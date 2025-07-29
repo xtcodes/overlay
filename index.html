@@ -21,12 +21,14 @@
       height: 320px;
       border: 2px dashed #aaa;
       background: #fff;
+      overflow: hidden;
     }
 
     canvas {
       width: 100%;
       height: 100%;
       display: block;
+      background: #fff;
     }
 
     #resetBtn {
@@ -40,6 +42,7 @@
       font-size: 12px;
       border-radius: 4px;
       cursor: pointer;
+      display: none; /* default disembunyikan */
       opacity: 0.8;
     }
 
@@ -60,6 +63,7 @@
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
+      display: none; /* default disembunyikan */
     }
 
     #container.dragover {
@@ -82,79 +86,82 @@
     const resetBtn = document.getElementById("resetBtn");
     const fileNameDiv = document.getElementById("fileName");
 
-    let userImage = null;
     let twibbonImage = new Image();
-    let fileName = '';
+    twibbonImage.src = "twibbon.png"; // pastikan file ini tersedia di direktori yang sama
 
-    // Muat twibbon (harus ada di lokasi yang sama)
-    twibbonImage.src = 'twibbon.png';
-
-    // Fungsi gambar user + twibbon
-    function drawImageToCanvas(image) {
+    // Tampilkan placeholder awal
+    function drawPlaceholder() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const scale = Math.min(canvas.width / image.width, canvas.height / image.height);
-      const x = (canvas.width - image.width * scale) / 2;
-      const y = (canvas.height - image.height * scale) / 2;
-
-      ctx.drawImage(image, x, y, image.width * scale, image.height * scale);
-
-      // Tambahkan twibbon setelah gambar pengguna
-      twibbonImage.onload = () => {
-        ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
-      };
-
-      // Jika sudah dimuat sebelumnya
-      if (twibbonImage.complete) {
-        ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
-      }
+      ctx.fillStyle = "#bbb";
+      ctx.font = "20px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Tarik gambar ke sini", canvas.width / 2, canvas.height / 2);
     }
 
+    drawPlaceholder();
+
+    // Gambar ke canvas
+    function drawImageWithTwibbon(userImg) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Gambar pengguna (scaled & centered)
+      const scale = Math.min(canvas.width / userImg.width, canvas.height / userImg.height);
+      const x = (canvas.width - userImg.width * scale) / 2;
+      const y = (canvas.height - userImg.height * scale) / 2;
+      ctx.drawImage(userImg, x, y, userImg.width * scale, userImg.height * scale);
+
+      // Gambar twibbon di atasnya
+      if (twibbonImage.complete) {
+        ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
+      } else {
+        twibbonImage.onload = () => {
+          ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
+        };
+      }
+
+      // Tampilkan tombol & nama file
+      resetBtn.style.display = "block";
+      fileNameDiv.style.display = "block";
+    }
+
+    // Event: dragover
     container.addEventListener("dragover", (e) => {
       e.preventDefault();
       container.classList.add("dragover");
     });
 
+    // Event: dragleave
     container.addEventListener("dragleave", () => {
       container.classList.remove("dragover");
     });
 
+    // Event: drop gambar
     container.addEventListener("drop", (e) => {
       e.preventDefault();
       container.classList.remove("dragover");
+
       const file = e.dataTransfer.files[0];
-      if (file && file.type.startsWith("image/")) {
-        fileName = file.name;
-        fileNameDiv.textContent = fileName;
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-          const img = new Image();
-          img.onload = function() {
-            userImage = img;
-            drawImageToCanvas(userImage);
-          };
-          img.src = evt.target.result;
+      if (!file || !file.type.startsWith("image/")) return;
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const img = new Image();
+        img.onload = () => {
+          drawImageWithTwibbon(img);
+          fileNameDiv.textContent = file.name;
         };
-        reader.readAsDataURL(file);
-      }
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
     });
 
+    // Tombol Reset
     resetBtn.addEventListener("click", () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      userImage = null;
-      fileName = '';
+      drawPlaceholder();
+      resetBtn.style.display = "none";
+      fileNameDiv.style.display = "none";
       fileNameDiv.textContent = '';
-      ctx.fillStyle = "#bbb";
-      ctx.font = "20px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("Tarik gambar ke sini", canvas.width / 2, canvas.height / 2);
     });
-
-    // Placeholder awal
-    ctx.fillStyle = "#bbb";
-    ctx.font = "20px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("Tarik gambar ke sini", canvas.width / 2, canvas.height / 2);
   </script>
 </body>
 </html>
