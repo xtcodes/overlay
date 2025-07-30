@@ -10,9 +10,9 @@
       background: #f0f0f0;
       font-family: sans-serif;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
-      height: 100vh;
+      padding: 20px;
     }
 
     #container {
@@ -53,7 +53,7 @@
       pointer-events: none;
     }
 
-    #fileName, #resetBtn, #downloadBtn, #shareBtn {
+    #fileName, #resetBtn {
       position: absolute;
       font-size: 12px;
       padding: 5px 10px;
@@ -78,16 +78,21 @@
       display: none;
     }
 
-    #downloadBtn, #shareBtn {
-      top: 8px;
+    #actionButtons {
+      margin-top: 12px;
       display: none;
-      background: #2ecc71;
-      color: white;
-      border: none;
+      gap: 12px;
     }
 
-    #downloadBtn { right: 70px; }
-    #shareBtn { right: 8px; }
+    #actionButtons button {
+      background: #2ecc71;
+      color: white;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
 
     #container.dragover {
       border-color: #3498db;
@@ -96,12 +101,17 @@
   </style>
 </head>
 <body>
+
   <div id="container">
     <canvas id="canvas" width="800" height="800"></canvas>
     <input type="file" id="uploadInput" accept="image/*">
     <label id="uploadLabel" for="uploadInput">Pilih Gambar</label>
     <div id="fileName"></div>
     <button id="resetBtn">Reset</button>
+  </div>
+
+  <!-- Tombol di luar canvas -->
+  <div id="actionButtons">
     <button id="downloadBtn">Unduh</button>
     <button id="shareBtn">Bagikan</button>
   </div>
@@ -116,26 +126,24 @@
     const resetBtn = document.getElementById('resetBtn');
     const downloadBtn = document.getElementById('downloadBtn');
     const shareBtn = document.getElementById('shareBtn');
+    const actionButtons = document.getElementById('actionButtons');
 
     let twibbonImg = new Image();
-    twibbonImg.src = 'twibbon.png'; // pastikan file tersedia
+    twibbonImg.src = 'twibbon.png'; // Pastikan tersedia
 
     let userImg = null;
     let scale = 1, lastScale = 1;
     let dx = 0, dy = 0, lastDx = 0, lastDy = 0;
     let dragging = false, pinchZoom = false;
     let startX = 0, startY = 0, distStart = 0;
-
     let isInteracting = false;
     let imageLoaded = false;
 
-    // Placeholder awal
     ctx.fillStyle = "#bbb";
     ctx.font = "20px sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("Tarik atau pilih gambar", canvas.width / 2, canvas.height / 2);
 
-    // Gambar ke canvas
     function renderCanvas() {
       if (!userImg) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -166,9 +174,8 @@
           fileNameDiv.textContent = file.name;
           fileNameDiv.style.display = "block";
           resetBtn.style.display = "block";
-          downloadBtn.style.display = "block";
-          shareBtn.style.display = "block";
           uploadLabel.style.display = "none";
+          actionButtons.style.display = "flex";
           renderCanvas();
         };
         img.src = evt.target.result;
@@ -193,7 +200,6 @@
       if (e.dataTransfer.files[0]) handleImage(e.dataTransfer.files[0]);
     });
 
-    // Gesture Events
     container.addEventListener('touchstart', e => {
       if (!imageLoaded) return;
       if (e.touches.length === 1) {
@@ -239,8 +245,9 @@
 
     resetBtn.addEventListener("click", () => {
       userImg = null;
-      fileNameDiv.style.display = resetBtn.style.display = downloadBtn.style.display = shareBtn.style.display = "none";
+      fileNameDiv.style.display = resetBtn.style.display = "none";
       uploadLabel.style.display = "block";
+      actionButtons.style.display = "none";
       uploadInput.value = '';
       imageLoaded = false;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
