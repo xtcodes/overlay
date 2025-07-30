@@ -87,14 +87,14 @@
     }
 
     #actionButtons button {
-      flex: 1;
       background: #2ecc71;
       color: white;
-      padding: 10px;
+      padding: 8px 14px;
       border: none;
       border-radius: 6px;
       font-size: 14px;
       cursor: pointer;
+      width: 100%;
     }
 
     #container.dragover {
@@ -131,7 +131,10 @@
     const actionButtons = document.getElementById('actionButtons');
 
     let twibbonImg = new Image();
-    twibbonImg.src = 'twibbon.png'; // Pastikan tersedia
+    twibbonImg.src = 'twibbon.png'; // Pastikan file ini tersedia
+
+    let placeholderImg = new Image();
+    placeholderImg.src = 'placeholder.png'; // Tambahkan placeholder.png
 
     let userImg = null;
     let scale = 1, lastScale = 1;
@@ -141,27 +144,44 @@
     let isInteracting = false;
     let imageLoaded = false;
 
-    ctx.fillStyle = "#bbb";
-    ctx.font = "20px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("Tarik atau pilih gambar", canvas.width / 2, canvas.height / 2);
+    placeholderImg.onload = () => {
+      renderCanvas();
+    }
 
     function renderCanvas() {
-      if (!userImg) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.save();
-      ctx.translate(dx, dy);
-      ctx.scale(scale, scale);
-      const imgW = userImg.width;
-      const imgH = userImg.height;
-      const cx = (canvas.width / scale - imgW) / 2;
-      const cy = (canvas.height / scale - imgH) / 2;
-      ctx.drawImage(userImg, cx, cy, imgW, imgH);
-      ctx.restore();
 
-      ctx.globalAlpha = isInteracting ? 0.4 : 1;
-      ctx.drawImage(twibbonImg, 0, 0, canvas.width, canvas.height);
-      ctx.globalAlpha = 1;
+      if (userImg) {
+        ctx.save();
+        ctx.translate(dx, dy);
+        ctx.scale(scale, scale);
+        const imgW = userImg.width;
+        const imgH = userImg.height;
+        const cx = (canvas.width / scale - imgW) / 2;
+        const cy = (canvas.height / scale - imgH) / 2;
+        ctx.drawImage(userImg, cx, cy, imgW, imgH);
+        ctx.restore();
+      } else if (placeholderImg.complete) {
+        const pW = placeholderImg.width;
+        const pH = placeholderImg.height;
+        const ratio = Math.min(canvas.width / pW, canvas.height / pH);
+        const w = pW * ratio;
+        const h = pH * ratio;
+        const x = (canvas.width - w) / 2;
+        const y = (canvas.height - h) / 2;
+        ctx.drawImage(placeholderImg, x, y, w, h);
+      } else {
+        ctx.fillStyle = "#bbb";
+        ctx.font = "20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Tarik atau pilih gambar", canvas.width / 2, canvas.height / 2);
+      }
+
+      if (imageLoaded || userImg) {
+        ctx.globalAlpha = isInteracting ? 0.4 : 1;
+        ctx.drawImage(twibbonImg, 0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
+      }
     }
 
     function handleImage(file) {
@@ -177,8 +197,8 @@
           fileNameDiv.style.display = "block";
           resetBtn.style.display = "block";
           uploadLabel.style.display = "none";
+          uploadInput.disabled = true;
           actionButtons.style.display = "flex";
-          uploadInput.disabled = true; // ✅ Nonaktifkan input
           renderCanvas();
         };
         img.src = evt.target.result;
@@ -252,13 +272,9 @@
       uploadLabel.style.display = "block";
       actionButtons.style.display = "none";
       uploadInput.value = '';
-      uploadInput.disabled = false; // ✅ Aktifkan kembali input
+      uploadInput.disabled = false;
       imageLoaded = false;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#bbb";
-      ctx.font = "20px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("Tarik atau pilih gambar", canvas.width / 2, canvas.height / 2);
+      renderCanvas();
     });
 
     downloadBtn.addEventListener("click", () => {
@@ -272,7 +288,7 @@
       try {
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         const file = new File([blob], "twibbon.png", { type: "image/png" });
-        if (navigator.canShare?.({ files: [file] })) {
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({
             files: [file],
             title: "Twibbon Saya",
@@ -285,6 +301,10 @@
         alert("Gagal membagikan: " + err.message);
       }
     });
+
+    window.onload = () => {
+      if (placeholderImg.complete) renderCanvas();
+    };
   </script>
 </body>
 </html>
