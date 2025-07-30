@@ -7,12 +7,12 @@
   <style>
     body {
       margin: 0;
-      padding: 20px;
       font-family: sans-serif;
+      background: #f2f2f2;
       display: flex;
       flex-direction: column;
       align-items: center;
-      background: #f4f4f4;
+      padding: 20px;
     }
 
     #container {
@@ -21,7 +21,6 @@
       height: 320px;
       border: 2px dashed #aaa;
       background: #fff;
-      overflow: hidden;
       touch-action: none;
     }
 
@@ -29,28 +28,7 @@
       width: 100%;
       height: 100%;
       display: block;
-    }
-
-    #uploadInput {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      z-index: 10;
-      cursor: pointer;
-    }
-
-    #uploadLabel {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(52,152,219,0.9);
-      color: white;
-      padding: 10px 18px;
-      border-radius: 6px;
-      font-size: 14px;
-      pointer-events: none;
-      z-index: 5;
+      touch-action: none;
     }
 
     #resetBtn {
@@ -64,7 +42,6 @@
       font-size: 12px;
       border-radius: 4px;
       cursor: pointer;
-      display: none;
     }
 
     #fileName {
@@ -80,7 +57,6 @@
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
-      display: none;
     }
 
     #actionButtons {
@@ -93,13 +69,18 @@
 
     #actionButtons button {
       flex: 1;
-      background: #2ecc71;
+      background: #3498db;
       color: white;
-      padding: 12px;
+      padding: 10px;
       font-size: 14px;
       border: none;
       border-radius: 6px;
       cursor: pointer;
+    }
+
+    #uploadInput {
+      margin-top: 10px;
+      width: 320px;
     }
 
     #container.dragover {
@@ -109,14 +90,14 @@
   </style>
 </head>
 <body>
+
   <div id="container">
     <canvas id="canvas" width="800" height="800"></canvas>
-    <input type="file" id="uploadInput" accept="image/*">
-    <label id="uploadLabel" for="uploadInput">Pilih Gambar</label>
     <div id="fileName"></div>
-    <button id="resetBtn">Reset</button>
+    <button id="resetBtn" style="display:none;">Reset</button>
   </div>
 
+  <input type="file" accept="image/*" id="uploadInput" />
   <div id="actionButtons">
     <button id="downloadBtn">Unduh</button>
     <button id="shareBtn">Bagikan</button>
@@ -127,20 +108,19 @@
     const ctx = canvas.getContext("2d");
     const container = document.getElementById("container");
     const uploadInput = document.getElementById("uploadInput");
-    const uploadLabel = document.getElementById("uploadLabel");
     const resetBtn = document.getElementById("resetBtn");
     const fileNameDiv = document.getElementById("fileName");
     const actionButtons = document.getElementById("actionButtons");
     const downloadBtn = document.getElementById("downloadBtn");
     const shareBtn = document.getElementById("shareBtn");
 
-    let userImg = null;
-    let twibbonImg = new Image();
-    twibbonImg.src = "twibbon.png";
-
-    let scale = 1, dx = 0, dy = 0;
-    let lastDist = null, lastTouch = null;
+    let userImg = null, twibbonImg = new Image();
+    let fileName = '';
+    let dx = 0, dy = 0, scale = 1;
+    let lastTouch = null, lastDist = null;
     let isInteracting = false;
+
+    twibbonImg.src = "https://via.placeholder.com/800x800.png?text=TWIBBON"; // Ganti URL twibbon di sini
 
     function renderCanvas() {
       if (!userImg) return;
@@ -149,7 +129,6 @@
       ctx.translate(dx, dy);
       ctx.scale(scale, scale);
 
-      // Hitung ukuran proporsional gambar
       const imgAspect = userImg.width / userImg.height;
       const canvasAspect = canvas.width / canvas.height;
       let drawWidth, drawHeight;
@@ -174,29 +153,29 @@
     }
 
     function handleImage(file) {
-      if (!file || !file.type.startsWith("image/")) return;
+      if (!file.type.startsWith("image/")) return;
+      fileName = file.name;
+      fileNameDiv.textContent = fileName;
+
       const reader = new FileReader();
-      reader.onload = (evt) => {
-        userImg = new Image();
-        userImg.onload = () => {
+      reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = () => {
+          userImg = img;
+          dx = dy = 0;
           scale = 1;
-          dx = 0;
-          dy = 0;
           renderCanvas();
-          fileNameDiv.textContent = file.name;
-          fileNameDiv.style.display = "block";
           resetBtn.style.display = "block";
-          uploadLabel.style.display = "none";
           actionButtons.style.display = "flex";
           uploadInput.disabled = true;
         };
-        userImg.src = evt.target.result;
+        img.src = evt.target.result;
       };
       reader.readAsDataURL(file);
     }
 
     uploadInput.addEventListener("change", (e) => {
-      handleImage(e.target.files[0]);
+      if (e.target.files[0]) handleImage(e.target.files[0]);
     });
 
     container.addEventListener("dragover", (e) => {
@@ -211,24 +190,19 @@
     container.addEventListener("drop", (e) => {
       e.preventDefault();
       container.classList.remove("dragover");
-      handleImage(e.dataTransfer.files[0]);
+      if (e.dataTransfer.files[0]) handleImage(e.dataTransfer.files[0]);
     });
 
     resetBtn.addEventListener("click", () => {
-      userImg = null;
-      scale = 1;
-      dx = 0;
-      dy = 0;
-      fileNameDiv.style.display = "none";
-      resetBtn.style.display = "none";
-      actionButtons.style.display = "none";
-      uploadLabel.style.display = "block";
-      uploadInput.value = '';
-      uploadInput.disabled = false;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      userImg = null;
+      fileName = '';
+      fileNameDiv.textContent = '';
+      uploadInput.disabled = false;
+      actionButtons.style.display = "none";
+      resetBtn.style.display = "none";
     });
 
-    // Zoom + drag
     container.addEventListener("touchstart", (e) => {
       if (e.touches.length === 2) {
         const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -243,32 +217,33 @@
     container.addEventListener("touchmove", (e) => {
       e.preventDefault();
       if (!userImg) return;
-      if (e.touches.length === 2) {
+
+      if (e.touches.length === 2 && lastDist) {
         const dxNow = e.touches[0].clientX - e.touches[1].clientX;
         const dyNow = e.touches[0].clientY - e.touches[1].clientY;
         const dist = Math.hypot(dxNow, dyNow);
-        const zoom = dist / lastDist;
-        scale *= zoom;
-        scale = Math.max(0.3, Math.min(scale, 5));
+        const zoomFactor = dist / lastDist;
+        scale *= zoomFactor;
+        scale = Math.min(Math.max(scale, 0.3), 5);
         lastDist = dist;
-      } else if (e.touches.length === 1 && lastTouch) {
+      }
+
+      if (e.touches.length === 1 && lastTouch) {
         const deltaX = e.touches[0].clientX - lastTouch.clientX;
         const deltaY = e.touches[0].clientY - lastTouch.clientY;
         dx += deltaX;
         dy += deltaY;
         lastTouch = e.touches[0];
       }
+
       renderCanvas();
     }, { passive: false });
 
     container.addEventListener("touchend", () => {
-      lastDist = null;
-      lastTouch = null;
       isInteracting = false;
       renderCanvas();
     });
 
-    // Unduh
     downloadBtn.addEventListener("click", () => {
       const link = document.createElement("a");
       link.download = "twibbon.png";
@@ -276,24 +251,21 @@
       link.click();
     });
 
-    // Bagikan
     shareBtn.addEventListener("click", async () => {
-      canvas.toBlob(async (blob) => {
-        const file = new File([blob], "twibbon.png", { type: "image/png" });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({
-              title: "Twibbon Saya",
-              files: [file],
-            });
-          } catch (err) {
-            alert("Gagal membagikan.");
-          }
-        } else {
-          alert("Perangkat tidak mendukung fitur berbagi.");
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+      const file = new File([blob], "twibbon.png", { type: "image/png" });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: "Twibbon Saya" });
+        } catch (e) {
+          alert("Gagal membagikan.");
         }
-      });
+      } else {
+        alert("Perangkat tidak mendukung fitur share.");
+      }
     });
   </script>
+
 </body>
 </html>
