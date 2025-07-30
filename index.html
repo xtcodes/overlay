@@ -17,8 +17,8 @@
 
     #container {
       position: relative;
-      width: 320px;
-      height: 320px;
+      width: 600px;
+   /*   height: 320px; */
       border: 2px dashed #aaa;
       background: #fff;
       overflow: hidden;
@@ -100,6 +100,13 @@
     #container.dragover {
       border-color: #3498db;
       background: #ecf7ff;
+    }
+
+    @media (max-width: 700px) {
+      #container {
+        margin: 0 auto;
+        width: auto;
+      }
     }
   </style>
 </head>
