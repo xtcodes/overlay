@@ -31,6 +31,30 @@
       background: #fff;
     }
 
+    #uploadInput {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+
+    #uploadLabel {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(52,152,219,0.9);
+      color: white;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 14px;
+      pointer-events: none;
+    }
+
     #resetBtn {
       position: absolute;
       bottom: 8px;
@@ -42,12 +66,8 @@
       font-size: 12px;
       border-radius: 4px;
       cursor: pointer;
-      display: none; /* default disembunyikan */
+      display: none;
       opacity: 0.8;
-    }
-
-    #resetBtn:hover {
-      opacity: 1;
     }
 
     #fileName {
@@ -63,7 +83,7 @@
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
-      display: none; /* default disembunyikan */
+      display: none;
     }
 
     #container.dragover {
@@ -75,6 +95,10 @@
 <body>
   <div id="container">
     <canvas id="canvas" width="800" height="800"></canvas>
+    
+    <input type="file" id="uploadInput" accept="image/*">
+    <label id="uploadLabel" for="uploadInput">Pilih Gambar</label>
+
     <div id="fileName"></div>
     <button id="resetBtn">Reset</button>
   </div>
@@ -83,84 +107,84 @@
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
     const container = document.getElementById("container");
+    const uploadInput = document.getElementById("uploadInput");
+    const uploadLabel = document.getElementById("uploadLabel");
     const resetBtn = document.getElementById("resetBtn");
     const fileNameDiv = document.getElementById("fileName");
 
     let twibbonImage = new Image();
-    twibbonImage.src = "twibbon.png"; // pastikan file ini tersedia di direktori yang sama
+    twibbonImage.src = "twibbon.png"; // pastikan file twibbon.png ada
 
-    // Tampilkan placeholder awal
     function drawPlaceholder() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "#bbb";
       ctx.font = "20px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("Tarik gambar ke sini", canvas.width / 2, canvas.height / 2);
+      ctx.fillText("Tarik atau pilih gambar", canvas.width / 2, canvas.height / 2);
     }
 
     drawPlaceholder();
 
-    // Gambar ke canvas
-    function drawImageWithTwibbon(userImg) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Gambar pengguna (scaled & centered)
-      const scale = Math.min(canvas.width / userImg.width, canvas.height / userImg.height);
-      const x = (canvas.width - userImg.width * scale) / 2;
-      const y = (canvas.height - userImg.height * scale) / 2;
-      ctx.drawImage(userImg, x, y, userImg.width * scale, userImg.height * scale);
-
-      // Gambar twibbon di atasnya
-      if (twibbonImage.complete) {
-        ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
-      } else {
-        twibbonImage.onload = () => {
-          ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
-        };
-      }
-
-      // Tampilkan tombol & nama file
-      resetBtn.style.display = "block";
-      fileNameDiv.style.display = "block";
-    }
-
-    // Event: dragover
-    container.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      container.classList.add("dragover");
-    });
-
-    // Event: dragleave
-    container.addEventListener("dragleave", () => {
-      container.classList.remove("dragover");
-    });
-
-    // Event: drop gambar
-    container.addEventListener("drop", (e) => {
-      e.preventDefault();
-      container.classList.remove("dragover");
-
-      const file = e.dataTransfer.files[0];
+    function handleImage(file) {
       if (!file || !file.type.startsWith("image/")) return;
 
       const reader = new FileReader();
       reader.onload = (evt) => {
         const img = new Image();
         img.onload = () => {
-          drawImageWithTwibbon(img);
+          // Gambar user
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+          const x = (canvas.width - img.width * scale) / 2;
+          const y = (canvas.height - img.height * scale) / 2;
+          ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+
+          // Gambar twibbon di atasnya
+          if (twibbonImage.complete) {
+            ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
+          } else {
+            twibbonImage.onload = () => {
+              ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
+            };
+          }
+
+          // Update UI
           fileNameDiv.textContent = file.name;
+          fileNameDiv.style.display = "block";
+          resetBtn.style.display = "block";
+          uploadLabel.style.display = "none";
         };
         img.src = evt.target.result;
       };
       reader.readAsDataURL(file);
+    }
+
+    uploadInput.addEventListener("change", (e) => {
+      handleImage(e.target.files[0]);
     });
 
-    // Tombol Reset
+    container.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      container.classList.add("dragover");
+    });
+
+    container.addEventListener("dragleave", () => {
+      container.classList.remove("dragover");
+    });
+
+    container.addEventListener("drop", (e) => {
+      e.preventDefault();
+      container.classList.remove("dragover");
+      handleImage(e.dataTransfer.files[0]);
+    });
+
     resetBtn.addEventListener("click", () => {
       drawPlaceholder();
-      resetBtn.style.display = "none";
-      fileNameDiv.style.display = "none";
       fileNameDiv.textContent = '';
+      fileNameDiv.style.display = "none";
+      resetBtn.style.display = "none";
+      uploadLabel.style.display = "block";
+      uploadInput.value = '';
     });
   </script>
 </body>
