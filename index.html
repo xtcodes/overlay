@@ -1,231 +1,256 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aplikasi Twibbon</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 1rem;
-    }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Aplikasi Twibbon Interaktif</title>
+  <style>
+    body {
+      margin: 0;
+      background: #f0f0f0;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
 
-    #container {
-      position: relative;
-      width: 100%;
-      max-width: 400px;
-    }
+    #container {
+      position: relative;
+      width: 320px;
+      height: 320px;
+      border: 2px dashed #aaa;
+      background: #fff;
+      overflow: hidden;
+      touch-action: none;
+    }
 
-    canvas {
-      width: 100%;
-      background: #f0f0f0;
-      border: 1px solid #ccc;
-    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      display: block;
+    }
 
-    #uploadBtn {
-      margin: 1rem 0;
-      padding: 10px 16px;
-      font-size: 16px;
-      cursor: pointer;
-    }
+    input[type="file"] {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
 
-    #resetBtn {
-      position: absolute;
-      bottom: 10px;
-      right: 10px;
-      z-index: 10;
-      padding: 6px 12px;
-    }
+    #uploadLabel {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(52,152,219,0.9);
+      color: white;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 14px;
+      pointer-events: none;
+    }
 
-    #filenameLabel {
-      position: absolute;
-      bottom: 10px;
-      left: 10px;
-      font-size: 12px;
-      background: rgba(255,255,255,0.7);
-      padding: 2px 6px;
-    }
+    #fileName, #resetBtn {
+      position: absolute;
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 4px;
+    }
 
-    #actionButtons {
-      margin-top: 12px;
-      display: none;
-      gap: 12px;
-      width: 100%;
-      display: flex;
-    }
+    #fileName {
+      bottom: 8px; left: 8px;
+      background: rgba(255,255,255,0.6);
+      max-width: 65%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: none;
+    }
 
-    #actionButtons button {
-      flex: 1;
-      background: #2ecc71;
-      color: white;
-      padding: 8px 14px;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-      cursor: pointer;
-    }
+    #resetBtn {
+      bottom: 8px; right: 8px;
+      background: #e74c3c;
+      color: white;
+      border: none;
+      display: none;
+    }
 
-    #overlayProcessing {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(180, 180, 180, 0.8);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      z-index: 5;
-    }
+    #actionButtons {
+      margin-top: 12px;
+      display: none;
+      gap: 12px;
+      width: 100%;
+      max-width: 320px;
+    }
 
-    #overlayProcessing .text {
-      color: #333;
-      font-size: 18px;
-      margin-bottom: 10px;
-    }
+    #actionButtons button {
+      background: #2ecc71;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      flex: 1;
+    }
 
-    #overlayProcessing .spinner {
-      width: 20px;
-      height: 20px;
-      border: 3px solid #ccc;
-      border-top: 3px solid #3498db;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
+    #container.dragover {
+      border-color: #3498db;
+      background: #ecf7ff;
+    }
 
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-  </style>
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(128, 128, 128, 0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 10;
+    }
+
+    #overlay span {
+      color: white;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    #spinner {
+      width: 20px;
+      height: 20px;
+      border: 3px solid white;
+      border-top: 3px solid transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body>
-  <h2>Aplikasi Twibbon</h2>
 
-  <button id="uploadBtn">Unggah Gambar</button>
-  <input type="file" id="uploadInput" accept="image/*" style="display:none" />
+  <div id="container">
+    <canvas id="canvas" width="800" height="800"></canvas>
+    <div id="overlay"><span>Sedang proses...</span><div id="spinner"></div></div>
+    <input type="file" id="uploadInput" accept="image/*">
+    <label id="uploadLabel" for="uploadInput">Pilih Gambar</label>
+    <div id="fileName"></div>
+    <button id="resetBtn">Reset</button>
+  </div>
 
-  <div id="container">
-    <canvas id="canvas" width="400" height="400"></canvas>
-    <button id="resetBtn" style="display:none">Reset</button>
-    <div id="filenameLabel"></div>
-    <div id="overlayProcessing">
-      <div class="text">Sedang proses... <span id="countdown">15</span> detik</div>
-      <div class="spinner"></div>
-    </div>
-  </div>
+  <div id="actionButtons">
+    <button id="downloadBtn">Unduh</button>
+    <button id="shareBtn">Bagikan</button>
+  </div>
 
-  <div id="actionButtons">
-    <button id="downloadBtn">Unduh</button>
-    <button id="shareBtn">Bagikan</button>
-  </div>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const overlay = document.getElementById('overlay');
+    const uploadInput = document.getElementById('uploadInput');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const actionButtons = document.getElementById('actionButtons');
+    const uploadLabel = document.getElementById('uploadLabel');
+    const fileNameDiv = document.getElementById('fileName');
+    const shareBtn = document.getElementById('shareBtn');
+    let userImg = null;
+    let twibbonImg = new Image();
+    twibbonImg.src = 'twibbon.png';
+    let imageLoaded = false;
+    let scale = 1, lastScale = 1, dx = 0, dy = 0, lastDx = 0, lastDy = 0;
 
-  <script>
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    const uploadBtn = document.getElementById("uploadBtn");
-    const uploadInput = document.getElementById("uploadInput");
-    const resetBtn = document.getElementById("resetBtn");
-    const filenameLabel = document.getElementById("filenameLabel");
-    const downloadBtn = document.getElementById("downloadBtn");
-    const shareBtn = document.getElementById("shareBtn");
-    const overlay = document.getElementById("overlayProcessing");
-    const countdownEl = document.getElementById("countdown");
-    const actionButtons = document.getElementById("actionButtons");
+    ctx.fillStyle = "#bbb";
+    ctx.font = "20px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Tarik atau pilih gambar", canvas.width / 2, canvas.height / 2);
 
-    let userImg = null;
-    let twibbonImg = new Image();
-    twibbonImg.src = "twibbon.png";
+    function renderCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!userImg) {
+        ctx.fillStyle = "#bbb";
+        ctx.font = "20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Tarik atau pilih gambar", canvas.width / 2, canvas.height / 2);
+        return;
+      }
+      ctx.save();
+      ctx.translate(dx, dy);
+      ctx.scale(scale, scale);
+      const imgW = userImg.width;
+      const imgH = userImg.height;
+      const cx = (canvas.width / scale - imgW) / 2;
+      const cy = (canvas.height / scale - imgH) / 2;
+      ctx.drawImage(userImg, cx, cy, imgW, imgH);
+      ctx.restore();
+      ctx.drawImage(twibbonImg, 0, 0, canvas.width, canvas.height);
+    }
 
-    function drawPlaceholder() {
-      ctx.fillStyle = "#ddd";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#888";
-      ctx.font = "16px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("Unggah gambar untuk mulai", canvas.width / 2, canvas.height / 2);
-    }
+    uploadInput.addEventListener('change', (e) => {
+      if (!e.target.files[0]) return;
+      const reader = new FileReader();
+      reader.onload = evt => {
+        const img = new Image();
+        img.onload = () => {
+          userImg = img;
+          dx = dy = lastDx = lastDy = 0;
+          scale = lastScale = 1;
+          imageLoaded = true;
+          renderCanvas();
+          fileNameDiv.textContent = e.target.files[0].name;
+          fileNameDiv.style.display = resetBtn.style.display = "block";
+          uploadLabel.style.display = "none";
+          uploadInput.disabled = true;
+          actionButtons.style.display = "flex";
+        }
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    });
 
-    function drawCanvas() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (userImg) {
-        const ratio = Math.min(canvas.width / userImg.width, canvas.height / userImg.height);
-        const drawWidth = userImg.width * ratio;
-        const drawHeight = userImg.height * ratio;
-        const x = (canvas.width - drawWidth) / 2;
-        const y = (canvas.height - drawHeight) / 2;
-        ctx.drawImage(userImg, x, y, drawWidth, drawHeight);
-        ctx.drawImage(twibbonImg, 0, 0, canvas.width, canvas.height);
-      } else {
-        drawPlaceholder();
-      }
-    }
+    downloadBtn.addEventListener("click", () => {
+      if (!userImg) return;
+      overlay.style.display = 'flex';
+      downloadBtn.disabled = true;
+      let countdown = 15;
+      const interval = setInterval(() => {
+        countdown--;
+        if (countdown <= 0) {
+          clearInterval(interval);
+          const link = document.createElement('a');
+          link.download = 'twibboned.png';
+          link.href = canvas.toDataURL("image/png");
+          link.click();
+          overlay.style.display = 'none';
+        }
+      }, 1000);
+    });
 
-    drawCanvas();
-
-    uploadBtn.addEventListener("click", () => uploadInput.click());
-
-    uploadInput.addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function (event) {
-        userImg = new Image();
-        userImg.onload = function () {
-          drawCanvas();
-        };
-        userImg.src = event.target.result;
-        filenameLabel.textContent = file.name;
-        resetBtn.style.display = "block";
-        actionButtons.style.display = "flex";
-        uploadBtn.disabled = true;
-      };
-      reader.readAsDataURL(file);
-    });
-
-    resetBtn.addEventListener("click", () => {
-      userImg = null;
-      uploadInput.value = "";
-      filenameLabel.textContent = "";
-      resetBtn.style.display = "none";
-      uploadBtn.disabled = false;
-      actionButtons.style.display = "none";
-      drawCanvas();
-    });
-
-    downloadBtn.addEventListener("click", () => {
-      if (!userImg) return;
-
-      overlay.style.display = "flex";
-      downloadBtn.disabled = true;
-
-      let countdown = 15;
-      countdownEl.textContent = countdown;
-
-      const interval = setInterval(() => {
-        countdown--;
-        countdownEl.textContent = countdown;
-        if (countdown <= 0) {
-          clearInterval(interval);
-          overlay.style.display = "none";
-          downloadBtn.disabled = false;
-
-          const link = document.createElement('a');
-          link.download = 'twibboned.png';
-          link.href = canvas.toDataURL("image/png");
-          link.click();
-        }
-      }, 1000);
-    });
-
-    shareBtn.addEventListener("click", () => {
-      alert("Fitur bagikan belum diimplementasikan.");
-    });
-  </script>
+    resetBtn.addEventListener("click", () => {
+      userImg = null;
+      uploadInput.disabled = false;
+      uploadInput.value = '';
+      fileNameDiv.style.display = resetBtn.style.display = "none";
+      uploadLabel.style.display = "block";
+      actionButtons.style.display = "none";
+      overlay.style.display = 'none';
+      downloadBtn.disabled = false;
+      imageLoaded = false;
+      renderCanvas();
+    });
+  </script>
 </body>
 </html>
