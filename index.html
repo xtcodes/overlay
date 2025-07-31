@@ -7,19 +7,18 @@
   <title>Aplikasi Twibbon Interaktif</title>
   <style>
     body {
-      margin: 0;
-      background: #f0f0f0;
+      margin: 5em auto;
+      background: #fdfdff;
       font-family: sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px;
+      padding: 2em;
     }
 
     #container {
       position: relative;
-      width: 320px;
-      height: 320px;
+      width: 600px;
       border: 2px dashed #aaa;
       background: #fff;
       overflow: hidden;
@@ -29,7 +28,7 @@
     canvas {
       width: 100%;
       height: 100%;
-      background: #fff;
+      background: #f0f0f2;
       display: block;
     }
 
@@ -38,7 +37,7 @@
       top: 0; left: 0;
       width: 100%; height: 100%;
       opacity: 0;
-      cursor: pointer;
+      cursor: none;
     }
 
     #uploadLabel {
@@ -84,7 +83,7 @@
       display: none;
       gap: 12px;
       width: 100%;
-      max-width: 320px;
+      max-width: 600px;
     }
 
     #actionButtons button {
@@ -137,6 +136,17 @@
 
     @keyframes spin {
       to { transform: rotate(360deg); }
+
+    a:link, a:visited {
+      color: #38488f;
+      text-decoration: none;
+    }
+    @media (max-width: 700px) {
+      #container {
+         margin: 0 auto;
+          width: auto;
+      }
+    }
     }
   </style>
 </head>
