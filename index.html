@@ -135,9 +135,12 @@
 
     #processingText {
       font-size: 16px;
-      font-weight: 700;
       margin-bottom: 8px;
       color: #333;
+    }
+
+    .bold {
+      font-weight: 900;
     }
 
     .spinner {
@@ -173,7 +176,7 @@
   <div id="container">
     <canvas id="canvas" width="800" height="800"></canvas>
     <div id="processingOverlay">
-      <div id="processingText">Sedang proses... 15</div>
+      <div class="bold" id="processingText">Sedang proses... 15</div>
       <div class="spinner"></div>
     </div>
     <input type="file" id="uploadInput" accept="image/*">
