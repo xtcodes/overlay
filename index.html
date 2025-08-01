@@ -132,8 +132,9 @@
       #caff38ff 8.25% 16.5%,
       #30f88aff 16.5% 25% );    */
 
-    background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-    animation: gradient 15s ease infinite;
+    background: linear-gradient(129deg,#43e089,#faa22b,#db0e11,#9d65cc,#6cc925,#9af35e);
+  background-size: 360% 360%;
+  animation: gradient-animation 24s ease infinite;
     }
 
     #processingText {
@@ -162,17 +163,7 @@
       to { transform: rotate(360deg); }
     }
 
-    @keyframes gradient {
-	0% {
-		background-position: 0% 50%;
-	}
-	50% {
-		background-position: 100% 50%;
-	}
-	100% {
-		background-position: 0% 50%;
-	}
-    }
+    @keyframes gradient-animation { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
     a:link, a:visited {
       color: #38488f;
