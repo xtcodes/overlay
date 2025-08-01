@@ -114,7 +114,7 @@
       align-items: center;
       justify-content: center;
       z-index: 10;
-      background: repeating-conic-gradient(
+     /* background: repeating-conic-gradient(
       from 0deg at 80% 50%,
       #5691f580 0% 8.25%,
       #b338ff80 8.25% 16.5%,
@@ -130,7 +130,10 @@
       from 0deg at 20% 50%,
       #f58356ff 0% 8.25%,
       #caff38ff 8.25% 16.5%,
-      #30f88aff 16.5% 25% );    
+      #30f88aff 16.5% 25% );    */
+
+    background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+    animation: gradient 15s ease infinite;
     }
 
     #processingText {
@@ -157,6 +160,18 @@
 
     @keyframes spin {
       to { transform: rotate(360deg); }
+    }
+
+    @keyframes gradient {
+	0% {
+		background-position: 0% 50%;
+	}
+	50% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0% 50%;
+	}
     }
 
     a:link, a:visited {
