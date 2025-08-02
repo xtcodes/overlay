@@ -83,9 +83,10 @@
       gap: 12px;
       width: 100%;
       max-width: 600px;
+      flex-direction: column;
     }
 
-    #actionButtons button {
+    #actionButtons button, #downloadLinkAlt {
       background: #2ecc71;
       color: white;
       padding: 8px 14px;
@@ -93,7 +94,16 @@
       border-radius: 6px;
       font-size: 16px;
       cursor: pointer;
+      text-align: center;
       width: 100%;
+      display: block;
+    }
+
+    #downloadLinkAlt {
+      text-decoration: none;
+      display: none;
+      margin-top: 8px;
+      background: #3498db;
     }
 
     #container.dragover {
@@ -107,43 +117,20 @@
       left: 0;
       width: 100%;
       height: 100%;
-    /*  background: #ddd;
-      background: rgba(200, 200, 200, 0.85); */
       display: none;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       z-index: 10;
-     /* background: repeating-conic-gradient(
-      from 0deg at 80% 50%,
-      #5691f580 0% 8.25%,
-      #b338ff80 8.25% 16.5%,
-      #f8305880 16.5% 25%
-    ),
-    repeating-conic-gradient(
-      from 15deg at 50% 50%,
-      #e856f580 0% 8.25%,
-      #ff384c80 8.25% 16.5%,
-      #e7f83080 16.5% 25%
-    ),
-    repeating-conic-gradient(
-      from 0deg at 20% 50%,
-      #f58356ff 0% 8.25%,
-      #caff38ff 8.25% 16.5%,
-      #30f88aff 16.5% 25% );    */
-
-    background: linear-gradient(129deg,#43e089,#faa22b,#db0e11,#9d65cc,#6cc925,#9af35e);
-  background-size: 360% 360%;
-  animation: gradient-animation 24s ease infinite;
+      background: linear-gradient(129deg,#43e089,#faa22b,#db0e11,#9d65cc,#6cc925,#9af35e);
+      background-size: 360% 360%;
+      animation: gradient-animation 24s ease infinite;
     }
 
     #processingText {
       font-size: 16px;
       margin-bottom: 8px;
       color: #333;
-    }
-
-    .bold {
       font-weight: 900;
     }
 
@@ -159,21 +146,11 @@
       right: 8px;
     }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    @keyframes gradient-animation { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-
-    a:link, a:visited {
-      color: #38488f;
-      text-decoration: none;
-    }
-    @media (max-width: 700px) {
-      #container {
-         margin: 0 auto;
-          width: auto;
-      }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes gradient-animation {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
   </style>
 </head>
@@ -182,7 +159,7 @@
   <div id="container">
     <canvas id="canvas" width="800" height="800"></canvas>
     <div id="processingOverlay">
-      <div class="bold" id="processingText">Sedang proses... 15</div>
+      <div id="processingText">Sedang proses... 15</div>
       <div class="spinner"></div>
     </div>
     <input type="file" id="uploadInput" accept="image/*">
@@ -193,6 +170,7 @@
 
   <div id="actionButtons">
     <button id="downloadBtn">Unduh</button>
+    <a id="downloadLinkAlt" href="#" download="twibboned.png">Unduh Alternatif</a>
     <button id="shareBtn">Bagikan</button>
   </div>
 
@@ -209,6 +187,7 @@
     const actionButtons = document.getElementById('actionButtons');
     const overlay = document.getElementById('processingOverlay');
     const overlayText = document.getElementById('processingText');
+    const altLink = document.getElementById('downloadLinkAlt');
 
     let twibbonImg = new Image();
     twibbonImg.src = 'twibbon.png';
@@ -224,10 +203,6 @@
     let isInteracting = false;
     let imageLoaded = false;
 
-    placeholderImg.onload = () => {
-      renderCanvas();
-    }
-
     function renderCanvas() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (userImg) {
@@ -241,11 +216,9 @@
         ctx.drawImage(userImg, cx, cy, imgW, imgH);
         ctx.restore();
       } else if (placeholderImg.complete) {
-        const pW = placeholderImg.width;
-        const pH = placeholderImg.height;
-        const ratio = Math.min(canvas.width / pW, canvas.height / pH);
-        const w = pW * ratio;
-        const h = pH * ratio;
+        const ratio = Math.min(canvas.width / placeholderImg.width, canvas.height / placeholderImg.height);
+        const w = placeholderImg.width * ratio;
+        const h = placeholderImg.height * ratio;
         const x = (canvas.width - w) / 2;
         const y = (canvas.height - h) / 2;
         ctx.drawImage(placeholderImg, x, y, w, h);
@@ -345,6 +318,7 @@
       fileNameDiv.style.display = resetBtn.style.display = "none";
       uploadLabel.style.display = "block";
       actionButtons.style.display = "none";
+      altLink.style.display = "none";
       uploadInput.value = '';
       uploadInput.disabled = false;
       imageLoaded = false;
@@ -353,6 +327,7 @@
 
     downloadBtn.addEventListener("click", async () => {
       downloadBtn.disabled = true;
+      altLink.style.display = "none";
       overlay.style.display = "flex";
       let countdown = 15;
       const interval = setInterval(() => {
@@ -362,10 +337,14 @@
           clearInterval(interval);
           overlay.style.display = "none";
           renderCanvas();
+          const dataUrl = canvas.toDataURL("image/png");
           const link = document.createElement('a');
           link.download = 'twibboned.png';
-          link.href = canvas.toDataURL("image/png");
+          link.href = dataUrl;
           link.click();
+
+          altLink.href = dataUrl;
+          altLink.style.display = "block";
           downloadBtn.disabled = false;
         }
       }, 1000);
