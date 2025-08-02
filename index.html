@@ -17,9 +17,8 @@
 
     #container {
       position: relative;
-      width: 320px;
-      height: 320px;
-      border: 2px dashed #aaa;
+      width: 600px;
+      border: 2px solid #aaa;
       background: #fff;
       overflow: hidden;
       touch-action: none;
@@ -147,6 +146,13 @@
     #downloadLinkAlt a {
       color: #2980b9;
       text-decoration: underline;
+    }
+
+    @media (max-width: 700px) {
+     #container {
+        margin: 0 auto;
+        width: auto;
+      }
     }
   </style>
 </head>
