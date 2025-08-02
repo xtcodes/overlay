@@ -14,23 +14,21 @@
       align-items: center;
       padding: 20px;
     }
-
     #container {
       position: relative;
-      width: 600px;
-      border: 2px solid #aaa;
+      width: 320px;
+      height: 320px;
+      border: 2px dashed #aaa;
       background: #fff;
       overflow: hidden;
       touch-action: none;
     }
-
     canvas {
       width: 100%;
       height: 100%;
       background: #fff;
       display: block;
     }
-
     input[type="file"] {
       position: absolute;
       top: 0; left: 0;
@@ -38,7 +36,6 @@
       opacity: 0;
       cursor: pointer;
     }
-
     #uploadLabel {
       position: absolute;
       top: 50%;
@@ -51,14 +48,12 @@
       font-size: 14px;
       pointer-events: none;
     }
-
     #fileName, #resetBtn {
       position: absolute;
       font-size: 12px;
       padding: 5px 10px;
       border-radius: 4px;
     }
-
     #fileName {
       bottom: 8px; left: 8px;
       background: rgba(255,255,255,0.6);
@@ -68,7 +63,6 @@
       text-overflow: ellipsis;
       display: none;
     }
-
     #resetBtn {
       bottom: 8px; right: 8px;
       background: #e74c3c;
@@ -76,7 +70,6 @@
       border: none;
       display: none;
     }
-
     #actionButtons {
       margin-top: 12px;
       display: none;
@@ -84,75 +77,60 @@
       width: 100%;
       max-width: 320px;
       flex-direction: column;
+      align-items: stretch;
     }
-
     #actionButtons button {
       background: #2ecc71;
       color: white;
-      padding: 8px 14px;
+      padding: 10px;
       border: none;
       border-radius: 6px;
       font-size: 14px;
       cursor: pointer;
       width: 100%;
     }
-
     #container.dragover {
       border-color: #3498db;
       background: #ecf7ff;
     }
-
-    #overlay {
+    #processingOverlay {
       position: absolute;
-      width: 100%;
-      height: 100%;
-      background: rgba(128, 128, 128, 0.6);
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(128, 128, 128, 0.8);
       display: none;
-      justify-content: center;
       align-items: center;
+      justify-content: center;
       flex-direction: column;
+      color: white;
+      font-size: 16px;
       z-index: 10;
     }
-
-    #overlayText {
-      font-size: 18px;
-      color: white;
-      margin-bottom: 10px;
-    }
-
-    #spinner {
+    .spinner {
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top: 3px solid white;
+      border-radius: 50%;
       width: 20px;
       height: 20px;
-      border: 3px solid #fff;
-      border-top: 3px solid transparent;
-      border-radius: 50%;
       animation: spin 1s linear infinite;
       position: absolute;
       bottom: 10px;
       right: 10px;
     }
-
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
-
-    #downloadLinkAlt {
-      display: none;
-      font-size: 14px;
-      text-align: center;
+    #downloadAlt {
       margin-top: 8px;
+      font-size: 13px;
+      color: #333;
+      display: none;
     }
-
-    #downloadLinkAlt a {
-      color: #2980b9;
+    #downloadAlt a {
+      color: #3498db;
       text-decoration: underline;
-    }
-
-    @media (max-width: 700px) {
-     #container {
-        margin: 0 auto;
-        width: auto;
-      }
+      cursor: pointer;
     }
   </style>
 </head>
@@ -160,9 +138,9 @@
 
   <div id="container">
     <canvas id="canvas" width="800" height="800"></canvas>
-    <div id="overlay">
-      <div id="overlayText">Sedang proses... (<span id="countdown">15</span>s)</div>
-      <div id="spinner"></div>
+    <div id="processingOverlay">
+      <div>Sedang proses... <span id="countdown">15</span> detik</div>
+      <div class="spinner"></div>
     </div>
     <input type="file" id="uploadInput" accept="image/*">
     <label id="uploadLabel" for="uploadInput">Pilih Gambar</label>
@@ -173,7 +151,10 @@
   <div id="actionButtons">
     <button id="downloadBtn">Unduh</button>
     <button id="shareBtn">Bagikan</button>
-    <p id="downloadLinkAlt">Jika unduhan tidak berjalan otomatis, <a href="#" download="twibboned.png">klik di sini</a>.</p>
+  </div>
+
+  <div id="downloadAlt">
+    Jika unduhan tidak berjalan otomatis, <a id="manualDownload">klik di sini</a>
   </div>
 
   <script>
@@ -187,10 +168,10 @@
     const downloadBtn = document.getElementById('downloadBtn');
     const shareBtn = document.getElementById('shareBtn');
     const actionButtons = document.getElementById('actionButtons');
-    const overlay = document.getElementById('overlay');
-    const countdownText = document.getElementById('countdown');
-    const downloadLinkAlt = document.getElementById('downloadLinkAlt');
-    const downloadLinkAltAnchor = downloadLinkAlt.querySelector('a');
+    const overlay = document.getElementById('processingOverlay');
+    const countdownSpan = document.getElementById('countdown');
+    const manualDownloadLink = document.getElementById('manualDownload');
+    const downloadAlt = document.getElementById('downloadAlt');
 
     let twibbonImg = new Image();
     twibbonImg.src = 'twibbon.png';
@@ -206,13 +187,10 @@
     let isInteracting = false;
     let imageLoaded = false;
 
-    placeholderImg.onload = () => {
-      renderCanvas();
-    }
+    placeholderImg.onload = () => renderCanvas();
 
     function renderCanvas() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
       if (userImg) {
         ctx.save();
         ctx.translate(dx, dy);
@@ -232,6 +210,11 @@
         const x = (canvas.width - w) / 2;
         const y = (canvas.height - h) / 2;
         ctx.drawImage(placeholderImg, x, y, w, h);
+      } else {
+        ctx.fillStyle = "#bbb";
+        ctx.font = "20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Tarik atau pilih gambar", canvas.width / 2, canvas.height / 2);
       }
 
       if (imageLoaded || userImg) {
@@ -331,34 +314,35 @@
       uploadInput.value = '';
       uploadInput.disabled = false;
       imageLoaded = false;
-      overlay.style.display = "none";
-      downloadBtn.disabled = false;
-      downloadLinkAlt.style.display = "none";
+      downloadAlt.style.display = "none";
       renderCanvas();
     });
 
     downloadBtn.addEventListener("click", () => {
-      overlay.style.display = "flex";
+      if (!imageLoaded) return;
       downloadBtn.disabled = true;
-      downloadLinkAlt.style.display = "none";
+      overlay.style.display = "flex";
+      let countdown = 15;
+      countdownSpan.textContent = countdown;
+      downloadAlt.style.display = "none";
 
-      let seconds = 15;
-      countdownText.textContent = seconds;
-      const countdown = setInterval(() => {
-        seconds--;
-        countdownText.textContent = seconds;
-        if (seconds <= 0) {
-          clearInterval(countdown);
+      const interval = setInterval(() => {
+        countdown--;
+        countdownSpan.textContent = countdown;
+        if (countdown === 0) {
+          clearInterval(interval);
           overlay.style.display = "none";
+          downloadBtn.disabled = false;
 
           const dataURL = canvas.toDataURL("image/png");
           const link = document.createElement('a');
-          link.download = "twibboned.png";
+          link.download = 'twibboned.png';
           link.href = dataURL;
           link.click();
 
-          downloadLinkAltAnchor.href = dataURL;
-          downloadLinkAlt.style.display = "block";
+          // tampilkan link alternatif
+          downloadAlt.style.display = "block";
+          manualDownloadLink.href = dataURL;
         }
       }, 1000);
     });
