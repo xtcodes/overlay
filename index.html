@@ -319,33 +319,39 @@
     });
 
     downloadBtn.addEventListener("click", () => {
-      if (!imageLoaded) return;
-      downloadBtn.disabled = true;
-      overlay.style.display = "flex";
-      let countdown = 15;
-      countdownSpan.textContent = countdown;
-      downloadAlt.style.display = "none";
+  if (!imageLoaded) return;
+  downloadBtn.disabled = true;
+  overlay.style.display = "flex";
+  let countdown = 15;
+  countdownSpan.textContent = countdown;
+  downloadAlt.style.display = "none";
 
-      const interval = setInterval(() => {
-        countdown--;
-        countdownSpan.textContent = countdown;
-        if (countdown === 0) {
-          clearInterval(interval);
-          overlay.style.display = "none";
-          downloadBtn.disabled = false;
+  const interval = setInterval(() => {
+    countdown--;
+    countdownSpan.textContent = countdown;
+    if (countdown === 0) {
+      clearInterval(interval);
+      overlay.style.display = "none";
+      downloadBtn.disabled = false;
 
-          const dataURL = canvas.toDataURL("image/png");
-          const link = document.createElement('a');
-          link.download = 'twibboned.png';
-          link.href = dataURL;
-          link.click();
+      const dataURL = canvas.toDataURL("image/png");
 
-          // tampilkan link alternatif
-          downloadAlt.style.display = "block";
-          manualDownloadLink.href = dataURL;
-        }
-      }, 1000);
-    });
+      // Unduh otomatis
+      const link = document.createElement('a');
+      link.download = 'twibboned.png';
+      link.href = dataURL;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Link alternatif jika gagal
+      manualDownloadLink.href = dataURL;
+      manualDownloadLink.setAttribute('download', 'twibboned.png');
+      downloadAlt.style.display = "block";
+    }
+  }, 1000);
+});
+
 
     shareBtn.addEventListener("click", async () => {
       try {
