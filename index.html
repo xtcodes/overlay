@@ -16,8 +16,7 @@
     }
     #container {
       position: relative;
-      width: 320px;
-      height: 320px;
+      width: 600px;
       border: 2px dashed #aaa;
       background: #fff;
       overflow: hidden;
@@ -75,7 +74,7 @@
       display: none;
       gap: 12px;
       width: 100%;
-      max-width: 320px;
+      max-width: 600px;
       flex-direction: column;
       align-items: stretch;
     }
@@ -131,6 +130,12 @@
       color: #3498db;
       text-decoration: underline;
       cursor: pointer;
+    }
+    @media (max-width: 700px) {
+      #container {
+          margin: 0 auto;
+          width: auto;
+      }
     }
   </style>
 </head>
