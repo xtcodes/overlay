@@ -6,18 +6,19 @@
   <title>Aplikasi Twibbon Interaktif</title>
   <style>
     body {
-      margin: 5em auto;
-      background: #fdfdff;
+      margin: 0;
+      background: #f0f0f0;
       font-family: sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 2em;
+      padding: 20px;
     }
 
     #container {
       position: relative;
-      width: 600px;
+      width: 320px;
+      height: 320px;
       border: 2px dashed #aaa;
       background: #fff;
       overflow: hidden;
@@ -27,7 +28,7 @@
     canvas {
       width: 100%;
       height: 100%;
-      background: #f0f0f2;
+      background: #fff;
       display: block;
     }
 
@@ -36,7 +37,7 @@
       top: 0; left: 0;
       width: 100%; height: 100%;
       opacity: 0;
-      cursor: none;
+      cursor: pointer;
     }
 
     #uploadLabel {
@@ -48,7 +49,7 @@
       color: white;
       padding: 10px 18px;
       border-radius: 6px;
-      font-size: 16px;
+      font-size: 14px;
       pointer-events: none;
     }
 
@@ -82,7 +83,7 @@
       display: none;
       gap: 12px;
       width: 100%;
-      max-width: 600px;
+      max-width: 320px;
       flex-direction: column;
     }
 
@@ -92,17 +93,9 @@
       padding: 8px 14px;
       border: none;
       border-radius: 6px;
-      font-size: 16px;
+      font-size: 14px;
       cursor: pointer;
-      text-align: center;
       width: 100%;
-      display: block;
-    }
-
-    #downloadLinkAlt {
-      text-decoration: none;
-      display: none;
-      margin-top: 8px;
     }
 
     #container.dragover {
@@ -110,53 +103,50 @@
       background: #ecf7ff;
     }
 
-    #processingOverlay {
+    #overlay {
       position: absolute;
-      top: 0;
-      left: 0;
       width: 100%;
       height: 100%;
+      background: rgba(128, 128, 128, 0.6);
       display: none;
-      flex-direction: column;
-      align-items: center;
       justify-content: center;
+      align-items: center;
+      flex-direction: column;
       z-index: 10;
-      background: linear-gradient(129deg,#43e089,#faa22b,#db0e11,#9d65cc,#6cc925,#9af35e);
-      background-size: 360% 360%;
-      animation: gradient-animation 24s ease infinite;
     }
 
-    #processingText {
-      font-size: 16px;
-      margin-bottom: 8px;
-      color: #333;
-      font-weight: 900;
+    #overlayText {
+      font-size: 18px;
+      color: white;
+      margin-bottom: 10px;
     }
 
-    .spinner {
-      width: 24px;
-      height: 24px;
-      border: 3px dashed #333;
-      border-top-color: transparent;
+    #spinner {
+      width: 20px;
+      height: 20px;
+      border: 3px solid #fff;
+      border-top: 3px solid transparent;
       border-radius: 50%;
       animation: spin 1s linear infinite;
       position: absolute;
-      bottom: 8px;
-      right: 8px;
+      bottom: 10px;
+      right: 10px;
     }
 
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes gradient-animation {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
-    @media (max-width: 700px) {
-      #container {
-          margin: 0 auto;
-          width: auto;
-      }
+    #downloadLinkAlt {
+      display: none;
+      font-size: 14px;
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    #downloadLinkAlt a {
+      color: #2980b9;
+      text-decoration: underline;
     }
   </style>
 </head>
@@ -164,9 +154,9 @@
 
   <div id="container">
     <canvas id="canvas" width="800" height="800"></canvas>
-    <div id="processingOverlay">
-      <div id="processingText">Sedang proses... 15</div>
-      <div class="spinner"></div>
+    <div id="overlay">
+      <div id="overlayText">Sedang proses... (<span id="countdown">15</span>s)</div>
+      <div id="spinner"></div>
     </div>
     <input type="file" id="uploadInput" accept="image/*">
     <label id="uploadLabel" for="uploadInput">Pilih Gambar</label>
@@ -174,13 +164,10 @@
     <button id="resetBtn">Reset</button>
   </div>
 
-<p id="downloadLinkAlt" style="display:none; font-size:14px; text-align:center; margin-top:8px;">
-  Jika unduhan tidak berjalan otomatis, <a href="#" download="twibboned.png">klik di sini</a>.
-</p>
-
   <div id="actionButtons">
     <button id="downloadBtn">Unduh</button>
     <button id="shareBtn">Bagikan</button>
+    <p id="downloadLinkAlt">Jika unduhan tidak berjalan otomatis, <a href="#" download="twibboned.png">klik di sini</a>.</p>
   </div>
 
   <script>
@@ -194,9 +181,10 @@
     const downloadBtn = document.getElementById('downloadBtn');
     const shareBtn = document.getElementById('shareBtn');
     const actionButtons = document.getElementById('actionButtons');
-    const overlay = document.getElementById('processingOverlay');
-    const overlayText = document.getElementById('processingText');
-    const altLink = document.getElementById('downloadLinkAlt');
+    const overlay = document.getElementById('overlay');
+    const countdownText = document.getElementById('countdown');
+    const downloadLinkAlt = document.getElementById('downloadLinkAlt');
+    const downloadLinkAltAnchor = downloadLinkAlt.querySelector('a');
 
     let twibbonImg = new Image();
     twibbonImg.src = 'twibbon.png';
@@ -212,8 +200,13 @@
     let isInteracting = false;
     let imageLoaded = false;
 
+    placeholderImg.onload = () => {
+      renderCanvas();
+    }
+
     function renderCanvas() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
       if (userImg) {
         ctx.save();
         ctx.translate(dx, dy);
@@ -225,9 +218,11 @@
         ctx.drawImage(userImg, cx, cy, imgW, imgH);
         ctx.restore();
       } else if (placeholderImg.complete) {
-        const ratio = Math.min(canvas.width / placeholderImg.width, canvas.height / placeholderImg.height);
-        const w = placeholderImg.width * ratio;
-        const h = placeholderImg.height * ratio;
+        const pW = placeholderImg.width;
+        const pH = placeholderImg.height;
+        const ratio = Math.min(canvas.width / pW, canvas.height / pH);
+        const w = pW * ratio;
+        const h = pH * ratio;
         const x = (canvas.width - w) / 2;
         const y = (canvas.height - h) / 2;
         ctx.drawImage(placeholderImg, x, y, w, h);
@@ -327,34 +322,37 @@
       fileNameDiv.style.display = resetBtn.style.display = "none";
       uploadLabel.style.display = "block";
       actionButtons.style.display = "none";
-      altLink.style.display = "none";
       uploadInput.value = '';
       uploadInput.disabled = false;
       imageLoaded = false;
+      overlay.style.display = "none";
+      downloadBtn.disabled = false;
+      downloadLinkAlt.style.display = "none";
       renderCanvas();
     });
 
-    downloadBtn.addEventListener("click", async () => {
-      downloadBtn.disabled = true;
-      altLink.style.display = "none";
+    downloadBtn.addEventListener("click", () => {
       overlay.style.display = "flex";
-      let countdown = 15;
-      const interval = setInterval(() => {
-        countdown--;
-        overlayText.textContent = "Sedang proses... " + countdown;
-        if (countdown <= 0) {
-          clearInterval(interval);
+      downloadBtn.disabled = true;
+      downloadLinkAlt.style.display = "none";
+
+      let seconds = 15;
+      countdownText.textContent = seconds;
+      const countdown = setInterval(() => {
+        seconds--;
+        countdownText.textContent = seconds;
+        if (seconds <= 0) {
+          clearInterval(countdown);
           overlay.style.display = "none";
-          renderCanvas();
-          const dataUrl = canvas.toDataURL("image/png");
+
+          const dataURL = canvas.toDataURL("image/png");
           const link = document.createElement('a');
-          link.download = 'twibboned.png';
-          link.href = dataUrl;
+          link.download = "twibboned.png";
+          link.href = dataURL;
           link.click();
 
-          altLink.href = dataUrl;
-          altLink.style.display = "block";
-          downloadBtn.disabled = false;
+          downloadLinkAltAnchor.href = dataURL;
+          downloadLinkAlt.style.display = "block";
         }
       }, 1000);
     });
