@@ -152,6 +152,13 @@
       50% { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
     }
+
+    @media (max-width: 700px) {
+      #container {
+          margin: 0 auto;
+          width: auto;
+      }
+    }
   </style>
 </head>
 <body>
@@ -167,10 +174,9 @@
     <div id="fileName"></div>
     <button id="resetBtn">Reset</button>
   </div>
-
+<p>Jika unduhan tidak berjalan otomatis, <a id="downloadLinkAlt" href="#" download="twibboned.png">klik disini</a>.</p>
   <div id="actionButtons">
     <button id="downloadBtn">Unduh</button>
-    <a id="downloadLinkAlt" href="#" download="twibboned.png">Unduh Alternatif</a>
     <button id="shareBtn">Bagikan</button>
   </div>
 
