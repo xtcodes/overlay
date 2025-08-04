@@ -6,17 +6,25 @@
   <title>Aplikasi Twibbon Interaktif</title>
   <style>
     body {
-      margin: 5em auto;
+      margin: 0;
       background: #fdfdff;
       font-family: sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 2em;
+      padding: 0;
+    }
+    main {
+        width: 600px;
+        margin: 5em auto;
+        padding: 2em;
+        background-color: #fdfdff;
+        border-radius: 0.5em;
+        box-shadow: 2px 3px 7px 2px rgba(0,0,0,0.02);
     }
     #container {
       position: relative;
-      width: 600px;
+      width: 100%;
       border: 2px solid #aaa;
       background: #fdfdff;
       overflow: hidden;
@@ -132,7 +140,7 @@
       cursor: pointer;
     }
     @media (max-width: 700px) {
-      #container {
+      main {
           margin: 0 auto;
           width: auto;
       }
@@ -140,7 +148,7 @@
   </style>
 </head>
 <body>
-
+<main>
   <div id="container">
     <canvas id="canvas" width="800" height="800"></canvas>
     <div id="processingOverlay">
@@ -161,7 +169,8 @@
   <div id="downloadAlt">
     Jika unduhan tidak berjalan otomatis, <a id="manualDownload">klik di sini</a>
   </div>
-
+</main>
+  
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
