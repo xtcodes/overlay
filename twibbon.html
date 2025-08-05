@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Twibbon Generator</title>
   <style>
     body {
@@ -12,8 +12,8 @@
     }
 
     canvas {
-      border: 1px solid #ccc;
       max-width: 100%;
+      border: 1px solid #ccc;
       touch-action: none;
     }
 
@@ -41,77 +41,76 @@
       border-radius: 5px;
       margin-top: 10px;
     }
-
-    #previewWrapper {
-      max-width: 100%;
-      overflow: auto;
-    }
   </style>
 </head>
 <body>
   <h2>Twibbon Generator</h2>
 
   <label id="uploadLabel" for="uploadInput">Unggah Gambar</label>
-  <input type="file" id="uploadInput" accept="image/*">
+  <input type="file" id="uploadInput" accept="image/*" />
 
   <div id="previewWrapper">
-    <canvas id="canvas"></canvas>
+    <canvas id="canvas" width="800" height="800"></canvas>
   </div>
 
   <button id="unduhBtn" class="btn">Unduh Hasil Twibbon</button>
   <button id="bagikanBtn" class="btn">Bagikan</button>
 
   <script>
-    const uploadInput = document.getElementById('uploadInput');
-    const uploadLabel = document.getElementById('uploadLabel');
-    const unduhBtn = document.getElementById('unduhBtn');
-    const bagikanBtn = document.getElementById('bagikanBtn');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
 
-    // --- Konfigurasi awal ---
-    const twibbonImage = new Image();
-    twibbonImage.src = 'twibbon.png'; // Ganti ini dengan twibbon transparan milikmu
+    const uploadInput = document.getElementById("uploadInput");
+    const uploadLabel = document.getElementById("uploadLabel");
+    const unduhBtn = document.getElementById("unduhBtn");
+    const bagikanBtn = document.getElementById("bagikanBtn");
 
     const placeholder = new Image();
-    placeholder.src = 'placeholder.png'; // Ganti dengan placeholder default kamu
+    placeholder.src = "placeholder.jpg"; // Ganti ini sesuai gambar placeholder kamu
 
-    // Ukuran default canvas
-    canvas.width = 800;
-    canvas.height = 800;
+    const twibbonImage = new Image();
+    twibbonImage.src = "twibbon.png"; // Ganti ini sesuai file twibbon PNG transparan
 
     let userImage = null;
-    let userImageData = null;
-
-    // Transformasi
-    let scale = 1;
-    let lastScale = 1;
+    let scale = 1, lastScale = 1;
     let posX = 0, posY = 0;
     let lastPosX = 0, lastPosY = 0;
     let isDragging = false;
     let lastTouches = [];
 
-    // --- Fungsi utama untuk menggambar ulang canvas ---
     function drawCanvas() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      // Gambar gambar user jika ada, jika tidak pakai placeholder
       if (userImage) {
         ctx.save();
         ctx.translate(posX, posY);
         ctx.scale(scale, scale);
-        ctx.drawImage(userImage, 0, 0);
+
+        // Hitung rasio proporsional agar tidak distorsi
+        const ratio = Math.min(
+          canvas.width / userImage.width,
+          canvas.height / userImage.height
+        );
+        const imgWidth = userImage.width * ratio;
+        const imgHeight = userImage.height * ratio;
+        ctx.drawImage(userImage, 0, 0, imgWidth, imgHeight);
         ctx.restore();
+
+        // Gambar twibbon setelah gambar user
+        if (twibbonImage.complete) {
+          ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
+        }
       } else {
         ctx.drawImage(placeholder, 0, 0, canvas.width, canvas.height);
       }
-
-      if (twibbonImage.complete) {
-        ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
-      }
     }
 
-    // --- Handle unggah gambar ---
-    uploadInput.addEventListener('change', (e) => {
+    // Load awal
+    placeholder.onload = drawCanvas;
+
+    // Upload gambar pengguna
+    uploadInput.addEventListener("change", (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
@@ -119,60 +118,55 @@
       reader.onload = function (event) {
         userImage = new Image();
         userImage.onload = function () {
-          // Atur canvas sesuai gambar asli
-          canvas.width = userImage.naturalWidth;
-          canvas.height = userImage.naturalHeight;
-
-          // Reset transformasi
+          // Reset posisi & skala
           scale = 1;
           posX = 0;
           posY = 0;
-
           drawCanvas();
 
-          // Tampilkan tombol unduh, sembunyikan unggah
-          unduhBtn.style.display = 'inline-block';
-          uploadLabel.style.display = 'none';
+          // Update UI
+          uploadLabel.style.display = "none";
+          unduhBtn.style.display = "inline-block";
         };
         userImage.src = event.target.result;
       };
       reader.readAsDataURL(file);
     });
 
-    // --- Unduh hasil canvas ---
-    unduhBtn.addEventListener('click', () => {
-      const link = document.createElement('a');
-      link.download = 'twibbon.png';
-      link.href = canvas.toDataURL('image/png');
+    // Unduh hasil twibbon
+    unduhBtn.addEventListener("click", () => {
+      const link = document.createElement("a");
+      link.download = "twibbon.png";
+      link.href = canvas.toDataURL("image/png");
       link.click();
 
-      unduhBtn.style.display = 'none';
-      bagikanBtn.style.display = 'inline-block';
+      // Tampilkan tombol bagikan
+      unduhBtn.style.display = "none";
+      bagikanBtn.style.display = "inline-block";
     });
 
-    // --- Web Share API ---
-    bagikanBtn.addEventListener('click', async () => {
+    // Web Share API
+    bagikanBtn.addEventListener("click", () => {
       canvas.toBlob(async (blob) => {
-        const file = new File([blob], 'twibbon.png', { type: 'image/png' });
-
+        const file = new File([blob], "twibbon.png", { type: "image/png" });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({
-              title: 'Hasil Twibbon Saya',
-              text: 'Lihat hasil twibbon saya!',
-              files: [file]
+              title: "Twibbon Saya",
+              text: "Lihat hasil twibbon saya!",
+              files: [file],
             });
-          } catch (error) {
-            alert('Gagal membagikan: ' + error.message);
+          } catch (err) {
+            alert("Gagal membagikan: " + err.message);
           }
         } else {
-          alert('Web Share API tidak didukung di perangkat ini.');
+          alert("Perangkat ini tidak mendukung Web Share API dengan file.");
         }
-      }, 'image/png');
+      });
     });
 
-    // --- Gesture: drag + zoom ---
-    canvas.addEventListener('touchstart', (e) => {
+    // Gesture: drag dan zoom
+    canvas.addEventListener("touchstart", (e) => {
       if (e.touches.length === 1) {
         isDragging = true;
         lastPosX = e.touches[0].clientX - posX;
@@ -183,46 +177,34 @@
       }
     });
 
-    canvas.addEventListener('touchmove', (e) => {
+    canvas.addEventListener("touchmove", (e) => {
       e.preventDefault();
-
       if (e.touches.length === 1 && isDragging) {
         posX = e.touches[0].clientX - lastPosX;
         posY = e.touches[0].clientY - lastPosY;
         drawCanvas();
-      } else if (e.touches.length === 2) {
-        const [touch1, touch2] = e.touches;
-        const dx = touch2.clientX - touch1.clientX;
-        const dy = touch2.clientY - touch1.clientY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+      } else if (e.touches.length === 2 && lastTouches.length === 2) {
+        const [t1, t2] = e.touches;
+        const dx = t2.clientX - t1.clientX;
+        const dy = t2.clientY - t1.clientY;
+        const dist = Math.hypot(dx, dy);
 
-        const [last1, last2] = lastTouches;
-        const lastDx = last2.clientX - last1.clientX;
-        const lastDy = last2.clientY - last1.clientY;
-        const lastDist = Math.sqrt(lastDx * lastDx + lastDy * lastDy);
+        const [lt1, lt2] = lastTouches;
+        const ldx = lt2.clientX - lt1.clientX;
+        const ldy = lt2.clientY - lt1.clientY;
+        const lastDist = Math.hypot(ldx, ldy);
 
-        const zoomFactor = dist / lastDist;
-        scale = Math.max(0.2, Math.min(5, lastScale * zoomFactor));
+        const zoom = dist / lastDist;
+        scale = Math.min(5, Math.max(0.5, lastScale * zoom));
         drawCanvas();
       }
     }, { passive: false });
 
-    canvas.addEventListener('touchend', (e) => {
+    canvas.addEventListener("touchend", () => {
       isDragging = false;
-      if (e.touches.length === 0) {
-        lastTouches = [];
-        lastScale = scale;
-      }
+      lastTouches = [];
+      lastScale = scale;
     });
-
-    // --- Inisialisasi awal ---
-    placeholder.onload = () => {
-      drawCanvas();
-    };
-
-    twibbonImage.onload = () => {
-      drawCanvas();
-    };
   </script>
 </body>
 </html>
