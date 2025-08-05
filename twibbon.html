@@ -33,16 +33,6 @@
       display: none;
     }
 
-    #uploadLabel {
-      display: inline-block;
-      padding: 12px 24px;
-      background-color: #007bff;
-      color: white;
-      cursor: pointer;
-      border-radius: 5px;
-      margin-top: 10px;
-    }
-
     #canvasWrapper {
       position: relative;
       display: inline-block;
@@ -59,14 +49,15 @@
       padding: 5px 10px;
       cursor: pointer;
       z-index: 10;
-      display: none; /* ⬅️ Sembunyikan di awal */
+      display: none;
     }
   </style>
 </head>
 <body>
   <h2>Twibbon Generator</h2>
 
-  <label id="uploadLabel" for="uploadInput">Unggah Gambar</label>
+  <!-- Tombol unggah gambar biasa -->
+  <button id="uploadBtn" class="btn">Unggah Gambar</button>
   <input type="file" id="uploadInput" accept="image/*" />
 
   <div id="canvasWrapper">
@@ -83,14 +74,14 @@
     const ctx = canvas.getContext("2d");
 
     const uploadInput = document.getElementById("uploadInput");
-    const uploadLabel = document.getElementById("uploadLabel");
+    const uploadBtn = document.getElementById("uploadBtn");
     const unduhBtn = document.getElementById("unduhBtn");
     const bagikanBtn = document.getElementById("bagikanBtn");
     const twibbonInput = document.getElementById("twibbonInput");
     const uploadTwibbonBtn = document.getElementById("uploadTwibbonBtn");
 
     const placeholder = new Image();
-    placeholder.src = "placeholder.jpg"; // Ganti sesuai file kamu
+    placeholder.src = "placeholder.png"; // Ganti sesuai file kamu
 
     let userImage = null;
     let twibbonImage = new Image();
@@ -120,9 +111,8 @@
         ctx.drawImage(userImage, 0, 0, imgWidth, imgHeight);
         ctx.restore();
 
-        // Twibbon muncul hanya setelah user upload gambar
         if (twibbonImage.complete) {
-          ctx.globalAlpha = isTouching ? 0.5 : 1; // transparan saat interaksi
+          ctx.globalAlpha = isTouching ? 0.5 : 1;
           ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
           ctx.globalAlpha = 1;
         }
@@ -133,6 +123,9 @@
 
     placeholder.onload = drawCanvas;
     twibbonImage.onload = drawCanvas;
+
+    // Tombol unggah gambar
+    uploadBtn.addEventListener("click", () => uploadInput.click());
 
     uploadInput.addEventListener("change", (e) => {
       const file = e.target.files[0];
@@ -147,9 +140,9 @@
           posY = 0;
           drawCanvas();
 
-          uploadLabel.style.display = "none";
+          uploadBtn.style.display = "none";
           unduhBtn.style.display = "inline-block";
-          uploadTwibbonBtn.style.display = "inline-block"; // ✅ Tampilkan tombol ubah twibbon
+          uploadTwibbonBtn.style.display = "inline-block";
         };
         userImage.src = event.target.result;
       };
