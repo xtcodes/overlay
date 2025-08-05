@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Twibbon Generator</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+
+    canvas {
+      border: 1px solid #ccc;
+      max-width: 100%;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      margin: 10px 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #unduhBtn, #bagikanBtn {
+      display: none;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    #uploadLabel {
+      display: inline-block;
+      padding: 12px 24px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-top: 10px;
+    }
+
+    #previewWrapper {
+      max-width: 100%;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <h2>Twibbon Generator</h2>
+
+  <label id="uploadLabel" for="uploadInput">Unggah Gambar</label>
+  <input type="file" id="uploadInput" accept="image/*">
+
+  <div id="previewWrapper">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <button id="unduhBtn" class="btn">Unduh Hasil Twibbon</button>
+  <button id="bagikanBtn" class="btn">Bagikan</button>
+
+  <script>
+    const uploadInput = document.getElementById('uploadInput');
+    const uploadLabel = document.getElementById('uploadLabel');
+    const unduhBtn = document.getElementById('unduhBtn');
+    const bagikanBtn = document.getElementById('bagikanBtn');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const twibbonImage = new Image();
+    twibbonImage.src = 'twibbon.png'; // ganti dengan path twibbon PNG transparan milikmu
+
+    let userImage = null;
+
+    uploadInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        userImage = new Image();
+        userImage.onload = function () {
+          // Sesuaikan ukuran canvas ke ukuran asli gambar user
+          canvas.width = userImage.naturalWidth;
+          canvas.height = userImage.naturalHeight;
+
+          // Gambar user ke canvas
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(userImage, 0, 0);
+
+          // Gambar twibbon jika sudah siap
+          if (twibbonImage.complete) {
+            ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
+          } else {
+            twibbonImage.onload = () => {
+              ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
+            };
+          }
+
+          // Tampilkan tombol unduh, sembunyikan unggah
+          unduhBtn.style.display = 'inline-block';
+          uploadLabel.style.display = 'none';
+        };
+        userImage.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    unduhBtn.addEventListener('click', () => {
+      // Unduh hasil canvas
+      const link = document.createElement('a');
+      link.download = 'twibbon.png';
+      link.href = canvas.toDataURL();
+      link.click();
+
+      // Sembunyikan tombol unduh, tampilkan bagikan
+      unduhBtn.style.display = 'none';
+      bagikanBtn.style.display = 'inline-block';
+    });
+
+    bagikanBtn.addEventListener('click', () => {
+      alert('Bagikan ke media sosial diimplementasikan di sini!');
+    });
+  </script>
+</body>
+</html>
