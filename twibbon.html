@@ -59,6 +59,7 @@
       padding: 5px 10px;
       cursor: pointer;
       z-index: 10;
+      display: none; /* ⬅️ Sembunyikan di awal */
     }
   </style>
 </head>
@@ -89,11 +90,11 @@
     const uploadTwibbonBtn = document.getElementById("uploadTwibbonBtn");
 
     const placeholder = new Image();
-    placeholder.src = "placeholder.png"; // ganti dengan placeholder kamu
+    placeholder.src = "placeholder.png"; // Ganti sesuai file kamu
 
     let userImage = null;
     let twibbonImage = new Image();
-    twibbonImage.src = "twibbon.png"; // default twibbon
+    twibbonImage.src = "twibbon.png"; // Default twibbon PNG transparan
 
     let scale = 1, lastScale = 1;
     let posX = 0, posY = 0;
@@ -102,15 +103,14 @@
     let isTouching = false;
     let lastTouches = [];
 
-    // Draw canvas
     function drawCanvas() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Gambar pengguna / placeholder
       if (userImage) {
         ctx.save();
         ctx.translate(posX, posY);
         ctx.scale(scale, scale);
+
         const ratio = Math.min(
           canvas.width / userImage.width,
           canvas.height / userImage.height
@@ -120,9 +120,9 @@
         ctx.drawImage(userImage, 0, 0, imgWidth, imgHeight);
         ctx.restore();
 
-        // Twibbon semi transparan saat disentuh
+        // Twibbon muncul hanya setelah user upload gambar
         if (twibbonImage.complete) {
-          ctx.globalAlpha = isTouching ? 0.5 : 1;
+          ctx.globalAlpha = isTouching ? 0.5 : 1; // transparan saat interaksi
           ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
           ctx.globalAlpha = 1;
         }
@@ -134,7 +134,6 @@
     placeholder.onload = drawCanvas;
     twibbonImage.onload = drawCanvas;
 
-    // Upload gambar pengguna
     uploadInput.addEventListener("change", (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -147,15 +146,16 @@
           posX = 0;
           posY = 0;
           drawCanvas();
+
           uploadLabel.style.display = "none";
           unduhBtn.style.display = "inline-block";
+          uploadTwibbonBtn.style.display = "inline-block"; // ✅ Tampilkan tombol ubah twibbon
         };
         userImage.src = event.target.result;
       };
       reader.readAsDataURL(file);
     });
 
-    // Upload twibbon custom
     uploadTwibbonBtn.addEventListener("click", () => {
       twibbonInput.click();
     });
@@ -173,7 +173,6 @@
       reader.onload = function (event) {
         const img = new Image();
         img.onload = function () {
-          // Validasi transparansi
           const tempCanvas = document.createElement("canvas");
           const tempCtx = tempCanvas.getContext("2d");
           tempCanvas.width = img.width;
@@ -194,7 +193,6 @@
             return;
           }
 
-          // Jika lolos validasi, pasang twibbon
           twibbonImage = img;
           drawCanvas();
         };
@@ -203,17 +201,16 @@
       reader.readAsDataURL(file);
     });
 
-    // Unduh hasil
     unduhBtn.addEventListener("click", () => {
       const link = document.createElement("a");
       link.download = "twibbon.png";
       link.href = canvas.toDataURL("image/png");
       link.click();
+
       unduhBtn.style.display = "none";
       bagikanBtn.style.display = "inline-block";
     });
 
-    // Web Share API
     bagikanBtn.addEventListener("click", () => {
       canvas.toBlob(async (blob) => {
         const file = new File([blob], "twibbon.png", { type: "image/png" });
@@ -228,12 +225,11 @@
             alert("Gagal membagikan: " + err.message);
           }
         } else {
-          alert("Web Share API tidak didukung di perangkat ini.");
+          alert("Perangkat ini tidak mendukung Web Share API dengan file.");
         }
       });
     });
 
-    // Gesture: drag dan zoom
     canvas.addEventListener("touchstart", (e) => {
       isTouching = true;
       if (e.touches.length === 1) {
