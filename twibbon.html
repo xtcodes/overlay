@@ -22,11 +22,22 @@
     }
 
     .btn {
+      color: white;
+      border: none;
       padding: 10px 20px;
       margin: 10px 5px;
       font-size: 16px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
       cursor: pointer;
     }
+
+    .unduh {background-color: #04AA6D;} /* Green */
+    .share {background-color: #008CBA;} /* Blue */
+    .reset {background-color: #f44336;} /* Red */
+    .default {background-color: #e7e7e7; color: black;} /* Gray */
+    .upload {background-color: #555555;} /* Black */
 
     input[type="file"] {
       display: none;
@@ -148,7 +159,7 @@
   <main>
   <h2>Twibbon Generator</h2>
 
-  <button id="uploadBtn" class="btn">Unggah Gambar</button>
+  <button id="uploadBtn" class="btn upload">Unggah Gambar</button>
   <input type="file" id="uploadInput" accept="image/*" />
 
   <div id="canvasWrapper">
@@ -161,8 +172,8 @@
     <input type="file" id="twibbonInput" accept="image/png" />
   </div>
 
-  <button id="unduhBtn" class="btn">Unduh Hasil Twibbon</button>
-  <button id="bagikanBtn" class="btn">Bagikan</button>
+  <button id="unduhBtn" class="btn unduh">Unduh Hasil Twibbon</button>
+  <button id="bagikanBtn" class="btn share">Bagikan</button>
 
 <div id="downloadAlt">
     <span>
