@@ -6,10 +6,11 @@
   <title>Twibbon Generator</title>
   <style>
     body {
-      font-family: sans-serif;
+      font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
       text-align: center;
-      padding: 20px;
+      padding: 0;
       margin: 0;
+      background-color: #f0f0f2;
     }
 
     canvas {
@@ -53,6 +54,15 @@
       position: relative;
       display: inline-block;
       max-width: 100%;
+    }
+
+    main {
+        width: 600px;
+        margin: 5em auto;
+        padding: 2em;
+        background-color: #fdfdff;
+        border-radius: 0.5em;
+        box-shadow: 2px 3px 7px 2px rgba(0,0,0,0.02);
     }
 
     /* Spinner dan overlay proses */
@@ -125,9 +135,17 @@
         padding: 6px 10px;
       }
     }
+
+        @media (max-width: 700px) {
+        main {
+            margin: 0 auto;
+            width: auto;
+        }
+          }
   </style>
 </head>
 <body>
+  <main>
   <h2>Twibbon Generator</h2>
 
   <button id="uploadBtn" class="btn">Unggah Gambar</button>
@@ -151,6 +169,7 @@
       <a href="#" id="altDownloadLink" download>klik di sini</a> jika unduhan tidak dimulai otomatis
     </span>
 </div>
+  </main>
   
   <script>
     const canvas = document.getElementById("canvas");
