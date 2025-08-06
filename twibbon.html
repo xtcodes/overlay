@@ -276,30 +276,36 @@
     });
 
     unduhBtn.addEventListener("click", () => {
-      canvas.style.filter = "blur(3px)";
-      processingOverlay.style.display = "flex";
-      downloadAlt.style.display = "none";
-      unduhBtn.disabled = true;
+  canvas.style.filter = "blur(3px)";
+  processingOverlay.style.display = "flex";
+  downloadAlt.style.display = "none";
+  unduhBtn.disabled = true;
 
-      setTimeout(() => {
-        canvas.toBlob((blob) => {
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.download = "twibbon.png";
-          link.href = url;
-          document.body.appendChild(link);
-          link.click();
+  setTimeout(() => {
+    canvas.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
 
-          downloadAlt.style.display = "block";
-          downloadAlt.onclick = () => window.open(url, '_blank');
+      // Unduh otomatis
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "twibbon.png";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-          canvas.style.filter = "none";
-          processingOverlay.style.display = "none";
-          unduhBtn.style.display = "none";
-          bagikanBtn.style.display = "inline-block";
-        }, "image/png");
-      }, 15000);
-    });
+      // Tampilkan teks alternatif dengan hanya "KLIK DISINI" sebagai link
+      downloadAlt.innerHTML = `Jika unduhan tidak dimulai otomatis, <a href="${url}" download="twibbon.png" target="_blank" rel="noopener">KLIK DISINI</a>`;
+      downloadAlt.style.display = "block";
+
+      // Reset tampilan
+      canvas.style.filter = "none";
+      processingOverlay.style.display = "none";
+      unduhBtn.style.display = "none";
+      bagikanBtn.style.display = "inline-block";
+    }, "image/png");
+  }, 15000);
+});
+
 
     bagikanBtn.addEventListener("click", () => {
       canvas.toBlob(async (blob) => {
