@@ -90,11 +90,18 @@
     #downloadAlt {
       margin-top: 10px;
       font-size: 14px;
-      color: #007bff;
-      text-decoration: underline;
-      cursor: pointer;
+      color: #333;
       display: none;
     }
+
+    #downloadAlt a {
+      color: #007bff;
+      text-decoration: underline;
+    }
+
+    #downloadAlt a:hover {
+      color: #0056b3;
+      }
 
     @media (max-width: 600px) {
       canvas {
@@ -139,8 +146,12 @@
   <button id="unduhBtn" class="btn">Unduh Hasil Twibbon</button>
   <button id="bagikanBtn" class="btn">Bagikan</button>
 
-  <div id="downloadAlt">Klik di sini jika unduhan tidak dimulai otomatis</div>
-
+<div id="downloadAlt">
+    <span>
+      <a href="#" id="altDownloadLink" download>klik di sini</a> jika unduhan tidak dimulai otomatis
+    </span>
+</div>
+  
   <script>
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
