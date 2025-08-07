@@ -138,13 +138,13 @@
 
   <button id="unduhBtn" class="btn">Unduh Hasil Twibbon</button>
   <button id="bagikanBtn" class="btn">Bagikan</button>
-<!--
+
 <div id="downloadAlt">
     <span>
       <a href="#" id="altDownloadLink" download>klik di sini</a> jika unduhan tidak dimulai otomatis
     </span>
 </div>
-  -->
+  
   <script>
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
@@ -298,6 +298,7 @@
     }, "image/png");
   }, 15000);
 });
+
 
     bagikanBtn.addEventListener("click", () => {
       canvas.toBlob(async (blob) => {
