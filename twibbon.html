@@ -6,11 +6,10 @@
   <title>Twibbon Generator</title>
   <style>
     body {
-      font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-family: sans-serif;
       text-align: center;
-      padding: 2em;
+      padding: 20px;
       margin: 0;
-      background-color: #f0f0f2;
     }
 
     canvas {
@@ -22,19 +21,11 @@
     }
 
     .btn {
-      color: white;
-      border: none;
       padding: 10px 20px;
       margin: 10px 5px;
       font-size: 16px;
       cursor: pointer;
     }
-
-    .unduh {background-color: #04AA6D;} /* Green */
-    .share {background-color: #008CBA;} /* Blue */
-    .reset {background-color: #f44336;} /* Red */
-    .default {background-color: #e7e7e7; color: black;} /* Gray */
-    .upload {background-color: #555555;} /* Black */
 
     input[type="file"] {
       display: none;
@@ -62,15 +53,6 @@
       position: relative;
       display: inline-block;
       max-width: 100%;
-    }
-
-    main {
-        width: 600px;
-        margin: 5em auto;
-        padding: 2em;
-        background-color: #fdfdff;
-        border-radius: 0.5em;
-        box-shadow: 2px 3px 7px 2px rgba(0,0,0,0.02);
     }
 
     /* Spinner dan overlay proses */
@@ -108,18 +90,11 @@
     #downloadAlt {
       margin-top: 10px;
       font-size: 14px;
-      color: #333;
-      display: none;
-    }
-
-    #downloadAlt a {
       color: #007bff;
       text-decoration: underline;
+      cursor: pointer;
+      display: none;
     }
-
-    #downloadAlt a:hover {
-      color: #0056b3;
-      }
 
     @media (max-width: 600px) {
       canvas {
@@ -143,17 +118,9 @@
         padding: 6px 10px;
       }
     }
-
-        @media (max-width: 700px) {
-        main {
-            margin: 0 auto;
-            width: auto;
-        }
-          }
   </style>
 </head>
 <body>
-  <main>
   <h2>Twibbon Generator</h2>
 
   <button id="uploadBtn" class="btn">Unggah Gambar</button>
@@ -177,7 +144,6 @@
       <a href="#" id="altDownloadLink" download>klik di sini</a> jika unduhan tidak dimulai otomatis
     </span>
 </div>
-  </main>
   
   <script>
     const canvas = document.getElementById("canvas");
@@ -332,7 +298,6 @@
     }, "image/png");
   }, 15000);
 });
-
 
     bagikanBtn.addEventListener("click", () => {
       canvas.toBlob(async (blob) => {
