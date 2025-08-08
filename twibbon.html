@@ -319,47 +319,18 @@
     }
 
     // Download/export composition
-    downloadBtn.addEventListener('click', () => {
-  if (!imgLoaded) return alert('Unggah gambar dulu.');
-  try {
-    const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = canvas.width;
-    exportCanvas.height = canvas.height;
-    const exportCtx = exportCanvas.getContext('2d');
-    exportCtx.drawImage(userImage, originX, originY, userImage.width * scale, userImage.height * scale);
-    if (overlayLoaded) {
-      exportCtx.drawImage(overlayImage, 0, 0, canvas.width, canvas.height);
-    }
-
-    // Use toBlob and append link to DOM to maximize compatibility (mobile browsers)
-    if (exportCanvas.toBlob) {
-      exportCanvas.toBlob((blob) => {
-        if (!blob) return alert('Gagal membuat file gambar.');
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'twibbon.png';
-        document.body.appendChild(link);
-        // Use dispatchEvent to better emulate a user click on some browsers
-        link.dispatchEvent(new MouseEvent('click'));
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 'image/png');
-    } else {
-      // Fallback
-      const link = document.createElement('a');
-      link.download = 'twibbon.png';
-      link.href = exportCanvas.toDataURL('image/png');
-      document.body.appendChild(link);
-      link.dispatchEvent(new MouseEvent('click'));
-      document.body.removeChild(link);
-    }
-  } catch (err) {
-    console.error(err);
-    alert('Terjadi kesalahan saat menyiapkan unduhan. Coba lagi.');
+    downloadBtn.addEventListener('click', function() {
+  if (!userImage) {
+    alert('Silakan unggah gambar terlebih dahulu');
+    return;
   }
+  const link = document.createElement('a');
+  link.download = 'twibbon.png';
+  link.href = canvas.toDataURL('image/png');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 });
-
     // Keep layout responsive (do not auto-rescale image on resize to avoid jumps)
     new ResizeObserver(()=>{ /* intentionally empty */ }).observe(canvas);
 
