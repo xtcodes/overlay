@@ -319,66 +319,92 @@
     }
 
     // Download/export composition
-    downloadBtn.addEventListener('click', async () => {
+    // (ganti seluruh blok downloadBtn.addEventListener('click', ...) yang sekarang dengan kode ini)
+try { overlay.crossOrigin = 'anonymous'; } catch(e){ /* ignore if not allowed */ }
+const _overlaySrc = overlay.getAttribute('src');
+if (_overlaySrc) overlay.src = _overlaySrc; // reload so crossOrigin takes effect if possible
+
+downloadBtn.addEventListener('click', async () => {
   if (!photo.src) return alert('Unggah gambar dulu.');
 
   try {
     const rect = canvas.getBoundingClientRect();
-    const size = Math.round(rect.width);
+    const size = Math.round(rect.width);           // ukuran kanvas dalam CSS px (square)
     const dpr = window.devicePixelRatio || 1;
 
     const off = document.createElement('canvas');
     off.width = size * dpr;
     off.height = size * dpr;
-    const ctxOff = off.getContext('2d');
+    const ctx = off.getContext('2d');
 
-    // putihkan background
-    ctxOff.fillStyle = '#ffffff';
-    ctxOff.fillRect(0, 0, off.width, off.height);
+    // gunakan skala DPR sehingga kita bisa menggambar dengan koordinat CSS px (state.x/state.y)
+    ctx.scale(dpr, dpr);
 
-    // hitung faktor skala dari DOM px ke canvas ekspor px
-    const scaleFactor = dpr;
+    // background putih
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, size, size);
 
-    // gambar foto
-    const img = await loadImagePromise(photo.src);
-    const drawW = img.naturalWidth * state.scale * scaleFactor;
-    const drawH = img.naturalHeight * state.scale * scaleFactor;
-    ctxOff.drawImage(img, state.x * scaleFactor, state.y * scaleFactor, drawW, drawH);
+    // gambar foto langsung dari elemen <img id="photo"> (menghindari re-create dari blob URL)
+    const drawW = state.naturalWidth * state.scale;
+    const drawH = state.naturalHeight * state.scale;
+    ctx.drawImage(photo, state.x, state.y, drawW, drawH);
 
-    // gambar overlay
+    // jika ada overlay: tunggu jika belum complete, lalu gambar dan cek taint
     if (overlay && overlay.src) {
+      if (!overlay.complete) {
+        await new Promise((res, rej) => {
+          overlay.onload = res;
+          overlay.onerror = rej;
+        }).catch(()=>{ /* kalau gagal load, lanjut tanpa overlay */ });
+      }
+
       try {
-        const ov = await loadImagePromise(overlay.src);
-        ctxOff.drawImage(ov, 0, 0, off.width, off.height);
+        ctx.drawImage(overlay, 0, 0, size, size);
+
+        // quick taint check: getImageData akan melempar jika canvas sudah tainted
+        try {
+          ctx.getImageData(0, 0, 1, 1);
+        } catch (err) {
+          // canvas tainted oleh overlay (CORS) — tampilkan pesan jelas ke user
+          return alert(
+            "Gagal mengekspor karena pembatasan cross-origin pada overlay.\n\n" +
+            "Solusi: pastikan file overlay (twibbon.png) di-host di DOMAIN YANG SAMA dengan halaman ini, " +
+            "atau embed overlay langsung sebagai data URI (base64) ke dalam HTML."
+          );
+        }
       } catch (err) {
-        console.warn('Gagal memuat overlay saat ekspor:', err);
+        console.warn('Gagal menggambar overlay (akan lanjut tanpa overlay):', err);
       }
     }
 
-    // ekspor PNG
-    off.toBlob((blob) => {
-      if (!blob) return alert('Gagal membuat file gambar.');
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'twibbon.png';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }, 'image/png');
+    // ekspor ke Blob (pakai Promise agar bisa await)
+    const blob = await new Promise((resolve, reject) => {
+      try {
+        off.toBlob((b) => b ? resolve(b) : reject(new Error('no-blob')), 'image/png');
+      } catch (e) {
+        reject(e);
+      }
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'twibbon.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 
   } catch (err) {
     console.error('Download/export error:', err);
     const msg = (err && (err.name === 'SecurityError' || /taint|Security|cross-origin/i.test(String(err)))) ?
-      "Gagal mengekspor karena pembatasan cross-origin (CORS). Pastikan file overlay di-host di domain yang sama atau gunakan data URI." :
-      "Terjadi kesalahan saat menyiapkan unduhan.";
+      "Gagal mengekspor karena pembatasan cross-origin (CORS). Pastikan overlay di-host di domain yang sama atau embed sebagai data URI." :
+      "Terjadi kesalahan saat menyiapkan unduhan. Cek console untuk detail.";
     alert(msg);
   }
 });
 
-
-
+    
     // Keep layout responsive (do not auto-rescale image on resize to avoid jumps)
     new ResizeObserver(()=>{ /* intentionally empty */ }).observe(canvas);
 
