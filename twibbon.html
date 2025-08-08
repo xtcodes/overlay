@@ -45,7 +45,9 @@
             <button class="upload-btn" id="pickBtn">Pilih Gambar</button>
           </div>
           <input type="file" id="fileInput" accept="image/*" style="display:none" />
-          <img src="twibbon.png" id="overlay" class="overlay" alt="Twibbon Overlay" />
+
+          <!-- overlay disembunyikan sampai user unggah gambar -->
+          <img src="twibbon.png" id="overlay" class="overlay" alt="Twibbon Overlay" style="display:none" />
         </div>
       </div>
       <div class="controls">
@@ -71,54 +73,159 @@
     const dimInfo=document.getElementById('dimInfo');
     const overlay=document.getElementById('overlay');
     const downloadBtn=document.getElementById('downloadBtn');
+
     let state={scale:1,minScale:0.5,maxScale:8,x:0,y:0,startX:0,startY:0,dragging:false,lastTouchDist:null,lastTouchCenter:null,naturalWidth:0,naturalHeight:0};
+
     function setTransform(){photo.style.transform=`translate3d(${state.x}px, ${state.y}px, 0) scale(${state.scale})`;}
-    function showPlaceholder(show=true){placeholder.style.display=show?'flex':'none';imgWrap.style.display=show?'none':'block';imgWrap.setAttribute('aria-hidden',show?'true':'false');}
+    function showPlaceholder(show=true){
+      placeholder.style.display=show?'flex':'none';
+      imgWrap.style.display=show?'none':'block';
+      imgWrap.setAttribute('aria-hidden',show?'true':'false');
+      // hide overlay until there is an image
+      overlay.style.display = show ? 'none' : '';
+    }
     function updateDimInfo(){if(state.naturalWidth){dimInfo.textContent=`${state.naturalWidth}×${state.naturalHeight} • zoom ${Math.round(state.scale*100)}%`;}else dimInfo.textContent='';}
+
     pickBtn.addEventListener('click',()=>fileInput.click());
     fileInput.addEventListener('change',e=>{if(e.target.files&&e.target.files[0])loadFile(e.target.files[0]);e.target.value='';});
+
     ['dragenter','dragover','dragleave','drop'].forEach(evt=>{canvas.addEventListener(evt,e=>{e.preventDefault();e.stopPropagation();});});
     canvas.addEventListener('drop',e=>{const dt=e.dataTransfer;if(dt&&dt.files&&dt.files[0])loadFile(dt.files[0]);});
-    function loadFile(file){if(!file.type.startsWith('image/'))return alert('Pilih gambar saja.');const url=URL.createObjectURL(file);photo.onload=()=>{state.naturalWidth=photo.naturalWidth;state.naturalHeight=photo.naturalHeight;state.scale=1;state.x=0;state.y=0;showPlaceholder(false);requestAnimationFrame(()=>{const rect=canvas.getBoundingClientRect();const cw=rect.width,ch=rect.height;state.x=Math.round((cw-state.naturalWidth)/2);state.y=Math.round((ch-state.naturalHeight)/2);if(state.naturalWidth>cw||state.naturalHeight>ch){const scaleFit=Math.min(cw/state.naturalWidth,ch/state.naturalHeight);state.scale=scaleFit;}state.minScale=Math.min(0.25,state.scale);state.maxScale=Math.max(2,state.scale*6);setTransform();updateDimInfo();});URL.revokeObjectURL(url);};photo.src=url;}
-    resetBtn.addEventListener('click',()=>{photo.src='';showPlaceholder(true);state={scale:1,minScale:0.5,maxScale:8,x:0,y:0,startX:0,startY:0,dragging:false,lastTouchDist:null,lastTouchCenter:null,naturalWidth:0,naturalHeight:0};updateDimInfo();});
+
+    function loadFile(file){
+      if(!file.type.startsWith('image/'))return alert('Pilih gambar saja.');
+      const url=URL.createObjectURL(file);
+      photo.onload=()=>{
+        state.naturalWidth=photo.naturalWidth;state.naturalHeight=photo.naturalHeight;state.scale=1;state.x=0;state.y=0;showPlaceholder(false);
+
+        // tampilkan overlay sekarang (setelah gambar siap)
+        overlay.style.display = '';
+
+        requestAnimationFrame(()=>{
+          const rect=canvas.getBoundingClientRect();
+          const cw=rect.width,ch=rect.height;
+          state.x=Math.round((cw-state.naturalWidth)/2);
+          state.y=Math.round((ch-state.naturalHeight)/2);
+          if(state.naturalWidth>cw||state.naturalHeight>ch){
+            const scaleFit=Math.min(cw/state.naturalWidth,ch/state.naturalHeight);
+            state.scale=scaleFit;
+          }
+          state.minScale=Math.min(0.25,state.scale);
+          state.maxScale=Math.max(2,state.scale*6);
+          setTransform();updateDimInfo();
+        });
+        URL.revokeObjectURL(url);
+      };
+      photo.src=url;
+    }
+
+    resetBtn.addEventListener('click',()=>{
+      photo.src='';
+      state={scale:1,minScale:0.5,maxScale:8,x:0,y:0,startX:0,startY:0,dragging:false,lastTouchDist:null,lastTouchCenter:null,naturalWidth:0,naturalHeight:0};
+      showPlaceholder(true);
+      updateDimInfo();
+      // sembunyikan overlay saat di-reset
+      overlay.style.display = 'none';
+    });
+
     fitBtn.addEventListener('click',()=>{if(!state.naturalWidth)return;const rect=canvas.getBoundingClientRect();const cw=rect.width,ch=rect.height;const scaleFit=Math.min(cw/state.naturalWidth,ch/state.naturalHeight);state.scale=scaleFit;state.x=Math.round((cw-state.naturalWidth*state.scale)/2);state.y=Math.round((ch-state.naturalHeight*state.scale)/2);setTransform();updateDimInfo();});
-    canvas.addEventListener('touchstart',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
-    imgWrap.addEventListener('pointerdown',e=>{imgWrap.setPointerCapture(e.pointerId);state.dragging=true;imgWrap.classList.add('grabbing');state.startX=e.clientX;state.startY=e.clientY;state.startPanX=state.x;state.startPanY=state.y;});
-    window.addEventListener('pointermove',e=>{if(!state.dragging||e.pointerType==='touch')return;const dx=e.clientX-state.startX;const dy=e.clientY-state.startY;state.x=state.startPanX+dx;state.y=state.startPanY+dy;setTransform();updateDimInfo();});
-    window.addEventListener('pointerup',e=>{if(state.dragging){state.dragging=false;imgWrap.classList.remove('grabbing');try{imgWrap.releasePointerCapture(e.pointerId);}catch(e){}}});
-    function getTouchCenter(t1,t2){return{x:(t1.clientX+t2.clientX)/2,y:(t1.clientY+t2.clientY)/2};}
-    function getTouchDist(t1,t2){const dx=t1.clientX-t2.clientX;const dy=t1.clientY-t2.clientY;return Math.hypot(dx,dy);}
-    let singleTouchStart=null;
-    canvas.addEventListener('touchstart',onTouchStart,{passive:false});
-    canvas.addEventListener('touchmove',onTouchMove,{passive:false});
-    canvas.addEventListener('touchend',onTouchEnd,{passive:false});
-    canvas.addEventListener('touchcancel',onTouchEnd,{passive:false});
-    function onTouchStart(e){if(e.touches.length===1){const t=e.touches[0];singleTouchStart={x:t.clientX,y:t.clientY,panX:state.x,panY:state.y};}else if(e.touches.length===2){e.preventDefault();const t1=e.touches[0],t2=e.touches[1];state.lastTouchDist=getTouchDist(t1,t2);state.lastTouchCenter=getTouchCenter(t1,t2);state._startScale=state.scale;state._startX=state.x;state._startY=state.y;}}
-    function onTouchMove(e){if(e.touches.length===1&&singleTouchStart){const t=e.touches[0];const dx=t.clientX-singleTouchStart.x;const dy=t.clientY-singleTouchStart.y;state.x=singleTouchStart.panX+dx;state.y=singleTouchStart.panY+dy;setTransform();updateDimInfo();}else if(e.touches.length===2){e.preventDefault();const t1=e.touches[0],t2=e.touches[1];const dist=getTouchDist(t1,t2);const center=getTouchCenter(t1,t2);if(state.lastTouchDist==null){state.lastTouchDist=dist;state.lastTouchCenter=center;return;}const scaleFactor=dist/state.lastTouchDist;let newScale=state._startScale*scaleFactor;newScale=Math.max(state.minScale,Math.min(state.maxScale,newScale));const rect=canvas.getBoundingClientRect();const cx=center.x-rect.left;const cy=center.y-rect.top;const imgXBefore=(cx-state._startX)/state._startScale;const imgYBefore=(cy-state._startY)/state._startScale;const newX=cx-imgXBefore*newScale;const newY=cy-imgYBefore*newScale;state.scale=newScale;state.x=newX;state.y=newY;setTransform();updateDimInfo();}}
-    function onTouchEnd(e){if(e.touches.length===0){singleTouchStart=null;state.lastTouchDist=null;state.lastTouchCenter=null;}else if(e.touches.length===1){const t=e.touches[0];singleTouchStart={x:t.clientX,y:t.clientY,panX:state.x,panY:state.y};}}
-    let lastTap=0;canvas.addEventListener('touchend',e=>{const now=Date.now();if(now-lastTap<300){e.preventDefault();}lastTap=now;});
-    photo.addEventListener('dragstart',e=>e.preventDefault());
+
+    // disable native gesture zoom on canvas area for multi-touch
+    canvas.addEventListener('touchstart',e=>{ if(e.touches.length>1) e.preventDefault(); }, {passive:false});
+
+    // pointerdown: IGNORE touch pointers here to avoid conflict with touch-based pinch handlers
+    imgWrap.addEventListener('pointerdown', (e)=>{
+      if (e.pointerType === 'touch') return; // let touch handlers manage gestures
+      imgWrap.setPointerCapture(e.pointerId);
+      state.dragging = true;
+      imgWrap.classList.add('grabbing');
+      state.startX = e.clientX; state.startY = e.clientY;
+      state.startPanX = state.x; state.startPanY = state.y;
+    });
+
+    window.addEventListener('pointermove', (e)=>{
+      if(!state.dragging || e.pointerType === 'touch') return;
+      const dx = e.clientX - state.startX; const dy = e.clientY - state.startY;
+      state.x = state.startPanX + dx; state.y = state.startPanY + dy;
+      setTransform(); updateDimInfo();
+    });
+
+    window.addEventListener('pointerup', (e)=>{
+      if(state.dragging){ state.dragging=false; imgWrap.classList.remove('grabbing'); try{ imgWrap.releasePointerCapture(e.pointerId);}catch(err){} }
+    });
+
+    function getTouchCenter(t1,t2){return {x:(t1.clientX+t2.clientX)/2, y:(t1.clientY+t2.clientY)/2 };}
+    function getTouchDist(t1,t2){const dx=t1.clientX-t2.clientX; const dy=t1.clientY-t2.clientY; return Math.hypot(dx,dy);}
+
+    let singleTouchStart = null;
+    canvas.addEventListener('touchstart', onTouchStart, {passive:false});
+    canvas.addEventListener('touchmove', onTouchMove, {passive:false});
+    canvas.addEventListener('touchend', onTouchEnd, {passive:false});
+    canvas.addEventListener('touchcancel', onTouchEnd, {passive:false});
+
+    function onTouchStart(e){
+      if(e.touches.length === 1){
+        const t = e.touches[0];
+        singleTouchStart = {x: t.clientX, y: t.clientY, panX: state.x, panY: state.y};
+      } else if(e.touches.length === 2){
+        e.preventDefault();
+        const t1 = e.touches[0], t2 = e.touches[1];
+        state.lastTouchDist = getTouchDist(t1,t2);
+        state.lastTouchCenter = getTouchCenter(t1,t2);
+        state._startScale = state.scale;
+        state._startX = state.x;
+        state._startY = state.y;
+      }
+    }
+
+    function onTouchMove(e){
+      if(e.touches.length === 1 && singleTouchStart){
+        const t = e.touches[0];
+        const dx = t.clientX - singleTouchStart.x; const dy = t.clientY - singleTouchStart.y;
+        state.x = singleTouchStart.panX + dx; state.y = singleTouchStart.panY + dy;
+        setTransform(); updateDimInfo();
+      } else if(e.touches.length === 2){
+        e.preventDefault();
+        const t1 = e.touches[0], t2 = e.touches[1];
+        const dist = getTouchDist(t1,t2);
+        const center = getTouchCenter(t1,t2);
+        if(state.lastTouchDist == null) { state.lastTouchDist = dist; state.lastTouchCenter = center; return; }
+
+        const scaleFactor = dist / state.lastTouchDist;
+        let newScale = state._startScale * scaleFactor;
+        newScale = Math.max(state.minScale, Math.min(state.maxScale, newScale));
+
+        const rect = canvas.getBoundingClientRect();
+        const cx = center.x - rect.left; const cy = center.y - rect.top;
+        const imgXBefore = (cx - state._startX) / state._startScale;
+        const imgYBefore = (cy - state._startY) / state._startScale;
+        const newX = cx - imgXBefore * newScale;
+        const newY = cy - imgYBefore * newScale;
+
+        state.scale = newScale; state.x = newX; state.y = newY;
+        setTransform(); updateDimInfo();
+      }
+    }
+
+    function onTouchEnd(e){
+      if(e.touches.length === 0){ singleTouchStart = null; state.lastTouchDist = null; state.lastTouchCenter = null; }
+      else if(e.touches.length === 1){ const t = e.touches[0]; singleTouchStart = {x: t.clientX, y: t.clientY, panX: state.x, panY: state.y}; }
+    }
+
+    let lastTap = 0; canvas.addEventListener('touchend', (e)=>{ const now = Date.now(); if(now - lastTap < 300){ e.preventDefault(); } lastTap = now; });
+    photo.addEventListener('dragstart', e=>e.preventDefault());
     showPlaceholder(true);
+
     downloadBtn.addEventListener('click',()=>{
       if(!photo.src) return alert('Unggah gambar dulu.');
       const off=document.createElement('canvas');
-      const size=canvas.getBoundingClientRect().width;
+      const size=Math.round(canvas.getBoundingClientRect().width);
       off.width=off.height=size;
       const ctx=off.getContext('2d');
       ctx.fillStyle='#fff';ctx.fillRect(0,0,size,size);
-      const img=new Image();img.src=photo.src;img.onload=()=>{
-        ctx.save();
-        ctx.translate(state.x,state.y);
-        ctx.scale(state.scale,state.scale);
-        ctx.drawImage(img,0,0);
-        ctx.restore();
-        const ov=new Image();ov.src=overlay.src;ov.onload=()=>{
-          ctx.drawImage(ov,0,0,size,size);
-          const link=document.createElement('a');
-          link.download='twibbon.png';
-          link.href=off.toDataURL('image/png');
-          link.click();
-        };
+      const img=new Image(); img.crossOrigin='anonymous'; img.src=photo.src; img.onload=()=>{
+        ctx.save(); ctx.translate(state.x, state.y); ctx.scale(state.scale, state.scale); ctx.drawImage(img,0,0); ctx.restore();
+        const ov=new Image(); ov.crossOrigin='anonymous'; ov.src=overlay.src; ov.onload=()=>{ ctx.drawImage(ov,0,0,size,size); const link=document.createElement('a'); link.download='twibbon.png'; link.href=off.toDataURL('image/png'); link.click(); };
       };
     });
   </script>
