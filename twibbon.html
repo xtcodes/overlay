@@ -319,51 +319,46 @@
     }
 
     // Download/export composition
-    downloadBtn.addEventListener('click', async ()=>{
-      if(!photo.src) return alert('Unggah gambar dulu.');
+    downloadBtn.addEventListener('click', () => {
+  if (!imgLoaded) return alert('Unggah gambar dulu.');
+  try {
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = canvas.width;
+    exportCanvas.height = canvas.height;
+    const exportCtx = exportCanvas.getContext('2d');
+    exportCtx.drawImage(userImage, originX, originY, userImage.width * scale, userImage.height * scale);
+    if (overlayLoaded) {
+      exportCtx.drawImage(overlayImage, 0, 0, canvas.width, canvas.height);
+    }
 
-      try{
-        const rect = canvas.getBoundingClientRect();
-        const size = Math.round(rect.width);
-        const dpr = window.devicePixelRatio || 1;
-
-        const off = document.createElement('canvas');
-        off.width = size * dpr; off.height = size * dpr;
-        const ctx = off.getContext('2d');
-        // scale so we can draw in CSS px coordinates while producing high-res image
-        ctx.scale(dpr, dpr);
-
-        // white background
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,size,size);
-
-        // load photo and draw at state.x/state.y with scaled size
-        const img = await loadImagePromise(photo.src);
-        const drawW = img.naturalWidth * state.scale;
-        const drawH = img.naturalHeight * state.scale;
-        ctx.drawImage(img, state.x, state.y, drawW, drawH);
-
-        // try to draw overlay if available
-        if(overlay && overlay.src){
-          try{
-            const ov = await loadImagePromise(overlay.src);
-            ctx.drawImage(ov, 0, 0, size, size);
-          }catch(err){
-            // overlay failed to load — continue without it
-            console.warn('Overlay gagal dimuat saat ekspor:', err);
-          }
-        }
-
-        // trigger download
+    // Use toBlob and append link to DOM to maximize compatibility (mobile browsers)
+    if (exportCanvas.toBlob) {
+      exportCanvas.toBlob((blob) => {
+        if (!blob) return alert('Gagal membuat file gambar.');
+        const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
+        link.href = url;
         link.download = 'twibbon.png';
-        link.href = off.toDataURL('image/png');
-        link.click();
-
-      }catch(err){
-        console.error(err);
-        alert('Terjadi kesalahan saat menyiapkan unduhan. Coba lagi.');
-      }
-    });
+        document.body.appendChild(link);
+        // Use dispatchEvent to better emulate a user click on some browsers
+        link.dispatchEvent(new MouseEvent('click'));
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 'image/png');
+    } else {
+      // Fallback
+      const link = document.createElement('a');
+      link.download = 'twibbon.png';
+      link.href = exportCanvas.toDataURL('image/png');
+      document.body.appendChild(link);
+      link.dispatchEvent(new MouseEvent('click'));
+      document.body.removeChild(link);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Terjadi kesalahan saat menyiapkan unduhan. Coba lagi.');
+  }
+});
 
     // Keep layout responsive (do not auto-rescale image on resize to avoid jumps)
     new ResizeObserver(()=>{ /* intentionally empty */ }).observe(canvas);
