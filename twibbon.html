@@ -1,366 +1,370 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Twibbon Generator</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Twibbon Generator — Simple & Smooth gestures</title>
   <style>
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      padding: 20px;
-      margin: 0;
-    }
+    :root{--bg:#f3f4f6;--accent:#0ea5a4}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg)}
 
-    canvas {
-      max-width: 100%;
-      border: 1px solid #ccc;
-      touch-action: none;
-      position: relative;
-      transition: filter 0.3s ease;
-    }
+    /* Outer card */
+    .card{width:min(640px,96vw);background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(15,23,42,0.08);padding:18px}
+    h1{font-size:18px;margin:0 0 12px}
+    p{margin:0 0 12px;color:#4b5563;font-size:14px}
 
-    .btn {
-      padding: 10px 20px;
-      margin: 10px 5px;
-      font-size: 16px;
-      cursor: pointer;
-    }
+    /* square canvas container responsive */
+    .canvas-wrap{position:relative;width:100%;padding-top:100%;background:#e6e7ea;border-radius:8px;overflow:hidden}
+    .canvas{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
 
-    input[type="file"] {
-      display: none;
-    }
+    /* placeholder */
+    .placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#6b7280}
+    .placeholder svg{width:88px;height:88px;opacity:0.9}
+    .upload-btn{display:inline-block;padding:8px 14px;border-radius:8px;background:var(--accent);color:white;border:none;cursor:pointer;font-weight:600}
 
-    #uploadTwibbonBtn {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(0, 0, 0, 0.6);
-      color: white;
-      border: none;
-      font-size: 12px;
-      padding: 5px 10px;
-      cursor: pointer;
-      z-index: 10;
-      display: none;
-    }
+    /* image wrapper - will be transformed */
+    .img-wrapper{position:absolute;top:0;left:0;width:100%;height:100%;touch-action:none;cursor:grab;display:flex;align-items:center;justify-content:center}
+    .img-wrapper.grabbing{cursor:grabbing}
 
-    #unduhBtn, #bagikanBtn {
-      display: none;
-    }
+    .img-wrapper img{max-width:none;max-height:none;will-change:transform;user-select:none;pointer-events:none}
 
-    #canvasWrapper {
-      position: relative;
-      display: inline-block;
-      max-width: 100%;
-    }
+    /* simple controls */
+    .controls{display:flex;gap:8px;margin-top:12px}
+    .btn{padding:8px 12px;border-radius:8px;border:1px solid #d1d5db;background:white;cursor:pointer}
+    .info{font-size:13px;color:#374151}
 
-    /* Spinner dan overlay proses */
-    #processingOverlay {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0, 0, 0, 0.6);
-      color: white;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-size: 14px;
-      z-index: 20;
-    }
+    /* small helper note */
+    .note{margin-top:10px;color:#6b7280;font-size:13px}
 
-    .spinner {
-      width: 16px;
-      height: 16px;
-      border: 3px solid rgba(255, 255, 255, 0.3);
-      border-top: 3px solid white;
-      border-radius: 50%;
-      margin-right: 10px;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    #downloadAlt {
-      margin-top: 10px;
-      font-size: 14px;
-      text-decoration: none;
-      cursor: none;
-      display: none;
-    }
-
-    @media (max-width: 600px) {
-      canvas {
-        width: 100% !important;
-        height: auto !important;
-      }
-
-      .btn {
-        width: 100%;
-        box-sizing: border-box;
-        margin: 5px 0;
-      }
-
-      #uploadTwibbonBtn {
-        font-size: 10px;
-        padding: 4px 8px;
-      }
-
-      #processingOverlay {
-        font-size: 12px;
-        padding: 6px 10px;
-      }
-    }
+    @media (max-width:420px){.card{padding:12px}}
   </style>
 </head>
 <body>
-  <h2>Twibbon Generator</h2>
+  <div class="wrap">
+    <div class="card">
+      <h1>Twibbon Generator</h1>
+      <p>Drop / pilih gambar — kanvas persegi 1:1 responsif. Dukungan geser 1 jari & pinch-zoom 2 jari. Gambar ditampilkan pada ukuran aslinya (tanpa distorsi).</p>
 
-  <button id="uploadBtn" class="btn">Unggah Gambar</button>
-  <input type="file" id="uploadInput" accept="image/*" />
+      <div class="canvas-wrap" id="canvasWrap">
+        <div class="canvas" id="canvas">
 
-  <div id="canvasWrapper">
-    <canvas id="canvas" width="800" height="800"></canvas>
-    <div id="processingOverlay">
-      <div class="spinner"></div>
-      <span>Sedang proses...</span>
+          <!-- Image wrapper (hidden until image loaded) -->
+          <div class="img-wrapper" id="imgWrap" aria-hidden="true">
+            <img id="photo" alt="uploaded photo" draggable="false" />
+          </div>
+
+          <!-- Placeholder shown while there's no image -->
+          <div class="placeholder" id="placeholder">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="3" width="18" height="18" rx="3" stroke="#9CA3AF" stroke-width="1.2" fill="#F3F4F6" />
+              <path d="M7 15l2.5-3 2 2.5L15 9l3 6H7z" stroke="#9CA3AF" stroke-width="0.8" fill="#E5E7EB"/>
+            </svg>
+            <div>Tarik & lepas gambar di sini</div>
+            <button class="upload-btn" id="pickBtn">Pilih Gambar</button>
+          </div>
+
+          <!-- invisible file input -->
+          <input type="file" id="fileInput" accept="image/*" style="display:none" />
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="resetBtn">Reset</button>
+        <button class="btn" id="fitBtn">Tampilkan Fit</button>
+        <div style="flex:1"></div>
+        <div class="info" id="dimInfo"></div>
+      </div>
+
+      <div class="note">Tip: gunakan satu jari untuk geser, dua jari untuk zoom/pinch. Browser default gesture (mis. zoom halaman) akan diblok saat berinteraksi di kanvas.</div>
     </div>
-    <button id="uploadTwibbonBtn">Ubah Twibbon</button>
-    <input type="file" id="twibbonInput" accept="image/png" />
   </div>
 
-  <button id="unduhBtn" class="btn">Unduh Hasil Twibbon</button>
-  <button id="bagikanBtn" class="btn">Bagikan</button>
-
-<div id="downloadAlt">
-  <!--
-    <span>
-      <a href="#" id="altDownloadLink" download>klik di sini</a> jika unduhan tidak dimulai otomatis
-    </span>
-  -->
-</div>
-  
   <script>
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
+    // Elements
+    const canvasWrap = document.getElementById('canvasWrap');
+    const canvas = document.getElementById('canvas');
+    const placeholder = document.getElementById('placeholder');
+    const pickBtn = document.getElementById('pickBtn');
+    const fileInput = document.getElementById('fileInput');
+    const imgWrap = document.getElementById('imgWrap');
+    const photo = document.getElementById('photo');
+    const resetBtn = document.getElementById('resetBtn');
+    const fitBtn = document.getElementById('fitBtn');
+    const dimInfo = document.getElementById('dimInfo');
 
-    const uploadInput = document.getElementById("uploadInput");
-    const uploadBtn = document.getElementById("uploadBtn");
-    const unduhBtn = document.getElementById("unduhBtn");
-    const bagikanBtn = document.getElementById("bagikanBtn");
-    const twibbonInput = document.getElementById("twibbonInput");
-    const uploadTwibbonBtn = document.getElementById("uploadTwibbonBtn");
-    const processingOverlay = document.getElementById("processingOverlay");
-    const downloadAlt = document.getElementById("downloadAlt");
+    // State for transform
+    let state = {
+      scale: 1,
+      minScale: 0.5,
+      maxScale: 8,
+      x: 0,
+      y: 0,
+      startX: 0,
+      startY: 0,
+      dragging: false,
+      lastTouchDist: null,
+      lastTouchCenter: null,
+      naturalWidth: 0,
+      naturalHeight: 0
+    };
 
-    const placeholder = new Image();
-    placeholder.src = "placeholder.jpg"; // ganti sesuai gambar kamu
-
-    let userImage = null;
-    let twibbonImage = new Image();
-    twibbonImage.src = "twibbon.png"; // default twibbon
-
-    let scale = 1, lastScale = 1;
-    let posX = 0, posY = 0;
-    let lastPosX = 0, lastPosY = 0;
-    let isDragging = false;
-    let isTouching = false;
-    let lastTouches = [];
-
-    function drawCanvas() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      if (userImage) {
-        ctx.save();
-        ctx.translate(posX, posY);
-        ctx.scale(scale, scale);
-
-        const ratio = Math.min(
-          canvas.width / userImage.width,
-          canvas.height / userImage.height
-        );
-        const imgWidth = userImage.width * ratio;
-        const imgHeight = userImage.height * ratio;
-        ctx.drawImage(userImage, 0, 0, imgWidth, imgHeight);
-        ctx.restore();
-
-        if (twibbonImage.complete) {
-          ctx.globalAlpha = isTouching ? 0.5 : 1;
-          ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
-          ctx.globalAlpha = 1;
-        }
-      } else {
-        ctx.drawImage(placeholder, 0, 0, canvas.width, canvas.height);
-      }
+    // Helpers
+    function setTransform() {
+      // Use translate3d for smoother transforms on mobile
+      photo.style.transform = `translate3d(${state.x}px, ${state.y}px, 0) scale(${state.scale})`;
     }
 
-    placeholder.onload = drawCanvas;
-    twibbonImage.onload = drawCanvas;
+    function showPlaceholder(show=true){
+      placeholder.style.display = show ? 'flex' : 'none';
+      imgWrap.style.display = show ? 'none' : 'block';
+      imgWrap.setAttribute('aria-hidden', show ? 'true' : 'false');
+    }
 
-    uploadBtn.addEventListener("click", () => uploadInput.click());
+    function updateDimInfo(){
+      if(state.naturalWidth){
+        dimInfo.textContent = `${state.naturalWidth}×${state.naturalHeight} • zoom ${Math.round(state.scale*100)}%`;
+      } else dimInfo.textContent = '';
+    }
 
-    uploadInput.addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function (event) {
-        userImage = new Image();
-        userImage.onload = function () {
-          scale = 1;
-          posX = 0;
-          posY = 0;
-          drawCanvas();
-
-          uploadBtn.style.display = "none";
-          unduhBtn.style.display = "inline-block";
-          uploadTwibbonBtn.style.display = "inline-block";
-        };
-        userImage.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
+    // File handling
+    pickBtn.addEventListener('click', ()=> fileInput.click());
+    fileInput.addEventListener('change', (e)=>{
+      if(e.target.files && e.target.files[0]) loadFile(e.target.files[0]);
+      e.target.value = '';
     });
 
-    uploadTwibbonBtn.addEventListener("click", () => twibbonInput.click());
-
-    twibbonInput.addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      if (!file.type.includes("png")) {
-        alert("Twibbon harus berupa file PNG.");
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = function (event) {
-        const img = new Image();
-        img.onload = function () {
-          const tempCanvas = document.createElement("canvas");
-          const tempCtx = tempCanvas.getContext("2d");
-          tempCanvas.width = img.width;
-          tempCanvas.height = img.height;
-          tempCtx.drawImage(img, 0, 0);
-          const imageData = tempCtx.getImageData(0, 0, img.width, img.height).data;
-
-          let hasTransparency = false;
-          for (let i = 3; i < imageData.length; i += 4) {
-            if (imageData[i] < 255) {
-              hasTransparency = true;
-              break;
-            }
-          }
-
-          if (!hasTransparency) {
-            alert("Twibbon harus memiliki bagian transparan.");
-            return;
-          }
-
-          twibbonImage = img;
-          drawCanvas();
-        };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-
-    unduhBtn.addEventListener("click", () => {
-  canvas.style.filter = "blur(3px)";
-  processingOverlay.style.display = "flex";
-  downloadAlt.style.display = "none";
-  unduhBtn.disabled = true;
-
-  setTimeout(() => {
-    canvas.toBlob((blob) => {
-      const url = URL.createObjectURL(blob);
-
-      // Unduh otomatis
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "twibbon.png";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Tampilkan teks alternatif dengan hanya "KLIK DISINI" sebagai link
-      downloadAlt.innerHTML = `Jika unduhan tidak dimulai otomatis, <a href="${url}" download="twibbon.png" target="_blank" rel="noopener">KLIK DISINI</a>`;
-      downloadAlt.style.display = "block";
-
-      // Reset tampilan
-      canvas.style.filter = "none";
-      processingOverlay.style.display = "none";
-      unduhBtn.style.display = "none";
-      bagikanBtn.style.display = "inline-block";
-    }, "image/png");
-  }, 15000);
-});
-
-
-    bagikanBtn.addEventListener("click", () => {
-      canvas.toBlob(async (blob) => {
-        const file = new File([blob], "twibbon.png", { type: "image/png" });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({
-              title: "Twibbon Saya",
-              text: "Lihat hasil twibbon saya!",
-              files: [file],
-            });
-          } catch (err) {
-            alert("Gagal membagikan: " + err.message);
-          }
-        } else {
-          alert("Perangkat ini tidak mendukung Web Share API dengan file.");
-        }
+    // Drag & drop
+    ;['dragenter','dragover','dragleave','drop'].forEach(evt=>{
+      canvas.addEventListener(evt, e=>{
+        e.preventDefault(); e.stopPropagation();
       });
     });
 
-    canvas.addEventListener("touchstart", (e) => {
-      isTouching = true;
-      if (e.touches.length === 1) {
-        isDragging = true;
-        lastPosX = e.touches[0].clientX - posX;
-        lastPosY = e.touches[0].clientY - posY;
-      } else if (e.touches.length === 2) {
-        lastTouches = e.touches;
-        lastScale = scale;
+    canvas.addEventListener('drop', e=>{
+      const dt = e.dataTransfer;
+      if(dt && dt.files && dt.files[0]) loadFile(dt.files[0]);
+    });
+
+    function loadFile(file){
+      if(!file.type.startsWith('image/')) return alert('Pilih gambar saja.');
+      const url = URL.createObjectURL(file);
+      photo.onload = ()=>{
+        // Set natural sizes
+        state.naturalWidth = photo.naturalWidth;
+        state.naturalHeight = photo.naturalHeight;
+
+        // Reset transform
+        state.scale = 1;
+        state.x = 0; state.y = 0;
+
+        // Show image wrapper
+        showPlaceholder(false);
+
+        // Position image initially so it appears at its actual pixel size centered
+        // We'll compute offset to center the image using its intrinsic size.
+        requestAnimationFrame(()=>{
+          // photo is rendered with natural pixel size inside a 1:1 box. If it's larger than the box,
+          // user can pan to see other parts. We don't stretch — keep natural size.
+
+          // Get container size in px
+          const rect = canvas.getBoundingClientRect();
+          const cw = rect.width, ch = rect.height;
+
+          // Initial x,y center the image
+          state.x = Math.round((cw - state.naturalWidth) / 2);
+          state.y = Math.round((ch - state.naturalHeight) / 2);
+
+          // If image is much larger than container, set a scale so it fits initially but still keep aspect ratio
+          if(state.naturalWidth > cw || state.naturalHeight > ch){
+            const scaleFit = Math.min(cw / state.naturalWidth, ch / state.naturalHeight);
+            // We want to show at original size if possible; but if original > container, fit to container
+            state.scale = scaleFit;
+          }
+
+          // Set sensible bounds depending on fit
+          state.minScale = Math.min(0.25, state.scale);
+          state.maxScale = Math.max(2, state.scale * 6);
+
+          setTransform();
+          updateDimInfo();
+        });
+
+        // release objectURL later
+        URL.revokeObjectURL(url);
+      };
+
+      photo.src = url;
+    }
+
+    // Reset
+    resetBtn.addEventListener('click', ()=>{
+      photo.src = '';
+      state = {scale:1,minScale:0.5,maxScale:8,x:0,y:0,startX:0,startY:0,dragging:false,lastTouchDist:null,lastTouchCenter:null,naturalWidth:0,naturalHeight:0};
+      showPlaceholder(true);
+      updateDimInfo();
+    });
+
+    // Fit button - fit image into canvas while preserving aspect
+    fitBtn.addEventListener('click', ()=>{
+      if(!state.naturalWidth) return;
+      const rect = canvas.getBoundingClientRect();
+      const cw = rect.width, ch = rect.height;
+      const scaleFit = Math.min(cw / state.naturalWidth, ch / state.naturalHeight);
+      state.scale = scaleFit;
+      state.x = Math.round((cw - state.naturalWidth*state.scale) / 2);
+      state.y = Math.round((ch - state.naturalHeight*state.scale) / 2);
+      setTransform(); updateDimInfo();
+    });
+
+    // Pointer & touch handling for pan/zoom
+    // We'll handle touch separately for multi-touch, and pointerdown for mouse/pen single drag.
+
+    // Disable native gesture zoom on the canvas area
+    canvas.addEventListener('touchstart', e=>{ if(e.touches.length>1) e.preventDefault(); }, {passive:false});
+
+    // Mouse dragging
+    imgWrap.addEventListener('pointerdown', (e)=>{
+      imgWrap.setPointerCapture(e.pointerId);
+      state.dragging = true;
+      imgWrap.classList.add('grabbing');
+      state.startX = e.clientX;
+      state.startY = e.clientY;
+      state.startPanX = state.x;
+      state.startPanY = state.y;
+    });
+
+    window.addEventListener('pointermove', (e)=>{
+      if(!state.dragging || e.pointerType === 'touch') return;
+      const dx = e.clientX - state.startX;
+      const dy = e.clientY - state.startY;
+      state.x = state.startPanX + dx;
+      state.y = state.startPanY + dy;
+      setTransform();
+      updateDimInfo();
+    });
+
+    window.addEventListener('pointerup', (e)=>{
+      if(state.dragging){
+        state.dragging = false;
+        imgWrap.classList.remove('grabbing');
+        try{ imgWrap.releasePointerCapture(e.pointerId);}catch(e){}
       }
     });
 
-    canvas.addEventListener("touchmove", (e) => {
-      e.preventDefault();
-      if (e.touches.length === 1 && isDragging) {
-        posX = e.touches[0].clientX - lastPosX;
-        posY = e.touches[0].clientY - lastPosY;
-      } else if (e.touches.length === 2 && lastTouches.length === 2) {
-        const [t1, t2] = e.touches;
-        const dx = t2.clientX - t1.clientX;
-        const dy = t2.clientY - t1.clientY;
-        const dist = Math.hypot(dx, dy);
+    // Touch handling: single touch -> pan, two touches -> pinch zoom with focal point preservation
+    canvas.addEventListener('touchstart', onTouchStart, {passive:false});
+    canvas.addEventListener('touchmove', onTouchMove, {passive:false});
+    canvas.addEventListener('touchend', onTouchEnd, {passive:false});
+    canvas.addEventListener('touchcancel', onTouchEnd, {passive:false});
 
-        const [lt1, lt2] = lastTouches;
-        const ldx = lt2.clientX - lt1.clientX;
-        const ldy = lt2.clientY - lt1.clientY;
-        const lastDist = Math.hypot(ldx, ldy);
+    function getTouchCenter(t1, t2){
+      return {x: (t1.clientX + t2.clientX)/2, y: (t1.clientY + t2.clientY)/2 };
+    }
+    function getTouchDist(t1, t2){
+      const dx = t1.clientX - t2.clientX; const dy = t1.clientY - t2.clientY; return Math.hypot(dx,dy);
+    }
 
-        const zoom = dist / lastDist;
-        scale = Math.min(5, Math.max(0.5, lastScale * zoom));
+    let singleTouchStart = null; // {x,y,panX,panY}
+
+    function onTouchStart(e){
+      if(e.touches.length === 1){
+        // start panning
+        const t = e.touches[0];
+        singleTouchStart = {x: t.clientX, y: t.clientY, panX: state.x, panY: state.y};
+      } else if(e.touches.length === 2){
+        e.preventDefault();
+        const t1 = e.touches[0], t2 = e.touches[1];
+        state.lastTouchDist = getTouchDist(t1,t2);
+        state.lastTouchCenter = getTouchCenter(t1,t2);
+        // store current transform to compute from
+        state._startScale = state.scale;
+        state._startX = state.x;
+        state._startY = state.y;
       }
-      drawCanvas();
-    }, { passive: false });
+    }
 
-    canvas.addEventListener("touchend", () => {
-      isDragging = false;
-      isTouching = false;
-      lastTouches = [];
-      lastScale = scale;
-      drawCanvas();
+    function onTouchMove(e){
+      if(e.touches.length === 1 && singleTouchStart){
+        const t = e.touches[0];
+        const dx = t.clientX - singleTouchStart.x;
+        const dy = t.clientY - singleTouchStart.y;
+        state.x = singleTouchStart.panX + dx;
+        state.y = singleTouchStart.panY + dy;
+        setTransform(); updateDimInfo();
+      } else if(e.touches.length === 2){
+        e.preventDefault();
+        const t1 = e.touches[0], t2 = e.touches[1];
+        const dist = getTouchDist(t1,t2);
+        const center = getTouchCenter(t1,t2);
+        if(state.lastTouchDist == null) { state.lastTouchDist = dist; state.lastTouchCenter = center; return; }
+
+        // compute new scale relative to start
+        const scaleFactor = dist / state.lastTouchDist;
+        let newScale = state._startScale * scaleFactor;
+        // clamp
+        newScale = Math.max(state.minScale, Math.min(state.maxScale, newScale));
+
+        // Adjust x,y so the zoom focal point (center) stays under fingers
+        // Convert center to image-local coordinates before and after scale
+        const rect = canvas.getBoundingClientRect();
+        const cx = center.x - rect.left; // focal x in container
+        const cy = center.y - rect.top;  // focal y in container
+
+        // Image coordinates of focal point before transform:
+        const imgXBefore = (cx - state._startX) / state._startScale;
+        const imgYBefore = (cy - state._startY) / state._startScale;
+
+        // After new scale, compute new top-left so focal point maps to same container point
+        const newX = cx - imgXBefore * newScale;
+        const newY = cy - imgYBefore * newScale;
+
+        state.scale = newScale;
+        state.x = newX;
+        state.y = newY;
+
+        setTransform(); updateDimInfo();
+      }
+    }
+
+    function onTouchEnd(e){
+      if(e.touches.length === 0){
+        singleTouchStart = null; state.lastTouchDist = null; state.lastTouchCenter = null;
+        // keep current state
+      } else if(e.touches.length === 1){
+        // If one finger remains, prepare for single-pan continuation
+        const t = e.touches[0];
+        singleTouchStart = {x: t.clientX, y: t.clientY, panX: state.x, panY: state.y};
+      }
+    }
+
+    // Prevent double-tap zoom on mobile within the canvas
+    let lastTap = 0;
+    canvas.addEventListener('touchend', (e)=>{
+      const now = Date.now();
+      if(now - lastTap < 300){
+        e.preventDefault();
+      }
+      lastTap = now;
     });
+
+    // Prevent image dragging
+    photo.addEventListener('dragstart', e=>e.preventDefault());
+
+    // Initially show placeholder
+    showPlaceholder(true);
+
+    // Accessibility: keyboard file picking when focused on canvas
+    canvas.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') fileInput.click(); });
+
+    // Keep layout responsive if container resizes (recompute center when needed)
+    let resizeObserver = new ResizeObserver(()=>{
+      // If image present, keep its position relative to container center (no auto-rescale)
+      if(state.naturalWidth && !photo.src) return;
+      // If image present, do nothing — user controls transforms. (Avoid sudden jumps.)
+    });
+    resizeObserver.observe(canvas);
+
   </script>
 </body>
 </html>
