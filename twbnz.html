@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Twibbon Generator — Overlay & Unduh (perbaikan)</title>
+  <style>
+    :root{--bg:#f3f4f6;--accent:#0ea5a4}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg)}
+    .card{width:min(640px,96vw);background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(15,23,42,0.08);padding:18px}
+    h1{font-size:18px;margin:0 0 12px}
+    p{margin:0 0 12px;color:#4b5563;font-size:14px}
+
+    /* square canvas container responsive */
+    .canvas-wrap{position:relative;width:100%;padding-top:100%;background:#e6e7ea;border-radius:8px;overflow:hidden}
+    .canvas{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+
+    /* placeholder (centered) */
+    .placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#6b7280}
+    .placeholder svg{width:88px;height:88px;opacity:0.9}
+    .upload-btn{padding:8px 14px;border-radius:8px;background:var(--accent);color:white;border:none;cursor:pointer;font-weight:600}
+
+    /* image wrapper positioned top-left so transforms are relative to container origin */
+    .img-wrapper{position:absolute;top:0;left:0;width:100%;height:100%;touch-action:none;cursor:grab}
+    .img-wrapper.grabbing{cursor:grabbing}
+    .img-wrapper img{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform;user-select:none;pointer-events:none}
+
+    /* overlay fixed full-cover on top-left */
+    .overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:none}
+
+    .controls{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+    .btn{padding:8px 12px;border-radius:8px;border:1px solid #d1d5db;background:white;cursor:pointer}
+    .info{font-size:13px;color:#374151}
+    .note{margin-top:10px;color:#6b7280;font-size:13px}
+
+    @media (max-width:420px){.card{padding:12px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Twibbon Generator</h1>
+      <p>Drop / pilih gambar — kanvas persegi 1:1 responsif. Geser 1 jari & pinch-zoom 2 jari. Gambar asli tanpa distorsi.</p>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <div class="canvas" id="canvas">
+
+          <!-- Image wrapper (hidden until image loaded) -->
+          <div class="img-wrapper" id="imgWrap" aria-hidden="true">
+            <img id="photo" alt="uploaded photo" draggable="false" />
+          </div>
+
+          <!-- Placeholder shown while there's no image -->
+          <div class="placeholder" id="placeholder">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="3" width="18" height="18" rx="3" stroke="#9CA3AF" stroke-width="1.2" fill="#F3F4F6" />
+              <path d="M7 15l2.5-3 2 2.5L15 9l3 6H7z" stroke="#9CA3AF" stroke-width="0.8" fill="#E5E7EB"/>
+            </svg>
+            <div>Tarik & lepas gambar di sini</div>
+            <button class="upload-btn" id="pickBtn">Pilih Gambar</button>
+          </div>
+
+          <!-- invisible file input -->
+          <input type="file" id="fileInput" accept="image/*" style="display:none" />
+
+          <!-- overlay will be shown after upload -->
+          <img src="twibbon.png" id="overlay" class="overlay" alt="Twibbon Overlay" />
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="resetBtn">Reset</button>
+        <button class="btn" id="fitBtn">Tampilkan Fit</button>
+        <button class="btn" id="downloadBtn">Unduh Hasil</button>
+        <div style="flex:1"></div>
+        <div class="info" id="dimInfo"></div>
+      </div>
+
+      <div class="note">Tip: gunakan satu jari untuk geser, dua jari untuk zoom/pinch. Overlay PNG akan otomatis menempel di hasil unduhan.</div>
+    </div>
+  </div>
+
+  <script>
+    // Elements
+    const canvas = document.getElementById('canvas');
+    const placeholder = document.getElementById('placeholder');
+    const pickBtn = document.getElementById('pickBtn');
+    const fileInput = document.getElementById('fileInput');
+    const imgWrap = document.getElementById('imgWrap');
+    const photo = document.getElementById('photo');
+    const resetBtn = document.getElementById('resetBtn');
+    const fitBtn = document.getElementById('fitBtn');
+    const overlay = document.getElementById('overlay');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const dimInfo = document.getElementById('dimInfo');
+
+    // State
+    let state = {
+      scale: 1,
+      minScale: 0.25,
+      maxScale: 8,
+      x: 0, y: 0,
+      dragging: false,
+      naturalWidth: 0,
+      naturalHeight: 0
+    };
+
+    // Gesture helpers
+    let pinch = null; // {startDist, startScale, startX, startY}
+    let singleTouchStart = null; // {x,y,panX,panY}
+
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+    function setTransform(){
+      // transform origin is top-left (0 0)
+      photo.style.transform = `translate3d(${state.x}px, ${state.y}px, 0) scale(${state.scale})`;
+    }
+
+    function showPlaceholder(show = true){
+      placeholder.style.display = show ? 'flex' : 'none';
+      imgWrap.style.display = show ? 'none' : 'block';
+      imgWrap.setAttribute('aria-hidden', show ? 'true' : 'false');
+      // overlay visible only when image present
+      overlay.style.display = show ? 'none' : 'block';
+    }
+
+    function updateDimInfo(){
+      if(state.naturalWidth){
+        dimInfo.textContent = `${state.naturalWidth}×${state.naturalHeight} • zoom ${Math.round(state.scale*100)}%`;
+      } else dimInfo.textContent = '';
+    }
+
+    // File handling
+    pickBtn.addEventListener('click', ()=> fileInput.click());
+    fileInput.addEventListener('change', (e)=>{
+      if(e.target.files && e.target.files[0]) loadFile(e.target.files[0]);
+      e.target.value = '';
+    });
+
+    ;['dragenter','dragover','dragleave','drop'].forEach(evt=>{
+      canvas.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); });
+    });
+
+    canvas.addEventListener('drop', e=>{
+      const dt = e.dataTransfer;
+      if(dt && dt.files && dt.files[0]) loadFile(dt.files[0]);
+    });
+
+    function loadFile(file){
+      if(!file.type.startsWith('image/')) return alert('Pilih gambar saja.');
+      const url = URL.createObjectURL(file);
+
+      photo.onload = ()=>{
+        // store natural size
+        state.naturalWidth = photo.naturalWidth;
+        state.naturalHeight = photo.naturalHeight;
+
+        // reset transforms
+        state.scale = 1; state.x = 0; state.y = 0;
+        singleTouchStart = null; pinch = null;
+
+        showPlaceholder(false);
+
+        // compute initial fitting if image larger than box
+        requestAnimationFrame(()=>{
+          const rect = canvas.getBoundingClientRect();
+          const cw = rect.width, ch = rect.height;
+
+          // If image is larger than canvas, fit it otherwise show at natural size centered
+          if(state.naturalWidth > cw || state.naturalHeight > ch){
+            const scaleFit = Math.min(cw / state.naturalWidth, ch / state.naturalHeight);
+            state.scale = scaleFit;
+          }
+
+          // center image: now transforms are relative to top-left so center by placing top-left accordingly
+          state.x = Math.round((cw - state.naturalWidth * state.scale) / 2);
+          state.y = Math.round((ch - state.naturalHeight * state.scale) / 2);
+
+          // sensible bounds
+          state.minScale = Math.min(0.1, state.scale * 0.2);
+          state.maxScale = Math.max(2, state.scale * 6);
+
+          setTransform(); updateDimInfo();
+        });
+
+        // release blob url
+        URL.revokeObjectURL(url);
+      };
+
+      photo.src = url;
+    }
+
+    // Reset
+    resetBtn.addEventListener('click', ()=>{
+      photo.src = '';
+      state = {scale:1,minScale:0.25,maxScale:8,x:0,y:0,dragging:false,naturalWidth:0,naturalHeight:0};
+      singleTouchStart = null; pinch = null;
+      showPlaceholder(true);
+      updateDimInfo();
+    });
+
+    // Fit button - center & fit image into canvas while preserving aspect
+    fitBtn.addEventListener('click', ()=>{
+      if(!state.naturalWidth) return;
+      const rect = canvas.getBoundingClientRect();
+      const cw = rect.width, ch = rect.height;
+      const scaleFit = Math.min(cw / state.naturalWidth, ch / state.naturalHeight);
+      state.scale = scaleFit;
+      state.x = Math.round((cw - state.naturalWidth*state.scale) / 2);
+      state.y = Math.round((ch - state.naturalHeight*state.scale) / 2);
+      // update bounds
+      state.minScale = Math.min(0.1, state.scale * 0.2);
+      state.maxScale = Math.max(2, state.scale * 6);
+      setTransform(); updateDimInfo();
+    });
+
+    // Prevent native gesture zoom on the canvas area
+    canvas.addEventListener('touchstart', e=>{ if(e.touches.length>1) e.preventDefault(); }, {passive:false});
+
+    // Pointer (mouse) dragging — ignore touch pointers here to avoid conflicts
+    imgWrap.addEventListener('pointerdown', (e)=>{
+      if(e.pointerType === 'touch') return; // touch handled by touch handlers
+      imgWrap.setPointerCapture(e.pointerId);
+      state.dragging = true;
+      imgWrap.classList.add('grabbing');
+      state.startX = e.clientX; state.startY = e.clientY;
+      state.startPanX = state.x; state.startPanY = state.y;
+    });
+
+    window.addEventListener('pointermove', (e)=>{
+      if(!state.dragging || e.pointerType === 'touch') return;
+      const dx = e.clientX - state.startX; const dy = e.clientY - state.startY;
+      state.x = state.startPanX + dx; state.y = state.startPanY + dy;
+      setTransform(); updateDimInfo();
+    });
+
+    window.addEventListener('pointerup', (e)=>{
+      if(state.dragging){ state.dragging = false; imgWrap.classList.remove('grabbing'); try{ imgWrap.releasePointerCapture(e.pointerId);}catch(err){} }
+    });
+
+    // Touch handlers: single touch = pan, two touches = pinch zoom with focal preservation
+    function getTouchCenter(t1,t2){ return {x: (t1.clientX + t2.clientX)/2, y: (t1.clientY + t2.clientY)/2 }; }
+    function getTouchDist(t1,t2){ const dx = t1.clientX - t2.clientX; const dy = t1.clientY - t2.clientY; return Math.hypot(dx, dy); }
+
+    canvas.addEventListener('touchstart', onTouchStart, {passive:false});
+    canvas.addEventListener('touchmove', onTouchMove, {passive:false});
+    canvas.addEventListener('touchend', onTouchEnd, {passive:false});
+    canvas.addEventListener('touchcancel', onTouchEnd, {passive:false});
+
+    function onTouchStart(e){
+      if(e.touches.length === 1){
+        const t = e.touches[0];
+        singleTouchStart = { x: t.clientX, y: t.clientY, panX: state.x, panY: state.y };
+      } else if(e.touches.length === 2){
+        e.preventDefault();
+        const t1 = e.touches[0], t2 = e.touches[1];
+        pinch = {
+          startDist: getTouchDist(t1,t2),
+          startScale: state.scale,
+          startX: state.x,
+          startY: state.y
+        };
+      }
+    }
+
+    function onTouchMove(e){
+      if(e.touches.length === 1 && singleTouchStart){
+        const t = e.touches[0];
+        const dx = t.clientX - singleTouchStart.x; const dy = t.clientY - singleTouchStart.y;
+        state.x = singleTouchStart.panX + dx; state.y = singleTouchStart.panY + dy;
+        setTransform(); updateDimInfo();
+      } else if(e.touches.length === 2 && pinch){
+        e.preventDefault();
+        const t1 = e.touches[0], t2 = e.touches[1];
+        const dist = getTouchDist(t1,t2);
+        const center = getTouchCenter(t1,t2);
+
+        // compute new scale from gesture start
+        let newScale = pinch.startScale * (dist / pinch.startDist);
+        newScale = clamp(newScale, state.minScale, state.maxScale);
+
+        // Keep the focal point under fingers: compute image-space coords of focal from gesture start
+        const rect = canvas.getBoundingClientRect();
+        const cx = center.x - rect.left; const cy = center.y - rect.top; // focal in container CSS px
+
+        const imgXBefore = (cx - pinch.startX) / pinch.startScale;
+        const imgYBefore = (cy - pinch.startY) / pinch.startScale;
+
+        const newX = cx - imgXBefore * newScale;
+        const newY = cy - imgYBefore * newScale;
+
+        state.scale = newScale; state.x = newX; state.y = newY;
+        setTransform(); updateDimInfo();
+      }
+    }
+
+    function onTouchEnd(e){
+      if(e.touches.length === 0){ singleTouchStart = null; pinch = null; }
+      else if(e.touches.length === 1){ const t = e.touches[0]; singleTouchStart = { x: t.clientX, y: t.clientY, panX: state.x, panY: state.y }; pinch = null; }
+    }
+
+    // Prevent double-tap zoom on mobile within the canvas
+    let lastTap = 0;
+    canvas.addEventListener('touchend', (e)=>{ const now = Date.now(); if(now - lastTap < 300){ e.preventDefault(); } lastTap = now; });
+
+    photo.addEventListener('dragstart', e=>e.preventDefault());
+
+    // Initially show placeholder
+    showPlaceholder(true);
+
+    function loadImagePromise(src){
+      return new Promise((resolve, reject)=>{
+        const img = new Image();
+        img.onload = ()=>resolve(img);
+        img.onerror = (err)=>reject(err);
+        img.src = src;
+      });
+    }
+
+    // Download/export composition
+    downloadBtn.addEventListener('click', async () => {
+      if (!photo.src) return alert('Unggah gambar dulu.');
+      try {
+        const rect = canvas.getBoundingClientRect();
+        const size = Math.round(rect.width);
+        const dpr = window.devicePixelRatio || 1;
+
+        const off = document.createElement('canvas');
+        off.width = size * dpr; off.height = size * dpr;
+        const ctxOff = off.getContext('2d');
+        ctxOff.scale(dpr, dpr);
+
+        // white background
+        ctxOff.fillStyle = '#ffffff';
+        ctxOff.fillRect(0, 0, size, size);
+
+        // draw photo using current state transforms
+        const img = await loadImagePromise(photo.src);
+        const drawW = img.naturalWidth * state.scale;
+        const drawH = img.naturalHeight * state.scale;
+        ctxOff.drawImage(img, state.x, state.y, drawW, drawH);
+
+        // draw overlay if available
+        if (overlay && overlay.src) {
+          try {
+            const ov = await loadImagePromise(overlay.src);
+            ctxOff.drawImage(ov, 0, 0, size, size);
+          } catch (err) {
+            console.warn('Overlay gagal dimuat saat ekspor:', err);
+          }
+        }
+
+        // export using toBlob if supported (better mobile compatibility)
+        if (off.toBlob) {
+          off.toBlob((blob) => {
+            if (!blob) return alert('Gagal membuat file gambar.');
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'twibbon.png';
+            document.body.appendChild(link);
+            // Workaround: dispatch click event after appended to DOM
+            link.dispatchEvent(new MouseEvent('click'));
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          }, 'image/png');
+        } else {
+          // fallback
+          const link = document.createElement('a');
+          link.download = 'twibbon.png';
+          link.href = off.toDataURL('image/png');
+          document.body.appendChild(link);
+          link.dispatchEvent(new MouseEvent('click'));
+          document.body.removeChild(link);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Terjadi kesalahan saat menyiapkan unduhan. Coba lagi.');
+      }
+    });
+
+    // Keep layout responsive (do not auto-rescale image on resize to avoid jumps)
+    new ResizeObserver(()=>{ /* intentionally empty */ }).observe(canvas);
+
+  </script>
+</body>
+</html>
