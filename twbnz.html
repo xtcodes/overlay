@@ -319,66 +319,80 @@
     }
 
     // Download/export composition
-    downloadBtn.addEventListener('click', async () => {
-      if (!photo.src) return alert('Unggah gambar dulu.');
+    // --- Replace the entire current downloadBtn.addEventListener('click', ...) block with this ---
+try { overlay.crossOrigin = 'anonymous'; } catch(e){ /* ignore if not allowed */ }
+const _overlaySrc = overlay.getAttribute('src');
+if (_overlaySrc) overlay.src = _overlaySrc; // reload so crossOrigin takes effect if possible
+
+downloadBtn.addEventListener('click', async () => {
+  if (!photo.src) return alert('Unggah gambar dulu.');
+
+  try {
+    const rect = canvas.getBoundingClientRect();
+    const size = Math.round(rect.width);
+    const dpr = window.devicePixelRatio || 1;
+
+    const off = document.createElement('canvas');
+    off.width = size * dpr; off.height = size * dpr;
+    const ctxOff = off.getContext('2d');
+    ctxOff.scale(dpr, dpr);
+
+    // white background
+    ctxOff.fillStyle = '#ffffff';
+    ctxOff.fillRect(0, 0, size, size);
+
+    // draw photo using current state transforms
+    const img = await loadImagePromise(photo.src);
+    const drawW = img.naturalWidth * state.scale;
+    const drawH = img.naturalHeight * state.scale;
+    ctxOff.drawImage(img, state.x, state.y, drawW, drawH);
+
+    // draw overlay if available (attempt; ignore if it fails)
+    if (overlay && overlay.src) {
       try {
-        const rect = canvas.getBoundingClientRect();
-        const size = Math.round(rect.width);
-        const dpr = window.devicePixelRatio || 1;
-
-        const off = document.createElement('canvas');
-        off.width = size * dpr; off.height = size * dpr;
-        const ctxOff = off.getContext('2d');
-        ctxOff.scale(dpr, dpr);
-
-        // white background
-        ctxOff.fillStyle = '#ffffff';
-        ctxOff.fillRect(0, 0, size, size);
-
-        // draw photo using current state transforms
-        const img = await loadImagePromise(photo.src);
-        const drawW = img.naturalWidth * state.scale;
-        const drawH = img.naturalHeight * state.scale;
-        ctxOff.drawImage(img, state.x, state.y, drawW, drawH);
-
-        // draw overlay if available
-        if (overlay && overlay.src) {
-          try {
-            const ov = await loadImagePromise(overlay.src);
-            ctxOff.drawImage(ov, 0, 0, size, size);
-          } catch (err) {
-            console.warn('Overlay gagal dimuat saat ekspor:', err);
-          }
-        }
-
-        // export using toBlob if supported (better mobile compatibility)
-        if (off.toBlob) {
-          off.toBlob((blob) => {
-            if (!blob) return alert('Gagal membuat file gambar.');
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'twibbon.png';
-            document.body.appendChild(link);
-            // Workaround: dispatch click event after appended to DOM
-            link.dispatchEvent(new MouseEvent('click'));
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-          }, 'image/png');
-        } else {
-          // fallback
-          const link = document.createElement('a');
-          link.download = 'twibbon.png';
-          link.href = off.toDataURL('image/png');
-          document.body.appendChild(link);
-          link.dispatchEvent(new MouseEvent('click'));
-          document.body.removeChild(link);
-        }
+        const ov = await loadImagePromise(overlay.src);
+        ctxOff.drawImage(ov, 0, 0, size, size);
       } catch (err) {
-        console.error(err);
-        alert('Terjadi kesalahan saat menyiapkan unduhan. Coba lagi.');
+        console.warn('Gagal memuat overlay saat ekspor:', err);
+        // continue without overlay
       }
-    });
+    }
+
+    // export using toBlob (preferred) with fallback to toDataURL
+    if (off.toBlob) {
+      off.toBlob((blob) => {
+        if (!blob) return alert('Gagal membuat file gambar.');
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'twibbon.png';
+        document.body.appendChild(link);
+        link.dispatchEvent(new MouseEvent('click'));
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 'image/png');
+    } else {
+      // fallback
+      const link = document.createElement('a');
+      link.download = 'twibbon.png';
+      link.href = off.toDataURL('image/png');
+      document.body.appendChild(link);
+      link.dispatchEvent(new MouseEvent('click'));
+      document.body.removeChild(link);
+    }
+
+  } catch (err) {
+    console.error('Download/export error:', err);
+
+    // Detect CORS / taint SecurityError and give clear instructions
+    const msg = (err && (err.name === 'SecurityError' || /taint|Security|cross-origin/i.test(String(err)))) ?
+      "Gagal mengekspor karena pembatasan cross-origin (CORS). Solusi: pastikan file overlay (twibbon.png) di-host di domain yang SAMA dengan halaman ini, atau embed overlay sebagai data URI (base64) langsung ke HTML. Jika mau, unggah file `twibbon.png` di sini dan saya akan embed ke index.html untukmu." :
+      "Terjadi kesalahan saat menyiapkan unduhan. Cek console untuk detail.";
+
+    alert(msg);
+  }
+});
+
 
     // Keep layout responsive (do not auto-rescale image on resize to avoid jumps)
     new ResizeObserver(()=>{ /* intentionally empty */ }).observe(canvas);
