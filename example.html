@@ -248,44 +248,40 @@ function getDistance(touch1, touch2) {
 
 // Unduh
 downloadBtn.addEventListener('click', () => {
-    const exportCanvas = document.createElement('canvas');
-    const exportCtx = exportCanvas.getContext('2d');
+    if (!userImage) return;
 
-    // Ukuran HD
-    exportCanvas.width = 3000;
-    exportCanvas.height = 3000;
+    // Buat canvas offscreen untuk HD
+    const hdCanvas = document.createElement('canvas');
+    const size = 3000;
+    hdCanvas.width = size;
+    hdCanvas.height = size;
+    const hdCtx = hdCanvas.getContext('2d');
 
-    // Rasio perbesaran dari canvas utama ke HD
-    const scale = exportCanvas.width / canvas.width;
+    // Hitung skala relatif terhadap canvas tampilan
+    const scaleFactor = size / canvas.width;
 
-    // Gambar latar belakang (abu-abu jika tidak ada gambar)
-    exportCtx.fillStyle = '#ccc';
-    exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+    // Gambar ulang foto user di resolusi tinggi
+    hdCtx.save();
+    hdCtx.translate(size / 2 + posX * scaleFactor, size / 2 + posY * scaleFactor);
+    hdCtx.scale(scale * scaleFactor, scale * scaleFactor);
+    hdCtx.drawImage(userImage, -userImage.width / 2, -userImage.height / 2);
+    hdCtx.restore();
 
-    if (userImage) {
-        exportCtx.save();
-        exportCtx.translate(
-            posX * scale + exportCanvas.width / 2,
-            posY * scale + exportCanvas.height / 2
-        );
-        exportCtx.scale(scaleFactor * scale, scaleFactor * scale);
-        exportCtx.drawImage(
-            userImage,
-            -userImage.width / 2,
-            -userImage.height / 2
-        );
-        exportCtx.restore();
-    }
+    // Tambahkan twibbon
+    hdCtx.globalAlpha = twibbonOpacity;
+    hdCtx.drawImage(twibbonImage, 0, 0, size, size);
+    hdCtx.globalAlpha = 1;
 
-    if (twibbonImage) {
-        exportCtx.drawImage(twibbonImage, 0, 0, exportCanvas.width, exportCanvas.height);
-    }
-
+    // Unduh hasil HD
     const link = document.createElement('a');
     link.download = 'twibbon-hd.png';
-    link.href = exportCanvas.toDataURL('image/png');
+    link.href = hdCanvas.toDataURL('image/png', 1.0);
     link.click();
+
+    downloadBtn.style.display = 'none';
+    afterDownload.style.display = 'flex';
 });
+
 
 
 // Bagikan
