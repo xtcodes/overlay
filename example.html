@@ -66,13 +66,23 @@
     <input type="file" id="fileInput" accept="image/*">
     <canvas id="canvas"></canvas>
 </div>
-
+<!--
 <div class="btn-group">
     <button id="btnDownload" disabled>Unduh</button>
     <button id="btnShare" style="display:none;">Bagikan</button>
     <button id="btnReset" style="display:none;">Reset</button>
 </div>
+-->
 
+<div class="btn-group" id="downloadGroup">
+    <button id="btnDownload" disabled>Unduh</button>
+</div>
+    
+<div class="btn-group" id="shareResetGroup" style="display:none;">
+    <button id="btnShare">Bagikan</button>
+    <button id="btnReset">Reset</button>
+</div>
+    
 <script>
 const dropArea = document.getElementById('dropArea');
 const fileInput = document.getElementById('fileInput');
