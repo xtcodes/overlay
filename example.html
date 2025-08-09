@@ -1,259 +1,226 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PFP Twibbon — Fix Reset</title>
-  <style>
-    :root{ --maxW:420px }
-    body{ font-family: system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial; background:#f3f4f6; margin:20px; display:flex; justify-content:center }
-    .container{ width:100%; max-width:var(--maxW); display:flex; flex-direction:column; gap:12px }
-
-    .drop-area{
-      width:100%; aspect-ratio:1/1; border-radius:12px; overflow:hidden; position:relative;
-      border:2px dashed #c7c7c7; background:#fff; display:flex; align-items:center; justify-content:center
-    }
-    .drop-area.hover{ border-color:#6b7280; background:#fbfbfd }
-
-    /* canvas covers whole drop area */
-    canvas{ position:absolute; top:0; left:0; width:100%; height:100%; touch-action:none }
-
-    input[type=file]{ display:none }
-
-    /* buttons */
-    .controls{ width:100%; display:flex; gap:10px }
-    .btn-group{ width:100%; display:flex; gap:10px }
-    button{ flex:1; padding:10px 12px; border-radius:8px; border:none; font-size:15px; cursor:pointer }
-    button:disabled{ background:#e5e7eb; color:#9ca3af; cursor:not-allowed }
-
-    #btnDownload{ background:#2563eb; color:#fff }
-    #btnShare{ background:#16a34a; color:#fff }
-    #btnReset{ background:#ef4444; color:#fff }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Twibbon PFP</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background: #f0f0f0;
+    margin: 0;
+    padding: 20px;
+  }
+  #drop-area {
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 350px;
+    height: 350px;
+    margin: auto;
+    background: white;
+    position: relative;
+    overflow: hidden;
+  }
+  #drop-area.hover { border-color: #333; }
+  #hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #888;
+  }
+  canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .controls {
+    margin-top: 15px;
+  }
+  button {
+    padding: 10px;
+    font-size: 16px;
+    margin: 5px 0;
+  }
+  .btn-row {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+  }
+  .btn-row button {
+    flex: 1;
+  }
+</style>
 </head>
 <body>
-  <div class="container">
-    <div id="dropArea" class="drop-area" aria-label="Area unggah gambar">
-      <input id="fileInput" type="file" accept="image/*" />
-      <canvas id="canvas"></canvas>
-      <!-- optional visual hint (not necessary for function) -->
-      <div id="hint" style="position:absolute;pointer-events:none;color:#9ca3af;font-size:14px;">Tarik & Lepas gambar atau ketuk untuk pilih</div>
-    </div>
 
-    <!-- two groups: download (single full-width button) and share+reset (2 buttons, equal width) -->
-    <div class="controls">
-      <div id="downloadGroup" class="btn-group" style="display:flex">
-        <button id="btnDownload" disabled>Unduh</button>
-      </div>
-      <div id="shareResetGroup" class="btn-group" style="display:none">
-        <button id="btnShare">Bagikan</button>
-        <button id="btnReset">Reset</button>
-      </div>
-    </div>
+<h2>Twibbon PFP</h2>
+<div id="drop-area">
+  <div id="hint">Tarik & Lepas gambar atau ketuk untuk pilih</div>
+  <canvas id="canvas"></canvas>
+</div>
+
+<div class="controls">
+  <input type="file" id="fileElem" accept="image/*" style="display:none">
+  <button id="downloadBtn" disabled style="width:100%">Unduh</button>
+  <div id="shareReset" class="btn-row" style="display:none">
+    <button id="shareBtn">Bagikan</button>
+    <button id="resetBtn">Reset</button>
   </div>
+</div>
 
 <script>
-// -------------------------
-// Simple PFP Twibbon (fixed reset behaviour)
-// - placeholder shown before upload
-// - unduh button disabled until upload
-// - after unduh: show share + reset (side-by-side)
-// - reset returns UI to initial state (this was the bug you reported)
-// -------------------------
-
-const dropArea = document.getElementById('dropArea');
-const fileInput = document.getElementById('fileInput');
+const dropArea = document.getElementById('drop-area');
+const fileInput = document.getElementById('fileElem');
+const hint = document.getElementById('hint');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const hint = document.getElementById('hint');
+const btnDownload = document.getElementById('downloadBtn');
+const btnShare = document.getElementById('shareBtn');
+const btnReset = document.getElementById('resetBtn');
+const shareReset = document.getElementById('shareReset');
 
-const downloadGroup = document.getElementById('downloadGroup');
-const shareResetGroup = document.getElementById('shareResetGroup');
-const btnDownload = document.getElementById('btnDownload');
-const btnShare = document.getElementById('btnShare');
-const btnReset = document.getElementById('btnReset');
+let img = new Image();
+let twibbon = new Image();
+let imgX = 0, imgY = 0, scale = 1, startX = 0, startY = 0;
+let isDragging = false, lastDist = 0;
+let twibbonAlpha = 1;
 
-// images (provide your own files or data-URIs)
-const twibbonImage = new Image();
-const placeholderImage = new Image();
-// set these to your real files (or data URIs)
-twibbonImage.src = 'twibbon.png';
-placeholderImage.src = 'placeholder.png';
+canvas.width = 1000;
+canvas.height = 1000;
 
-let userImage = null;
-let scale = 1, offsetX = 0, offsetY = 0;
-let isDragging = false, isInteracting = false;
-let lastTouchDistance = null, lastTouchX = 0, lastTouchY = 0;
+twibbon.src = 'twibbon.png'; // path twibbon
+twibbon.onload = drawPlaceholder;
 
-// --- Init / resize ---
-function resizeCanvas(){
-  // keep CSS size but set drawing buffer to match layout size
-  canvas.width = dropArea.clientWidth;
-  canvas.height = dropArea.clientHeight;
-  // redraw depending on state
-  if (userImage) draw(); else drawPlaceholder();
+function drawPlaceholder() {
+  ctx.fillStyle = "#ddd";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
 }
-window.addEventListener('resize', resizeCanvas);
 
-// ensure placeholder is drawn once loaded
-placeholderImage.onload = () => { if (!userImage) drawPlaceholder(); };
-
-window.addEventListener('load', () => {
-  resizeCanvas();
+dropArea.addEventListener('click', () => {
+  if (!fileInput.disabled) fileInput.click();
 });
-
-// --- Drawing ---
-function drawPlaceholder(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  if (placeholderImage.complete) {
-    ctx.drawImage(placeholderImage, 0, 0, canvas.width, canvas.height);
-  } else {
-    // fallback simple background + icon-like circle
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle = '#e5e7eb';
-    const r = Math.min(canvas.width, canvas.height)/6;
-    ctx.beginPath(); ctx.arc(canvas.width/2, canvas.height/2 - r/2, r, 0, Math.PI*2); ctx.fill();
-  }
-}
-
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  if (!userImage) { drawPlaceholder(); return; }
-
-  // calculate displayed size
-  const imgW = userImage.width * scale;
-  const imgH = userImage.height * scale;
-  const x = canvas.width/2 - imgW/2 + offsetX;
-  const y = canvas.height/2 - imgH/2 + offsetY;
-  ctx.drawImage(userImage, x, y, imgW, imgH);
-
-  // draw twibbon on top; make it semi-transparent while interacting
-  ctx.globalAlpha = isInteracting ? 0.5 : 1;
-  if (twibbonImage.complete) ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
-  ctx.globalAlpha = 1;
-}
-
-// --- Drag & drop / file input ---
-dropArea.addEventListener('click', () => { if (!fileInput.disabled) fileInput.click(); });
-dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('hover'); });
-dropArea.addEventListener('dragleave', () => dropArea.classList.remove('hover'));
-dropArea.addEventListener('drop', e => { e.preventDefault(); dropArea.classList.remove('hover'); if (!fileInput.disabled) handleFile(e.dataTransfer.files[0]); });
 fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
 
-function handleFile(file){
-  if (!file || !file.type.startsWith('image/')) return;
+['dragenter','dragover'].forEach(ev => {
+  dropArea.addEventListener(ev, e => {
+    e.preventDefault();
+    dropArea.classList.add('hover');
+  });
+});
+['dragleave','drop'].forEach(ev => {
+  dropArea.addEventListener(ev, e => {
+    e.preventDefault();
+    dropArea.classList.remove('hover');
+  });
+});
+dropArea.addEventListener('drop', e => {
+  handleFile(e.dataTransfer.files[0]);
+});
+
+function handleFile(file) {
+  if (!file) return;
   const reader = new FileReader();
-  reader.onload = () => {
-    const img = new Image();
+  reader.onload = e => {
+    img = new Image();
     img.onload = () => {
-      userImage = img;
-      scale = Math.min(canvas.width / userImage.width, canvas.height / userImage.height);
-      offsetX = 0; offsetY = 0;
-      fileInput.disabled = true;            // disable further uploads until reset
-      btnDownload.disabled = false;        // enable unduh
+      imgX = canvas.width/2 - img.width/2;
+      imgY = canvas.height/2 - img.height/2;
+      scale = 1;
+      fileInput.disabled = true;
+      btnDownload.disabled = false;
+      hint.style.display = 'none'; // ⬅ sembunyikan placeholder text
       draw();
-    };
-    img.src = reader.result;
-  };
+    }
+    img.src = e.target.result;
+  }
   reader.readAsDataURL(file);
 }
 
-// --- Touch gestures (1 finger drag, 2 finger pinch) ---
+function draw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = "#ddd";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  if (img.src) {
+    ctx.drawImage(img, imgX, imgY, img.width*scale, img.height*scale);
+    ctx.globalAlpha = twibbonAlpha;
+    ctx.drawImage(twibbon, 0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
+  }
+}
+
 canvas.addEventListener('touchstart', e => {
-  if (!userImage) return;
-  if (e.touches.length === 1){
+  if (e.touches.length === 1) {
     isDragging = true;
-    lastTouchX = e.touches[0].clientX;
-    lastTouchY = e.touches[0].clientY;
-  } else if (e.touches.length === 2){
-    lastTouchDistance = getDistance(e.touches[0], e.touches[1]);
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    twibbonAlpha = 0.5;
+  } else if (e.touches.length === 2) {
+    lastDist = getDistance(e.touches);
+    twibbonAlpha = 0.5;
   }
-  isInteracting = true; draw();
-}, { passive:false });
-
+});
 canvas.addEventListener('touchmove', e => {
-  if (!userImage) return;
   e.preventDefault();
-  if (e.touches.length === 1 && isDragging){
-    const dx = e.touches[0].clientX - lastTouchX;
-    const dy = e.touches[0].clientY - lastTouchY;
-    offsetX += dx; offsetY += dy;
-    lastTouchX = e.touches[0].clientX; lastTouchY = e.touches[0].clientY;
-  } else if (e.touches.length === 2){
-    const newD = getDistance(e.touches[0], e.touches[1]);
-    if (lastTouchDistance) {
-      scale *= newD / lastTouchDistance;
-      // clamp scale a bit
-      scale = Math.max(0.2, Math.min(10, scale));
+  if (e.touches.length === 1 && isDragging) {
+    let dx = e.touches[0].clientX - startX;
+    let dy = e.touches[0].clientY - startY;
+    imgX += dx;
+    imgY += dy;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    draw();
+  } else if (e.touches.length === 2) {
+    let dist = getDistance(e.touches);
+    if (lastDist) {
+      let delta = dist - lastDist;
+      scale += delta/200;
+      scale = Math.max(scale, 0.1);
     }
-    lastTouchDistance = newD;
+    lastDist = dist;
+    draw();
   }
+});
+canvas.addEventListener('touchend', () => {
+  isDragging = false;
+  lastDist = 0;
+  twibbonAlpha = 1;
   draw();
-}, { passive:false });
-
-canvas.addEventListener('touchend', e => {
-  if (!userImage) return;
-  if (e.touches.length === 0){ isDragging = false; isInteracting = false; lastTouchDistance = null; draw(); }
 });
 
-function getDistance(a,b){ const dx = a.clientX - b.clientX; const dy = a.clientY - b.clientY; return Math.sqrt(dx*dx+dy*dy); }
+function getDistance(touches) {
+  let dx = touches[0].clientX - touches[1].clientX;
+  let dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx*dx + dy*dy);
+}
 
-// --- Buttons ---
 btnDownload.addEventListener('click', () => {
-  if (!userImage) return;
-  // trigger download
   const link = document.createElement('a');
   link.download = 'twibbon.png';
-  try { link.href = canvas.toDataURL('image/png'); link.click(); }
-  catch(e){
-    // fallback to toBlob
-    canvas.toBlob(blob => {
-      const url = URL.createObjectURL(blob);
-      link.href = url; link.click(); URL.revokeObjectURL(url);
-    });
-  }
-
-  // swap UI: hide download, show share+reset
-  downloadGroup.style.display = 'none';
-  shareResetGroup.style.display = 'flex';
+  link.href = canvas.toDataURL('image/png', 1.0);
+  link.click();
+  btnDownload.style.display = 'none';
+  shareReset.style.display = 'flex';
 });
 
 btnShare.addEventListener('click', async () => {
-  if (!userImage) return alert('Tidak ada gambar untuk dibagikan');
-  // try Web Share API with files
-  canvas.toBlob(async blob => {
-    const file = new File([blob], 'twibbon.png', { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })){
-      try { await navigator.share({ files: [file], title:'Twibbon Saya' }); }
-      catch(err) { alert('Gagal membagikan: '+err.message); }
-    } else {
-      // fallback: open image in new tab
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      setTimeout(()=>URL.revokeObjectURL(url), 2000);
-    }
-  });
+  const blob = await (await fetch(canvas.toDataURL('image/png', 1.0))).blob();
+  navigator.share?.({ files: [new File([blob], 'twibbon.png', {type:'image/png'})] });
 });
 
 btnReset.addEventListener('click', () => {
-  // RESET TO INITIAL STATE
-  userImage = null;
+  img = new Image();
   fileInput.value = '';
-  fileInput.disabled = false;      // allow upload again
-
-  // Ensure buttons/groups return to initial appearance
-  btnDownload.disabled = true;     // download disabled until new upload
-  downloadGroup.style.display = 'flex';
-  shareResetGroup.style.display = 'none';
-
-  // Reset transforms
-  scale = 1; offsetX = 0; offsetY = 0; lastTouchDistance = null; isDragging = false; isInteracting = false;
-
-  // redraw placeholder
+  fileInput.disabled = false;
+  btnDownload.disabled = true;
+  btnDownload.style.display = 'block';
+  shareReset.style.display = 'none';
+  hint.style.display = 'block'; // ⬅ tampilkan lagi placeholder text
   drawPlaceholder();
 });
-
 </script>
 </body>
 </html>
