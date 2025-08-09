@@ -210,16 +210,28 @@ function getDistance(touch1, touch2) {
 }
 
 // === Tombol aksi ===
-btnDownload.addEventListener('click', () => {
+// btnDownload.addEventListener('click', () => {
+//    if (!userImage) return;
+//    const link = document.createElement('a');
+//    link.download = "twibbon.png";
+//    link.href = canvas.toDataURL("image/png");
+//    link.click();
+//    btnDownload.style.display = "none";
+//    btnShare.style.display = "inline-block";
+//    btnReset.style.display = "inline-block";
+// });
+
+    btnDownload.addEventListener('click', () => {
     if (!userImage) return;
     const link = document.createElement('a');
     link.download = "twibbon.png";
     link.href = canvas.toDataURL("image/png");
     link.click();
-    btnDownload.style.display = "none";
-    btnShare.style.display = "inline-block";
-    btnReset.style.display = "inline-block";
+
+    document.getElementById('downloadGroup').style.display = "none";
+    document.getElementById('shareResetGroup').style.display = "flex";
 });
+
 
 btnShare.addEventListener('click', async () => {
     try {
