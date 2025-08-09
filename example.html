@@ -5,222 +5,186 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Twibbon PFP</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    text-align: center;
-    background: #f0f0f0;
-    margin: 0;
-    padding: 20px;
-  }
-  #drop-area {
+  body { font-family: sans-serif; margin: 0; padding: 0; background: #f0f0f0; }
+  .container { max-width: 400px; margin: auto; padding: 10px; }
+  .drop-area {
     border: 2px dashed #ccc;
     border-radius: 10px;
-    width: 100%;
-    max-width: 350px;
-    height: 350px;
-    margin: auto;
+    padding: 10px;
+    text-align: center;
     background: white;
     position: relative;
-    overflow: hidden;
   }
-  #drop-area.hover { border-color: #333; }
-  #hint {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: #888;
-  }
-  canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-  .controls {
-    margin-top: 15px;
-  }
-  button {
-    padding: 10px;
-    font-size: 16px;
-    margin: 5px 0;
-  }
-  .btn-row {
-    display: flex;
-    gap: 5px;
-    justify-content: center;
-  }
-  .btn-row button {
-    flex: 1;
-  }
+  canvas { width: 100%; background: #fff; display: block; }
+  #hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+          color: #aaa; font-size: 14px; text-align: center; }
+  button { padding: 10px; margin-top: 10px; font-size: 16px; border: none; border-radius: 5px; }
+  #btnDownload { width: 100%; background: #4CAF50; color: white; }
+  .row { display: flex; gap: 5px; }
+  .row button { flex: 1; }
+  #btnShare { background: #2196F3; color: white; }
+  #btnReset { background: #f44336; color: white; }
 </style>
 </head>
 <body>
 
-<h2>Twibbon PFP</h2>
-<div id="drop-area">
-  <div id="hint">Tarik & Lepas gambar atau ketuk untuk pilih</div>
-  <canvas id="canvas"></canvas>
-</div>
+<div class="container">
+  <div class="drop-area" id="dropArea">
+    <input type="file" id="fileInput" accept="image/*" style="display:none;">
+    <canvas id="canvas" width="800" height="800"></canvas>
+    <div id="hint">Tarik & Lepas gambar<br>atau ketuk untuk pilih</div>
+  </div>
 
-<div class="controls">
-  <input type="file" id="fileElem" accept="image/*" style="display:none">
-  <button id="downloadBtn" disabled style="width:100%">Unduh</button>
-  <div id="shareReset" class="btn-row" style="display:none">
-    <button id="shareBtn">Bagikan</button>
-    <button id="resetBtn">Reset</button>
+  <button id="btnDownload" disabled>Unduh</button>
+  <div class="row" style="display:none;">
+    <button id="btnShare">Bagikan</button>
+    <button id="btnReset">Reset</button>
   </div>
 </div>
 
 <script>
-const dropArea = document.getElementById('drop-area');
-const fileInput = document.getElementById('fileElem');
-const hint = document.getElementById('hint');
+const dropArea = document.getElementById('dropArea');
+const fileInput = document.getElementById('fileInput');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const btnDownload = document.getElementById('downloadBtn');
-const btnShare = document.getElementById('shareBtn');
-const btnReset = document.getElementById('resetBtn');
-const shareReset = document.getElementById('shareReset');
+const hint = document.getElementById('hint');
+const btnDownload = document.getElementById('btnDownload');
+const btnShare = document.getElementById('btnShare');
+const btnReset = document.getElementById('btnReset');
+const rowBtns = document.querySelector('.row');
 
-let img = new Image();
-let twibbon = new Image();
-let imgX = 0, imgY = 0, scale = 1, startX = 0, startY = 0;
-let isDragging = false, lastDist = 0;
-let twibbonAlpha = 1;
-
-canvas.width = 1000;
-canvas.height = 1000;
-
-twibbon.src = 'twibbon.png'; // path twibbon
-twibbon.onload = drawPlaceholder;
+let userImage = null;
+let twibbonImage = new Image();
+twibbonImage.src = 'twibbon.png'; // ganti path twibbon default
+let scale = 1, originX = 0, originY = 0;
+let lastTouchDist = null, lastX = 0, lastY = 0, isDragging = false;
 
 function drawPlaceholder() {
-  ctx.fillStyle = "#ddd";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#aaa";
+  ctx.font = "24px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("Belum ada gambar", canvas.width/2, canvas.height/2);
 }
 
-dropArea.addEventListener('click', () => {
-  if (!fileInput.disabled) fileInput.click();
-});
-fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+function drawCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (userImage) {
+    ctx.save();
+    ctx.translate(canvas.width/2 + originX, canvas.height/2 + originY);
+    ctx.scale(scale, scale);
+    ctx.drawImage(userImage, -userImage.width/2, -userImage.height/2);
+    ctx.restore();
+  }
+  if (twibbonImage.complete) ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
+}
 
-['dragenter','dragover'].forEach(ev => {
-  dropArea.addEventListener(ev, e => {
-    e.preventDefault();
-    dropArea.classList.add('hover');
-  });
+dropArea.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', e => {
+  if (e.target.files.length) handleFile(e.target.files[0]);
 });
-['dragleave','drop'].forEach(ev => {
-  dropArea.addEventListener(ev, e => {
-    e.preventDefault();
-    dropArea.classList.remove('hover');
-  });
+
+dropArea.addEventListener('dragover', e => {
+  e.preventDefault(); dropArea.style.borderColor = "#4CAF50";
 });
+dropArea.addEventListener('dragleave', () => dropArea.style.borderColor = "#ccc");
 dropArea.addEventListener('drop', e => {
-  handleFile(e.dataTransfer.files[0]);
+  e.preventDefault(); dropArea.style.borderColor = "#ccc";
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
 });
 
 function handleFile(file) {
-  if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
-    img = new Image();
+    const img = new Image();
     img.onload = () => {
-      imgX = canvas.width/2 - img.width/2;
-      imgY = canvas.height/2 - img.height/2;
-      scale = 1;
+      userImage = img;
       fileInput.disabled = true;
       btnDownload.disabled = false;
-      hint.style.display = 'none'; // ⬅ sembunyikan placeholder text
-      draw();
-    }
+      hint.style.display = 'none'; // sembunyikan hint
+      drawCanvas();
+    };
     img.src = e.target.result;
-  }
+  };
   reader.readAsDataURL(file);
 }
 
-function draw() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle = "#ddd";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  if (img.src) {
-    ctx.drawImage(img, imgX, imgY, img.width*scale, img.height*scale);
-    ctx.globalAlpha = twibbonAlpha;
-    ctx.drawImage(twibbon, 0, 0, canvas.width, canvas.height);
-    ctx.globalAlpha = 1;
-  }
-}
-
+// Gesture
 canvas.addEventListener('touchstart', e => {
   if (e.touches.length === 1) {
     isDragging = true;
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-    twibbonAlpha = 0.5;
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
+    twibbonImage.styleOpacity = 0.5;
   } else if (e.touches.length === 2) {
-    lastDist = getDistance(e.touches);
-    twibbonAlpha = 0.5;
+    lastTouchDist = getTouchDist(e.touches);
+    twibbonImage.styleOpacity = 0.5;
   }
 });
 canvas.addEventListener('touchmove', e => {
   e.preventDefault();
   if (e.touches.length === 1 && isDragging) {
-    let dx = e.touches[0].clientX - startX;
-    let dy = e.touches[0].clientY - startY;
-    imgX += dx;
-    imgY += dy;
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-    draw();
+    originX += e.touches[0].clientX - lastX;
+    originY += e.touches[0].clientY - lastY;
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
+    drawCanvas();
   } else if (e.touches.length === 2) {
-    let dist = getDistance(e.touches);
-    if (lastDist) {
-      let delta = dist - lastDist;
-      scale += delta/200;
-      scale = Math.max(scale, 0.1);
-    }
-    lastDist = dist;
-    draw();
+    const dist = getTouchDist(e.touches);
+    if (lastTouchDist) scale *= dist / lastTouchDist;
+    lastTouchDist = dist;
+    drawCanvas();
   }
 });
-canvas.addEventListener('touchend', () => {
-  isDragging = false;
-  lastDist = 0;
-  twibbonAlpha = 1;
-  draw();
+canvas.addEventListener('touchend', e => {
+  if (e.touches.length === 0) {
+    isDragging = false;
+    lastTouchDist = null;
+    drawCanvas(); // twibbon kembali normal
+  }
 });
-
-function getDistance(touches) {
-  let dx = touches[0].clientX - touches[1].clientX;
-  let dy = touches[0].clientY - touches[1].clientY;
+function getTouchDist(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
   return Math.sqrt(dx*dx + dy*dy);
 }
 
+// Download
 btnDownload.addEventListener('click', () => {
   const link = document.createElement('a');
   link.download = 'twibbon.png';
   link.href = canvas.toDataURL('image/png', 1.0);
   link.click();
   btnDownload.style.display = 'none';
-  shareReset.style.display = 'flex';
+  rowBtns.style.display = 'flex';
 });
 
+// Share
 btnShare.addEventListener('click', async () => {
-  const blob = await (await fetch(canvas.toDataURL('image/png', 1.0))).blob();
-  navigator.share?.({ files: [new File([blob], 'twibbon.png', {type:'image/png'})] });
+  const blob = await (await fetch(canvas.toDataURL('image/png'))).blob();
+  const file = new File([blob], 'twibbon.png', { type: 'image/png' });
+  if (navigator.share) {
+    navigator.share({ files: [file] });
+  } else {
+    alert('Fitur berbagi tidak didukung di browser ini.');
+  }
 });
 
+// Reset
 btnReset.addEventListener('click', () => {
-  img = new Image();
-  fileInput.value = '';
+  userImage = null;
+  originX = originY = 0; scale = 1;
   fileInput.disabled = false;
   btnDownload.disabled = true;
   btnDownload.style.display = 'block';
-  shareReset.style.display = 'none';
-  hint.style.display = 'block'; // ⬅ tampilkan lagi placeholder text
+  rowBtns.style.display = 'none';
+  hint.style.display = 'block'; // tampilkan kembali hint
   drawPlaceholder();
 });
+
+drawPlaceholder();
 </script>
 </body>
 </html>
