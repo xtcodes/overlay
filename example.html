@@ -40,6 +40,7 @@
     input[type=file] {
         display: none;
     }
+    /*
     .btn-group {
         display: flex;
         gap: 10px;
@@ -58,6 +59,30 @@
     #btnDownload { background: #007bff; color: white; width: 100%; }
     #btnShare { background: #28a745; color: white; }
     #btnReset { background: #dc3545; color: white; }
+    */
+
+    .btn-group {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+        max-width: 400px;
+    }
+    button {
+        padding: 10px;
+        font-size: 15px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        flex: 1;
+    }
+    button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+    #btnDownload { background: #007bff; color: white; width: 100%; }
+    #btnShare { background: #28a745; color: white; }
+    #btnReset { background: #dc3545; color: white; }
+
 </style>
 </head>
 <body>
