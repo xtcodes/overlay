@@ -248,39 +248,77 @@ function getDistance(touch1, touch2) {
 
 // Unduh
 downloadBtn.addEventListener('click', () => {
-    if (!userImage) return;
+    // Matikan tombol unduh biar tidak double klik
+    downloadBtn.disabled = true;
 
-    // Buat canvas offscreen untuk HD
-    const hdCanvas = document.createElement('canvas');
-    const size = 3000;
-    hdCanvas.width = size;
-    hdCanvas.height = size;
-    const hdCtx = hdCanvas.getContext('2d');
+    // Simpan gambar asli canvas
+    const originalImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-    // Hitung skala relatif terhadap canvas tampilan
-    const scaleFactor = size / canvas.width;
+    let pulse = true;
 
-    // Gambar ulang foto user di resolusi tinggi
-    hdCtx.save();
-    hdCtx.translate(size / 2 + posX * scaleFactor, size / 2 + posY * scaleFactor);
-    hdCtx.scale(scale * scaleFactor, scale * scaleFactor);
-    hdCtx.drawImage(userImage, -userImage.width / 2, -userImage.height / 2);
-    hdCtx.restore();
+    // Interval animasi dot + abu-abu
+    const dotInterval = setInterval(() => {
+        // Gambar ulang gambar asli
+        ctx.putImageData(originalImage, 0, 0);
 
-    // Tambahkan twibbon
-    hdCtx.globalAlpha = twibbonOpacity;
-    hdCtx.drawImage(twibbonImage, 0, 0, size, size);
-    hdCtx.globalAlpha = 1;
+        // Overlay abu-abu
+        ctx.fillStyle = 'rgba(128, 128, 128, 0.6)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Unduh hasil HD
-    const link = document.createElement('a');
-    link.download = 'twibbon-hd.png';
-    link.href = hdCanvas.toDataURL('image/png', 1.0);
-    link.click();
+        // Dot hitam pulse di pojok kiri atas (dalam canvas)
+        ctx.beginPath();
+        ctx.arc(20, 20, pulse ? 6 : 3, 0, Math.PI * 2);
+        ctx.fillStyle = 'black';
+        ctx.fill();
 
-    downloadBtn.style.display = 'none';
-    afterDownload.style.display = 'flex';
+        pulse = !pulse;
+    }, 500);
+
+    // Countdown 15 detik lalu unduh
+    setTimeout(() => {
+        clearInterval(dotInterval);
+        ctx.putImageData(originalImage, 0, 0);
+
+        // Proses unduhan HD
+        const exportCanvas = document.createElement('canvas');
+        const exportCtx = exportCanvas.getContext('2d');
+
+        exportCanvas.width = 3000;
+        exportCanvas.height = 3000;
+        const scale = exportCanvas.width / canvas.width;
+
+        exportCtx.fillStyle = '#ccc';
+        exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+        if (userImage) {
+            exportCtx.save();
+            exportCtx.translate(
+                posX * scale + exportCanvas.width / 2,
+                posY * scale + exportCanvas.height / 2
+            );
+            exportCtx.scale(scaleFactor * scale, scaleFactor * scale);
+            exportCtx.drawImage(
+                userImage,
+                -userImage.width / 2,
+                -userImage.height / 2
+            );
+            exportCtx.restore();
+        }
+
+        if (twibbonImage) {
+            exportCtx.drawImage(twibbonImage, 0, 0, exportCanvas.width, exportCanvas.height);
+        }
+
+        const link = document.createElement('a');
+        link.download = 'twibbon-hd.png';
+        link.href = exportCanvas.toDataURL('image/png');
+        link.click();
+
+        // Aktifkan kembali tombol unduh
+        downloadBtn.disabled = false;
+    }, 15000);
 });
+
 
 
 
