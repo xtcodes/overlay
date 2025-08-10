@@ -248,76 +248,99 @@ function getDistance(touch1, touch2) {
 
 // Unduh
 downloadBtn.addEventListener('click', () => {
-    // Matikan tombol unduh biar tidak double klik
-    downloadBtn.disabled = true;
+  if (!userImage) return;
 
-    // Simpan gambar asli canvas
-    const originalImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  // disable tombol agar tidak diklik lagi selama proses
+  downloadBtn.disabled = true;
 
-    let pulse = true;
+  // simpan snapshot canvas saat ini (agar bisa dikembalikan)
+  let originalImageData = null;
+  try {
+    originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  } catch (err) {
+    console.warn('Tidak bisa ambil imageData (CORS?). Melanjutkan tanpa restore.');
+  }
 
-    // Interval animasi dot + abu-abu
-    const dotInterval = setInterval(() => {
-        // Gambar ulang gambar asli
-        ctx.putImageData(originalImage, 0, 0);
+  // animasi overlay abu-abu + dot pulse di dalam canvas (pojok kiri atas)
+  let pulse = true;
+  const intervalMs = 500;
+  const dotInterval = setInterval(() => {
+    if (originalImageData) ctx.putImageData(originalImageData, 0, 0);
+    // overlay abu-abu semi-transparan
+    ctx.fillStyle = 'rgba(128,128,128,0.6)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // dot pulse (di dalam canvas, pojok kiri atas)
+    ctx.beginPath();
+    ctx.arc(20, 20, pulse ? 6 : 3, 0, Math.PI * 2);
+    ctx.fillStyle = 'black';
+    ctx.fill();
+    pulse = !pulse;
+  }, intervalMs);
 
-        // Overlay abu-abu
-        ctx.fillStyle = 'rgba(128, 128, 128, 0.6)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // delay 15 detik lalu generate HD export
+  setTimeout(() => {
+    clearInterval(dotInterval);
+    // restore canvas view
+    if (originalImageData) ctx.putImageData(originalImageData, 0, 0);
+    else drawCanvas(); // fallback: redraw from state
 
-        // Dot hitam pulse di pojok kiri atas (dalam canvas)
-        ctx.beginPath();
-        ctx.arc(20, 20, pulse ? 6 : 3, 0, Math.PI * 2);
-        ctx.fillStyle = 'black';
-        ctx.fill();
+    // --- buat offscreen HD canvas 3000x3000 ---
+    const size = 3000;
+    const hdCanvas = document.createElement('canvas');
+    hdCanvas.width = size;
+    hdCanvas.height = size;
+    const hdCtx = hdCanvas.getContext('2d');
 
-        pulse = !pulse;
-    }, 500);
+    // skala relatif dari canvas tampilan ke HD canvas
+    const exportScale = size / canvas.width;
 
-    // Countdown 15 detik lalu unduh
-    setTimeout(() => {
-        clearInterval(dotInterval);
-        ctx.putImageData(originalImage, 0, 0);
+    // optional: fill bg (putih)
+    hdCtx.fillStyle = '#ffffff';
+    hdCtx.fillRect(0, 0, size, size);
 
-        // Proses unduhan HD
-        const exportCanvas = document.createElement('canvas');
-        const exportCtx = exportCanvas.getContext('2d');
+    // gambar ulang foto user (posisi & scale disesuaikan)
+    if (userImage) {
+      hdCtx.save();
+      // translate ke pusat HD canvas lalu apply posX/posY (dikalikan exportScale)
+      hdCtx.translate(size / 2 + posX * exportScale, size / 2 + posY * exportScale);
+      // skala = current scale (user) * exportScale
+      hdCtx.scale(scale * exportScale, scale * exportScale);
+      hdCtx.drawImage(userImage, -userImage.width / 2, -userImage.height / 2);
+      hdCtx.restore();
+    }
 
-        exportCanvas.width = 3000;
-        exportCanvas.height = 3000;
-        const scale = exportCanvas.width / canvas.width;
+    // gambar twibbon (full cover) — pastikan twibbonImage sudah ter-load di awal app
+    if (twibbonImage && twibbonImage.complete) {
+      hdCtx.globalAlpha = 1; // selalu full opacity di hasil akhir
+      hdCtx.drawImage(twibbonImage, 0, 0, size, size);
+      hdCtx.globalAlpha = 1;
+    }
 
-        exportCtx.fillStyle = '#ccc';
-        exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-
-        if (userImage) {
-            exportCtx.save();
-            exportCtx.translate(
-                posX * scale + exportCanvas.width / 2,
-                posY * scale + exportCanvas.height / 2
-            );
-            exportCtx.scale(scaleFactor * scale, scaleFactor * scale);
-            exportCtx.drawImage(
-                userImage,
-                -userImage.width / 2,
-                -userImage.height / 2
-            );
-            exportCtx.restore();
-        }
-
-        if (twibbonImage) {
-            exportCtx.drawImage(twibbonImage, 0, 0, exportCanvas.width, exportCanvas.height);
-        }
-
-        const link = document.createElement('a');
-        link.download = 'twibbon-hd.png';
-        link.href = exportCanvas.toDataURL('image/png');
-        link.click();
-
-        // Aktifkan kembali tombol unduh
+    // convert ke blob & trigger download (lebih aman untuk file besar)
+    hdCanvas.toBlob((blob) => {
+      if (!blob) {
+        alert('Gagal membuat file PNG.');
         downloadBtn.disabled = false;
-    }, 15000);
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'twibbon-hd.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      // restore UI
+      downloadBtn.disabled = false;
+      downloadBtn.style.display = 'none';
+      afterDownload.style.display = 'flex';
+    }, 'image/png', 1.0);
+
+  }, 15000); // 15000 ms = 15 detik
 });
+
 
 
 
