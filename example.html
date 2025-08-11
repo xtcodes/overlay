@@ -84,6 +84,10 @@
         gap: 10px;
         width: 100%;
     }
+    .disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
 </style>
 </head>
 <body>
@@ -97,7 +101,7 @@
 </div>
 
 <div class="btn-container">
-    <button class="btn-unduh" id="downloadBtn" disabled>Unduh</button>
+    <button class="btn-unduh disabled" id="downloadBtn" disabled>Unduh</button>
     <div class="row" id="afterDownload" style="display:none;">
         <button class="btn-bagikan" id="shareBtn">Bagikan</button>
         <button class="btn-reset" id="resetBtn">Reset</button>
