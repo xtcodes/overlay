@@ -3,288 +3,205 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Twibbon PFP</title>
+<title>Twibbon PFP HD</title>
 <style>
     body {
-        font-family: sans-serif;
-        margin: 0;
+        font-family: Arial, sans-serif;
+        margin: 0; padding: 0;
+        display: flex; flex-direction: column; align-items: center;
         background: #f5f5f5;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 10px;
     }
     .drop-area {
         position: relative;
         width: 100%;
         max-width: 400px;
-        aspect-ratio: 1 / 1;
-        border: 2px dashed #aaa;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
+        aspect-ratio: 1/1;
+        border: 2px dashed #ccc;
+        display: flex; align-items: center; justify-content: center;
         background: white;
-    }
-    .drop-area.hover {
-        border-color: #333;
-    }
-    #twibbonCanvas {
-        position: absolute;
-        width: 100%;
-        height: 100%;
+        overflow: hidden;
         touch-action: none;
     }
+    canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        background: white;
+    }
     .placeholder {
+        position: absolute;
+        text-align: center;
         color: #aaa;
         font-size: 16px;
-        text-align: center;
-        padding: 10px;
         pointer-events: none;
     }
     .controls {
+        margin-top: 10px;
+        display: flex; gap: 10px;
+        flex-wrap: wrap;
         width: 100%;
         max-width: 400px;
-        margin-top: 10px;
-        display: flex;
-        gap: 5px;
     }
-    .controls button {
+    button {
         flex: 1;
         padding: 10px;
-        font-size: 16px;
         border: none;
-        border-radius: 5px;
         cursor: pointer;
+        font-size: 16px;
+        border-radius: 5px;
+        background: #007bff;
+        color: white;
     }
-    #downloadBtn:disabled {
-        background-color: rgba(0,0,0,0.2);
-        color: rgba(255,255,255,0.6);
+    button:disabled {
+        background: rgba(0, 123, 255, 0.5);
         cursor: not-allowed;
     }
-    #downloadBtn {
-        background-color: #4CAF50;
-        color: white;
-    }
-    #shareBtn {
-        background-color: #2196F3;
-        color: white;
-    }
-    #resetBtn {
-        background-color: #f44336;
-        color: white;
-    }
-    /* Animasi dot pulse */
-    .dot-pulse {
-        position: absolute;
-        top: 8px;
-        left: 8px;
-        width: 10px;
-        height: 10px;
-        background-color: black;
-        border-radius: 50%;
-        animation: pulse 1s infinite;
-    }
-    @keyframes pulse {
-        0%, 100% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.5); opacity: 0.5; }
-    }
-    /* Animasi teks loading */
-    .loading-text {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        color: black;
-        font-size: 18px;
-        font-weight: bold;
-        white-space: nowrap;
-    }
-    .loading-text::after {
-        content: '';
-        animation: dots 1.5s infinite;
-    }
-    @keyframes dots {
-        0% { content: ''; }
-        33% { content: '.'; }
-        66% { content: '..'; }
-        100% { content: '...'; }
-    }
+    .hidden { display: none; }
 </style>
 </head>
 <body>
 
+<h2>Twibbon PFP HD</h2>
+
 <div class="drop-area" id="dropArea">
-    <canvas id="twibbonCanvas"></canvas>
-    <div class="placeholder" id="placeholder">Tarik & letakkan gambar di sini<br>atau klik untuk unggah</div>
+    <canvas id="canvas"></canvas>
+    <div class="placeholder" id="placeholder">Tarik & Letakkan Gambar<br>atau Klik untuk Unggah</div>
 </div>
 
 <div class="controls">
     <button id="downloadBtn" disabled>Unduh</button>
-    <button id="shareBtn" style="display:none;">Bagikan</button>
-    <button id="resetBtn" style="display:none;">Reset</button>
+    <button id="shareBtn" class="hidden">Bagikan</button>
+    <button id="resetBtn" class="hidden">Reset</button>
 </div>
 
-<input type="file" id="fileInput" accept="image/*" style="display:none;">
+<input type="file" id="fileInput" accept="image/*" class="hidden">
 
 <script>
 const dropArea = document.getElementById('dropArea');
-const fileInput = document.getElementById('fileInput');
-const canvas = document.getElementById('twibbonCanvas');
+const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const placeholder = document.getElementById('placeholder');
+const fileInput = document.getElementById('fileInput');
 const downloadBtn = document.getElementById('downloadBtn');
 const shareBtn = document.getElementById('shareBtn');
 const resetBtn = document.getElementById('resetBtn');
 
-let userImg = null;
-let twibbonImg = new Image();
-twibbonImg.src = 'twibbon.png'; // ganti dengan twibbon asli
-let scale = 1, posX = 0, posY = 0, dragging = false;
-let lastX, lastY, pinchDist = 0;
+let imgUser = null, imgTwibbon = new Image(), scale = 1, posX = 0, posY = 0;
+let dragging = false, lastX, lastY, lastDist;
 
-// Set ukuran canvas
-function resizeCanvas() {
-    canvas.width = dropArea.clientWidth;
-    canvas.height = dropArea.clientHeight;
-    drawCanvas();
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+canvas.width = canvas.height = 400;
+imgTwibbon.src = "twibbon.png"; // ganti dengan twibbon asli 1024x1024
 
-function drawCanvas(twibbonAlpha = 1) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (!userImg) {
-        placeholder.style.display = 'block';
-        return;
+function drawCanvas(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if(imgUser){
+        let iw = imgUser.width * scale;
+        let ih = imgUser.height * scale;
+        ctx.drawImage(imgUser, posX, posY, iw, ih);
     }
-    placeholder.style.display = 'none';
-    ctx.drawImage(userImg, posX, posY, userImg.width * scale, userImg.height * scale);
-    ctx.globalAlpha = twibbonAlpha;
-    ctx.drawImage(twibbonImg, 0, 0, canvas.width, canvas.height);
-    ctx.globalAlpha = 1;
+    if(imgTwibbon.complete){
+        ctx.globalAlpha = dragging ? 0.5 : 1;
+        ctx.drawImage(imgTwibbon, 0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
+    }
 }
 
-// Drag & drop upload
-dropArea.addEventListener('click', () => fileInput.click());
-dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('hover'); });
-dropArea.addEventListener('dragleave', () => dropArea.classList.remove('hover'));
-dropArea.addEventListener('drop', e => {
-    e.preventDefault();
-    dropArea.classList.remove('hover');
-    handleFile(e.dataTransfer.files[0]);
-});
-fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+dropArea.addEventListener('click', ()=> fileInput.click());
 
-function handleFile(file) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-        const img = new Image();
-        img.onload = () => {
-            userImg = img;
-            scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-            posX = (canvas.width - img.width * scale) / 2;
-            posY = (canvas.height - img.height * scale) / 2;
-            drawCanvas();
-            downloadBtn.disabled = false;
+fileInput.addEventListener('change', e=>{
+    const file = e.target.files[0];
+    if(file){
+        const reader = new FileReader();
+        reader.onload = ev=>{
+            imgUser = new Image();
+            imgUser.onload = ()=>{
+                placeholder.classList.add('hidden');
+                scale = Math.min(canvas.width/imgUser.width, canvas.height/imgUser.height);
+                posX = (canvas.width - imgUser.width*scale)/2;
+                posY = (canvas.height - imgUser.height*scale)/2;
+                drawCanvas();
+                downloadBtn.disabled = false;
+            };
+            imgUser.src = ev.target.result;
         };
-        img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-}
+        reader.readAsDataURL(file);
+    }
+});
 
-// Gesture
-canvas.addEventListener('touchstart', e => {
-    if (e.touches.length === 1) {
+// Geser & Zoom
+dropArea.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    if(e.touches.length === 1){
         dragging = true;
         lastX = e.touches[0].clientX;
         lastY = e.touches[0].clientY;
-    } else if (e.touches.length === 2) {
-        pinchDist = getPinchDist(e);
+    } else if(e.touches.length === 2){
+        lastDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+        );
     }
 });
-canvas.addEventListener('touchmove', e => {
+
+dropArea.addEventListener('touchmove', e=>{
     e.preventDefault();
-    if (e.touches.length === 1 && dragging) {
-        const dx = e.touches[0].clientX - lastX;
-        const dy = e.touches[0].clientY - lastY;
+    if(e.touches.length === 1 && dragging){
+        let dx = e.touches[0].clientX - lastX;
+        let dy = e.touches[0].clientY - lastY;
+        posX += dx; posY += dy;
         lastX = e.touches[0].clientX;
         lastY = e.touches[0].clientY;
-        posX += dx;
-        posY += dy;
-        drawCanvas(0.5);
-    } else if (e.touches.length === 2) {
-        const newDist = getPinchDist(e);
-        scale *= newDist / pinchDist;
-        pinchDist = newDist;
-        drawCanvas(0.5);
+    } else if(e.touches.length === 2){
+        let dist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+        );
+        let delta = dist - lastDist;
+        scale *= 1 + delta/200;
+        lastDist = dist;
     }
-});
-canvas.addEventListener('touchend', () => { dragging = false; drawCanvas(); });
-
-function getPinchDist(e) {
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-}
-
-// Download logic dengan efek abu-abu + dot pulse + teks
-downloadBtn.addEventListener('click', () => {
-    if (!userImg) return;
-
-    downloadBtn.disabled = true;
-
-    // Overlay efek
-    ctx.fillStyle = 'rgba(128,128,128,0.5)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const dot = document.createElement('div');
-    dot.className = 'dot-pulse';
-    dropArea.appendChild(dot);
-
-    const text = document.createElement('div');
-    text.className = 'loading-text';
-    text.textContent = 'Sedang proses';
-    dropArea.appendChild(text);
-
-    setTimeout(() => {
-        // Render HD
-        const offCanvas = document.createElement('canvas');
-        offCanvas.width = 3000;
-        offCanvas.height = 3000;
-        const offCtx = offCanvas.getContext('2d');
-        offCtx.drawImage(userImg, posX * (3000 / canvas.width), posY * (3000 / canvas.height), userImg.width * scale * (3000 / canvas.width), userImg.height * scale * (3000 / canvas.height));
-        offCtx.drawImage(twibbonImg, 0, 0, 3000, 3000);
-        const link = document.createElement('a');
-        link.download = 'twibbon.png';
-        link.href = offCanvas.toDataURL('image/png');
-        link.click();
-
-        // Bersihkan efek
-        dot.remove();
-        text.remove();
-        drawCanvas();
-
-        // Tampilkan tombol share & reset
-        downloadBtn.style.display = 'none';
-        shareBtn.style.display = 'block';
-        resetBtn.style.display = 'block';
-    }, 15000);
-});
-
-resetBtn.addEventListener('click', () => {
-    userImg = null;
-    scale = 1;
-    posX = 0;
-    posY = 0;
     drawCanvas();
+});
+
+dropArea.addEventListener('touchend', e=>{
+    dragging = false;
+    drawCanvas();
+});
+
+// Unduh
+downloadBtn.addEventListener('click', ()=>{
+    if(!imgUser) return;
     downloadBtn.disabled = true;
-    downloadBtn.style.display = 'block';
-    shareBtn.style.display = 'none';
-    resetBtn.style.display = 'none';
+    // Canvas HD export
+    let exportCanvas = document.createElement('canvas');
+    exportCanvas.width = exportCanvas.height = 3000;
+    let ex = exportCanvas.getContext('2d');
+
+    let scaleFactor = exportCanvas.width / canvas.width;
+    ex.drawImage(imgUser, posX*scaleFactor, posY*scaleFactor, imgUser.width*scale*scaleFactor, imgUser.height*scale*scaleFactor);
+    ex.drawImage(imgTwibbon, 0, 0, exportCanvas.width, exportCanvas.height);
+
+    let link = document.createElement('a');
+    link.download = "twibbon.png";
+    link.href = exportCanvas.toDataURL("image/png", 1.0);
+    link.click();
+
+    shareBtn.classList.remove('hidden');
+    resetBtn.classList.remove('hidden');
+    downloadBtn.classList.add('hidden');
+});
+
+// Reset
+resetBtn.addEventListener('click', ()=>{
+    imgUser = null;
+    placeholder.classList.remove('hidden');
+    downloadBtn.disabled = true;
+    downloadBtn.classList.remove('hidden');
+    shareBtn.classList.add('hidden');
+    resetBtn.classList.add('hidden');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 });
 </script>
+
 </body>
 </html>
