@@ -84,9 +84,10 @@
         gap: 10px;
         width: 100%;
     }
-    .disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
+    .disabled-btn {
+  background-color: rgba(0,0,0,0.2) !important;
+  color: rgba(255,255,255,0.5) !important;
+  cursor: not-allowed !important;
     }
 </style>
 </head>
@@ -148,11 +149,10 @@ function drawCanvas() {
         ctx.globalAlpha = twibbonOpacity;
         ctx.drawImage(twibbonImage, 0, 0, canvas.width, canvas.height);
         ctx.globalAlpha = 1;
-    } else {
-        // placeholder saja
     }
 }
 
+// drag drop click
 dropArea.addEventListener('click', () => {
     if (!userImage) uploadImage.click();
 });
@@ -165,6 +165,7 @@ uploadImage.addEventListener('change', e => {
         userImage = img;
         placeholderText.style.display = 'none';
         downloadBtn.disabled = false;
+        downloadBtn.classList.remove('disabled-btn');
         scale = Math.min(canvas.width / img.width, canvas.height / img.height);
         posX = posY = 0;
         drawCanvas();
@@ -189,6 +190,7 @@ dropArea.addEventListener('drop', e => {
         userImage = img;
         placeholderText.style.display = 'none';
         downloadBtn.disabled = false;
+        downloadBtn.classList.remove('disabled-btn');
         scale = Math.min(canvas.width / img.width, canvas.height / img.height);
         posX = posY = 0;
         drawCanvas();
@@ -245,7 +247,6 @@ canvas.addEventListener('wheel', e => {
 }, { passive: false });
 
 let wheelTimeout;
-
 function getDistance(touch1, touch2) {
     return Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
 }
@@ -255,8 +256,8 @@ downloadBtn.addEventListener('click', () => {
   if (!userImage) return;
 
   downloadBtn.disabled = true;
+  downloadBtn.classList.add('disabled-btn');
 
-  // simpan snapshot canvas
   let originalImageData = null;
   try {
     originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -264,7 +265,6 @@ downloadBtn.addEventListener('click', () => {
     console.warn('Tidak bisa ambil imageData (CORS?). Melanjutkan tanpa restore.');
   }
 
-  // variabel animasi
   let pulse = true;
   let dotCount = 0;
 
@@ -272,29 +272,25 @@ downloadBtn.addEventListener('click', () => {
   const dotInterval = setInterval(() => {
     if (originalImageData) ctx.putImageData(originalImageData, 0, 0);
 
-    // overlay abu-abu semi-transparan
-    ctx.fillStyle = '#f5f5f5';
+    ctx.fillStyle = 'rgba(200,200,200,0.5)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // dot pulse di pojok kiri atas
     ctx.beginPath();
-    ctx.arc(20, 20, pulse ? 6 : 3, 0, Math.PI * 2);
+    ctx.arc(20, 20, pulse ? 5 : 3, 0, Math.PI * 2);
     ctx.fillStyle = 'black';
     ctx.fill();
     pulse = !pulse;
 
-    // teks "Sedang proses..." dengan animasi titik
     ctx.fillStyle = 'black';
     ctx.font = `${canvas.width * 0.05}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const dots = '.'.repeat(dotCount % 4); // 0 → '', 1 → '.', 2 → '..', 3 → '...'
+    const dots = '.'.repeat(dotCount % 4);
     ctx.fillText(`Sedang proses${dots}`, canvas.width / 2, canvas.height / 2);
 
     dotCount++;
   }, intervalMs);
 
-  // setelah 15 detik → generate HD export
   setTimeout(() => {
     clearInterval(dotInterval);
     if (originalImageData) ctx.putImageData(originalImageData, 0, 0);
@@ -329,6 +325,7 @@ downloadBtn.addEventListener('click', () => {
       if (!blob) {
         alert('Gagal membuat file PNG.');
         downloadBtn.disabled = false;
+        downloadBtn.classList.remove('disabled-btn');
         return;
       }
       const url = URL.createObjectURL(blob);
@@ -341,6 +338,7 @@ downloadBtn.addEventListener('click', () => {
       URL.revokeObjectURL(url);
 
       downloadBtn.disabled = false;
+      downloadBtn.classList.remove('disabled-btn');
       downloadBtn.style.display = 'none';
       afterDownload.style.display = 'flex';
     }, 'image/png', 1.0);
@@ -366,6 +364,7 @@ resetBtn.addEventListener('click', () => {
     downloadBtn.style.display = 'block';
     afterDownload.style.display = 'none';
     downloadBtn.disabled = true;
+    downloadBtn.classList.add('disabled-btn');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 });
 </script>
