@@ -1,292 +1,458 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Twibbon PFP</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Twibbon PFP — Final</title>
 <style>
-    body {
-        font-family: sans-serif;
-        background: #f0f0f0;
-        margin: 0;
-        padding: 10px;
-        text-align: center;
-    }
-    #drop-area {
-        border: 2px dashed #ccc;
-        padding: 10px;
-        position: relative;
-        background: white;
-        max-width: 400px;
-        margin: auto;
-    }
-    canvas {
-        width: 100%;
-        height: auto;
-        display: block;
-        background: #ddd;
-    }
-    #buttons {
-        margin-top: 10px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        justify-content: center;
-    }
-    button {
-        flex: 1;
-        padding: 10px;
-        font-size: 16px;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-    }
-    #downloadBtn:disabled {
-        background: rgba(0,0,0,0.2);
-        cursor: not-allowed;
-    }
-    #downloadBtn { background: #28a745; color: white; }
-    #shareBtn { background: #007bff; color: white; display: none; }
-    #resetBtn { background: #dc3545; color: white; display: none; }
+  :root{ --maxW:420px }
+  body{ font-family: system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial; background:#f3f4f6; margin:20px; display:flex; justify-content:center }
+  .container{ width:100%; max-width:var(--maxW); display:flex; flex-direction:column; gap:12px; align-items:center }
+
+  .drop-area{
+    width:100%; aspect-ratio:1/1; border-radius:12px; overflow:hidden; position:relative;
+    border:2px dashed #c7c7c7; background:#fff; display:flex; align-items:center; justify-content:center;
+    touch-action:none; -webkit-user-select:none; user-select:none;
+  }
+  .drop-area.hover{ border-color:#6b7280; background:#fbfbfd }
+
+  canvas{ position:absolute; top:0; left:0; width:100%; height:100%; display:block; background:#fff }
+  input[type=file]{ display:none }
+
+  .placeholder{ position:absolute; pointer-events:none; color:#9ca3af; font-size:14px; text-align:center; padding:8px }
+
+  .controls{ width:100%; display:flex; gap:10px; flex-direction:column }
+  .btn-row{ display:flex; gap:10px; width:100% }
+  button{ padding:10px 12px; border-radius:8px; border:none; font-size:15px; cursor:pointer; flex:1 }
+  button:disabled{ opacity:0.5; cursor:not-allowed }
+
+  #btnDownload{ background:#2563eb; color:#fff; width:100% }
+  #btnShare{ background:#16a34a; color:#fff }
+  #btnReset{ background:#ef4444; color:#fff }
+
+  .hidden{ display:none !important; }
+
+  /* small responsive text */
+  @media (max-width:360px){ .placeholder{ font-size:13px } }
 </style>
 </head>
 <body>
+  <div class="container">
+    <div id="dropArea" class="drop-area" aria-label="Area unggah gambar">
+      <input id="fileInput" type="file" accept="image/*" />
+      <canvas id="canvas" width="800" height="800"></canvas>
+      <div id="placeholder" class="placeholder">Tarik & Lepas gambar atau ketuk untuk pilih</div>
+    </div>
 
-<h2>Twibbon PFP</h2>
-
-<div id="drop-area">
-    <input type="file" id="fileElem" accept="image/*" style="display:none">
-    <p id="placeholder-text">Tarik & Lepas Gambar di sini atau Klik</p>
-    <canvas id="canvas" width="1024" height="1024"></canvas>
-</div>
-
-<div id="buttons">
-    <button id="downloadBtn" disabled>Unduh</button>
-    <button id="shareBtn">Bagikan</button>
-    <button id="resetBtn">Reset</button>
-</div>
+    <div class="controls">
+      <div id="downloadGroup"><button id="btnDownload" disabled>Unduh</button></div>
+      <div id="shareResetGroup" class="btn-row hidden">
+        <button id="btnShare">Bagikan</button>
+        <button id="btnReset">Reset</button>
+      </div>
+    </div>
+  </div>
 
 <script>
-const dropArea = document.getElementById('drop-area');
-const fileElem = document.getElementById('fileElem');
-const placeholderText = document.getElementById('placeholder-text');
+/* --------- Elements --------- */
+const dropArea = document.getElementById('dropArea');
+const fileInput = document.getElementById('fileInput');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+const placeholder = document.getElementById('placeholder');
 
-const downloadBtn = document.getElementById('downloadBtn');
-const shareBtn = document.getElementById('shareBtn');
-const resetBtn = document.getElementById('resetBtn');
+const btnDownload = document.getElementById('btnDownload');
+const shareResetGroup = document.getElementById('shareResetGroup');
+const btnShare = document.getElementById('btnShare');
+const btnReset = document.getElementById('btnReset');
+const downloadGroup = document.getElementById('downloadGroup');
 
-let img = null;
-let twibbon = new Image();
-twibbon.src = 'twibbon.png'; // ganti path twibbon
-let scale = 1, originX = 0, originY = 0, lastX, lastY, dragging = false;
-let fingers = 0, lastDist = 0;
-let twibbonAlpha = 1;
+/* --------- State --------- */
+let userImage = null;
+const twibbon = new Image();
+twibbon.src = 'twibbon.png'; // <-- ganti jika perlu (default 1024x1024)
+let scale = 1;
+let imgX = 0, imgY = 0; // top-left in canvas coords
+let pointerDown = false, movedSinceDown = false, lastClientX = 0, lastClientY = 0;
+let lastTouchDist = 0;
+let isProcessing = false;
 
-function drawPlaceholder() {
-    ctx.fillStyle = "#ddd";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle = "#666";
-    ctx.font = "30px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("Upload gambar Anda", canvas.width/2, canvas.height/2);
+/* --------- Resize canvas to fit container --------- */
+function resizeCanvas(){
+  const rect = dropArea.getBoundingClientRect();
+  // set drawingBuffer size equal to displayed size for sharpness
+  canvas.width = Math.round(rect.width);
+  canvas.height = Math.round(rect.height);
+  // if image loaded, re-fit if necessary (keep current scale/pos)
+  if (!userImage) drawPlaceholder();
+  else draw();
 }
-drawPlaceholder();
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
-dropArea.addEventListener('click', () => fileElem.click());
+/* --------- Drawing functions --------- */
+function drawPlaceholder(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  placeholder.style.display = 'block';
+}
 
-fileElem.addEventListener('change', e => {
-    if (e.target.files.length) {
-        loadImage(e.target.files[0]);
-    }
+function draw(options = {}){
+  // options: { twibbonAlpha, overlay } overlay handled separately
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if (!userImage) {
+    placeholder.style.display = 'block';
+    return;
+  }
+  placeholder.style.display = 'none';
+
+  // draw user image
+  const iw = userImage.width * scale;
+  const ih = userImage.height * scale;
+  ctx.drawImage(userImage, imgX, imgY, iw, ih);
+
+  // twibbon overlay
+  ctx.globalAlpha = typeof options.twibbonAlpha === 'number' ? options.twibbonAlpha : 1;
+  if (twibbon.complete) ctx.drawImage(twibbon, 0, 0, canvas.width, canvas.height);
+  ctx.globalAlpha = 1;
+}
+
+/* --------- Helper: client->canvas coords --------- */
+function clientToCanvas(clientX, clientY){
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left),
+    y: (clientY - rect.top)
+  };
+}
+
+/* --------- Upload / Drop handling --------- */
+dropArea.addEventListener('click', (e)=>{
+  // prevent opening file if click was part of drag interaction
+  if (movedSinceDown) { movedSinceDown = false; return; }
+  if (fileInput.disabled) return;
+  fileInput.click();
 });
 
-dropArea.addEventListener('dragover', e => {
-    e.preventDefault();
-    dropArea.style.borderColor = '#000';
-});
-dropArea.addEventListener('dragleave', e => {
-    dropArea.style.borderColor = '#ccc';
-});
+dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('hover'); });
+dropArea.addEventListener('dragleave', () => dropArea.classList.remove('hover'));
 dropArea.addEventListener('drop', e => {
-    e.preventDefault();
-    dropArea.style.borderColor = '#ccc';
-    if (e.dataTransfer.files.length) {
-        loadImage(e.dataTransfer.files[0]);
-    }
+  e.preventDefault(); dropArea.classList.remove('hover');
+  if (fileInput.disabled) return;
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) handleFile(f);
 });
 
-function loadImage(file) {
-    const reader = new FileReader();
-    reader.onload = function(evt) {
-        img = new Image();
-        img.onload = () => {
-            placeholderText.style.display = 'none';
-            originX = (canvas.width - img.width)/2;
-            originY = (canvas.height - img.height)/2;
-            scale = 1;
-            draw();
-            downloadBtn.disabled = false;
-        };
-        img.src = evt.target.result;
+fileInput.addEventListener('change', e => {
+  if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
+});
+
+function handleFile(file){
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      userImage = img;
+      // fit image to canvas preserving aspect
+      const fit = Math.min(canvas.width / img.width, canvas.height / img.height);
+      scale = fit;
+      imgX = (canvas.width - img.width * scale) / 2;
+      imgY = (canvas.height - img.height * scale) / 2;
+      // disable fileInput until reset to match previous behavior
+      fileInput.disabled = true;
+      btnDownload.disabled = false;
+      draw();
     };
-    reader.readAsDataURL(file);
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
 }
 
-function draw() {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    if (img) {
-        ctx.drawImage(img, originX, originY, img.width*scale, img.height*scale);
-        ctx.globalAlpha = twibbonAlpha;
-        ctx.drawImage(twibbon, 0, 0, canvas.width, canvas.height);
-        ctx.globalAlpha = 1;
+/* --------- Pointer/mouse interactions (pointer events + touch) --------- */
+/* Use pointer events for mouse & stylus; use touch for multi-touch pinch logic */
+canvas.addEventListener('pointerdown', (e) => {
+  if (!userImage) return;
+  pointerDown = true;
+  movedSinceDown = false;
+  lastClientX = e.clientX;
+  lastClientY = e.clientY;
+  canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!pointerDown || !userImage) return;
+  const dx = e.clientX - lastClientX;
+  const dy = e.clientY - lastClientY;
+  if (Math.hypot(dx,dy) > 2) movedSinceDown = true;
+  imgX += dx;
+  imgY += dy;
+  lastClientX = e.clientX;
+  lastClientY = e.clientY;
+  draw({ twibbonAlpha: 0.5 });
+});
+canvas.addEventListener('pointerup', (e) => {
+  pointerDown = false;
+  canvas.releasePointerCapture && canvas.releasePointerCapture(e.pointerId);
+  draw();
+});
+canvas.addEventListener('pointercancel', ()=>{ pointerDown=false; draw(); });
+
+/* Touch for pinch (multi-touch). We use touch events for pinch center math. */
+let ongoingTouches = [];
+canvas.addEventListener('touchstart', (e)=> {
+  if (!userImage) return;
+  // add touches
+  for (const t of e.changedTouches) ongoingTouches.push(copyTouch(t));
+  if (ongoingTouches.length === 1){
+    lastClientX = ongoingTouches[0].clientX;
+    lastClientY = ongoingTouches[0].clientY;
+  } else if (ongoingTouches.length === 2){
+    lastTouchDist = distance(ongoingTouches[0], ongoingTouches[1]);
+  }
+});
+canvas.addEventListener('touchmove', (e)=> {
+  e.preventDefault(); // prevent page zoom/scroll
+  if (!userImage) return;
+  // update ongoingTouches
+  for (const t of e.changedTouches) {
+    for (let i=0;i<ongoingTouches.length;i++){
+      if (ongoingTouches[i].identifier === t.identifier){
+        ongoingTouches[i] = copyTouch(t);
+      }
+    }
+  }
+  if (ongoingTouches.length === 1 && pointerDown !== true) {
+    // single finger drag
+    const t = ongoingTouches[0];
+    const dx = t.clientX - lastClientX;
+    const dy = t.clientY - lastClientY;
+    if (Math.hypot(dx,dy) > 1) movedSinceDown = true;
+    imgX += dx; imgY += dy;
+    lastClientX = t.clientX; lastClientY = t.clientY;
+    draw({ twibbonAlpha: 0.5 });
+  } else if (ongoingTouches.length === 2){
+    const a = ongoingTouches[0], b = ongoingTouches[1];
+    const dist = distance(a,b);
+    if (lastTouchDist) {
+      // compute pinch center in canvas coords
+      const rect = canvas.getBoundingClientRect();
+      const cx = ((a.clientX + b.clientX)/2) - rect.left;
+      const cy = ((a.clientY + b.clientY)/2) - rect.top;
+      // image coords under center
+      const ix = (cx - imgX) / scale;
+      const iy = (cy - imgY) / scale;
+      const factor = dist / lastTouchDist;
+      scale *= factor;
+      scale = Math.max(0.05, Math.min(20, scale));
+      // recompute imgX/imgY to keep (ix,iy) under same canvas point
+      imgX = cx - ix * scale;
+      imgY = cy - iy * scale;
+      draw({ twibbonAlpha: 0.5 });
+    }
+    lastTouchDist = dist;
+  }
+}, { passive:false });
+
+canvas.addEventListener('touchend', (e)=> {
+  // remove ended touches
+  for (const t of e.changedTouches){
+    for (let i=0;i<ongoingTouches.length;i++){
+      if (ongoingTouches[i].identifier === t.identifier) ongoingTouches.splice(i,1);
+    }
+  }
+  if (ongoingTouches.length === 0) {
+    lastTouchDist = 0;
+    draw();
+  }
+});
+
+function copyTouch(t){ return { identifier: t.identifier, clientX: t.clientX, clientY: t.clientY }; }
+function distance(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
+
+/* Wheel zoom (desktop) */
+canvas.addEventListener('wheel', (e) => {
+  if (!userImage) return;
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+  const ix = (cx - imgX) / scale;
+  const iy = (cy - imgY) / scale;
+  const delta = -e.deltaY;
+  const zoom = 1 + (delta > 0 ? 0.08 : -0.08);
+  scale *= zoom;
+  scale = Math.max(0.05, Math.min(20, scale));
+  imgX = cx - ix * scale;
+  imgY = cy - iy * scale;
+  draw({ twibbonAlpha: 0.5 });
+  clearTimeout(window._wheelTimer);
+  window._wheelTimer = setTimeout(()=>draw(), 150);
+}, { passive:false });
+
+/* Prevent page gestures interfering on dropArea */
+['touchstart','touchmove'].forEach(ev => {
+  dropArea.addEventListener(ev, (e)=>{ e.preventDefault(); }, { passive:false });
+});
+
+/* Prevent click from drag: track movedSinceDown */
+canvas.addEventListener('pointerdown', ()=>{ movedSinceDown = false; });
+canvas.addEventListener('pointermove', ()=>{ /* movedSinceDown updated in pointermove */ });
+canvas.addEventListener('pointerup', ()=>{ /* noop */ });
+
+/* --------- Processing overlay + HD export (3000) --------- */
+function animateOverlayThenExport(){
+  if (!userImage || isProcessing) return;
+  isProcessing = true;
+  btnDownload.disabled = true;
+
+  const totalMs = 15000;
+  const start = performance.now();
+
+  function frame(now){
+    const elapsed = now - start;
+    const t = Math.min(elapsed / totalMs, 1);
+    // redraw base
+    draw();
+    // overlay
+    ctx.fillStyle = `rgba(240,240,240,${0.55})`;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // dot pulse top-left (inside canvas)
+    const pulse = 4 + 3 * Math.abs(Math.sin((elapsed/1000) * 3.5));
+    const dotX = Math.round(Math.max(12, canvas.width * 0.03));
+    const dotY = Math.round(Math.max(12, canvas.height * 0.03));
+    ctx.beginPath();
+    ctx.arc(dotX, dotY, pulse, 0, Math.PI*2);
+    ctx.fillStyle = 'black';
+    ctx.fill();
+
+    // animated dots for text
+    const dots = Math.floor((elapsed / 500) % 4); // 0..3
+    const text = 'Sedang proses' + '.'.repeat(dots);
+
+    // center text
+    ctx.fillStyle = '#111';
+    const fontSize = Math.max(12, Math.round(canvas.width * 0.06));
+    ctx.font = `${fontSize}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, canvas.width/2, canvas.height/2);
+
+    // countdown (seconds remaining)
+    const remaining = Math.max(0, Math.ceil((totalMs - elapsed) / 1000));
+    ctx.font = `${Math.max(10, Math.round(canvas.width * 0.045))}px Arial`;
+    ctx.textBaseline = 'top';
+    ctx.fillText(`sisa: ${remaining}s`, canvas.width/2, canvas.height/2 + fontSize*0.9);
+
+    if (elapsed < totalMs) {
+      requestAnimationFrame(frame);
     } else {
-        drawPlaceholder();
+      // finish: export HD
+      exportHD();
     }
+  }
+  requestAnimationFrame(frame);
 }
 
-// Gesture
-canvas.addEventListener('touchstart', e => {
-    if (!img) return;
-    fingers = e.touches.length;
-    if (fingers === 1) {
-        dragging = true;
-        lastX = e.touches[0].clientX;
-        lastY = e.touches[0].clientY;
-    } else if (fingers === 2) {
-        lastDist = Math.hypot(
-            e.touches[0].clientX - e.touches[1].clientX,
-            e.touches[0].clientY - e.touches[1].clientY
-        );
+function exportHD(){
+  const size = 3000;
+  const hd = document.createElement('canvas');
+  hd.width = size; hd.height = size;
+  const hctx = hd.getContext('2d');
+
+  // fill white background
+  hctx.fillStyle = '#ffffff';
+  hctx.fillRect(0,0,size,size);
+
+  // scale factor
+  const factor = size / canvas.width;
+
+  // draw user image scaled/positioned
+  if (userImage) {
+    const sx = imgX * factor;
+    const sy = imgY * factor;
+    const sw = userImage.width * scale * factor;
+    const sh = userImage.height * scale * factor;
+    hctx.drawImage(userImage, sx, sy, sw, sh);
+  }
+
+  // draw twibbon as full cover
+  if (twibbon.complete) {
+    hctx.globalAlpha = 1;
+    hctx.drawImage(twibbon, 0, 0, size, size);
+    hctx.globalAlpha = 1;
+  }
+
+  // toBlob and download
+  hd.toBlob((blob) => {
+    if (!blob) {
+      alert('Gagal membuat file PNG.');
+      btnDownload.disabled = false;
+      isProcessing = false;
+      return;
     }
-    twibbonAlpha = 0.5;
-    draw();
-});
-canvas.addEventListener('touchmove', e => {
-    if (!img) return;
-    if (fingers === 1 && dragging) {
-        originX += e.touches[0].clientX - lastX;
-        originY += e.touches[0].clientY - lastY;
-        lastX = e.touches[0].clientX;
-        lastY = e.touches[0].clientY;
-    } else if (fingers === 2) {
-        const dist = Math.hypot(
-            e.touches[0].clientX - e.touches[1].clientX,
-            e.touches[0].clientY - e.touches[1].clientY
-        );
-        scale *= dist / lastDist;
-        lastDist = dist;
-    }
-    draw();
-});
-canvas.addEventListener('touchend', e => {
-    fingers = e.touches.length;
-    if (fingers === 0) {
-        dragging = false;
-        twibbonAlpha = 1;
-        draw();
-    }
-});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'twibbon-hd.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
 
-// Mouse drag
-canvas.addEventListener('mousedown', e => {
-    if (!img) return;
-    dragging = true;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    twibbonAlpha = 0.5;
-    draw();
-});
-canvas.addEventListener('mousemove', e => {
-    if (!img || !dragging) return;
-    originX += e.clientX - lastX;
-    originY += e.clientY - lastY;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    draw();
-});
-canvas.addEventListener('mouseup', () => {
-    dragging = false;
-    twibbonAlpha = 1;
-    draw();
-});
+    // UI: hide download, show share+reset
+    downloadGroup.style.display = 'none';
+    shareResetGroup.classList.remove('hidden');
 
-// Unduh HD + efek abu-abu + countdown
-downloadBtn.addEventListener('click', () => {
-    if (!img) return;
-    downloadBtn.disabled = true;
-
-    let countdown = 15;
-    const overlay = document.createElement('canvas');
-    overlay.width = canvas.width;
-    overlay.height = canvas.height;
-    const octx = overlay.getContext('2d');
-
-    const interval = setInterval(() => {
-        octx.fillStyle = 'rgba(128,128,128,0.8)';
-        octx.fillRect(0,0,overlay.width,overlay.height);
-
-        // Dot pulse kiri atas
-        octx.beginPath();
-        octx.arc(20, 20, 8 + Math.sin(Date.now()/200)*2, 0, Math.PI*2);
-        octx.fillStyle = 'black';
-        octx.fill();
-
-        // Text proses...
-        octx.fillStyle = 'black';
-        octx.font = '30px sans-serif';
-        let dots = '.'.repeat((Math.floor(Date.now()/500)%3)+1);
-        octx.fillText(`Sedang proses${dots}`, overlay.width/2, overlay.height/2);
-
-        // Countdown
-        octx.font = '20px sans-serif';
-        octx.fillText(`Selesai dalam ${countdown}s`, overlay.width/2, overlay.height/2 + 30);
-
-        ctx.drawImage(overlay,0,0);
-
-    }, 100);
-
-    const countdownTimer = setInterval(() => {
-        countdown--;
-        if (countdown <= 0) {
-            clearInterval(countdownTimer);
-            clearInterval(interval);
-            saveHD();
-        }
-    }, 1000);
-});
-
-function saveHD() {
-    const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = 3000;
-    exportCanvas.height = 3000;
-    const exportCtx = exportCanvas.getContext('2d');
-    exportCtx.drawImage(img, originX, originY, img.width*scale, img.height*scale);
-    exportCtx.drawImage(twibbon, 0, 0, exportCanvas.width, exportCanvas.height);
-
-    const link = document.createElement('a');
-    link.download = 'twibbon.png';
-    link.href = exportCanvas.toDataURL('image/png');
-    link.click();
-
-    shareBtn.style.display = 'inline-block';
-    resetBtn.style.display = 'inline-block';
-    downloadBtn.style.display = 'none';
+    isProcessing = false;
+  }, 'image/png', 1.0);
 }
 
-resetBtn.addEventListener('click', () => {
-    img = null;
-    scale = 1;
-    originX = originY = 0;
-    placeholderText.style.display = 'block';
-    downloadBtn.disabled = true;
-    downloadBtn.style.display = 'inline-block';
-    shareBtn.style.display = 'none';
-    resetBtn.style.display = 'none';
-    draw();
+/* --------- Button handlers --------- */
+btnDownload.addEventListener('click', () => {
+  if (!userImage) return;
+  animateOverlayThenExport();
 });
 
+btnShare.addEventListener('click', async () => {
+  if (!userImage) return;
+  // generate HD blob for share
+  const size = 3000;
+  const hd = document.createElement('canvas');
+  hd.width = size; hd.height = size;
+  const hctx = hd.getContext('2d');
+  hctx.fillStyle = '#ffffff'; hctx.fillRect(0,0,size,size);
+  const factor = size / canvas.width;
+  if (userImage) hctx.drawImage(userImage, imgX*factor, imgY*factor, userImage.width * scale * factor, userImage.height * scale * factor);
+  if (twibbon.complete) hctx.drawImage(twibbon, 0, 0, size, size);
+  hd.toBlob(async (blob) => {
+    if (!blob) return alert('Gagal membuat file untuk dibagikan.');
+    const file = new File([blob], 'twibbon-hd.png', { type:'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files:[file], title:'Twibbon Saya' }); }
+      catch(err){ alert('Gagal membagikan: '+err.message); }
+    } else {
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(()=>URL.revokeObjectURL(url),2000);
+    }
+  }, 'image/png');
+});
+
+btnReset.addEventListener('click', () => {
+  userImage = null;
+  fileInput.value = '';
+  fileInput.disabled = false;
+  btnDownload.disabled = true;
+  downloadGroup.style.display = 'block';
+  shareResetGroup.classList.add('hidden');
+  imgX = imgY = 0; scale = 1;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawPlaceholder();
+});
+
+/* --------- init --------- */
+drawPlaceholder();
 </script>
 </body>
 </html>
