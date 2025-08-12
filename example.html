@@ -3,50 +3,42 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Twibbon PFP — Final</title>
+<title>Twibbon PFP — Final 1024</title>
 <style>
-  :root{ --maxW:420px }
-  body{ font-family: system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial; background:#f3f4f6; margin:20px; display:flex; justify-content:center }
-  .container{ width:100%; max-width:var(--maxW); display:flex; flex-direction:column; gap:12px; align-items:center }
-
-  .drop-area{
+  :root{ --maxW:480px }
+  body{ font-family:system-ui,Segoe UI,Roboto,Arial; background:#f3f4f6; margin:16px; display:flex; justify-content:center }
+  .wrap{ width:100%; max-width:var(--maxW); display:flex; flex-direction:column; gap:12px; align-items:center; }
+  .drop{
     width:100%; aspect-ratio:1/1; border-radius:12px; overflow:hidden; position:relative;
     border:2px dashed #c7c7c7; background:#fff; display:flex; align-items:center; justify-content:center;
     touch-action:none; -webkit-user-select:none; user-select:none;
   }
-  .drop-area.hover{ border-color:#6b7280; background:#fbfbfd }
-
-  canvas{ position:absolute; top:0; left:0; width:100%; height:100%; display:block; background:#fff }
+  .drop.hover{ border-color:#6b7280; background:#fbfbfd }
+  canvas{ position:absolute; inset:0; width:100%; height:100%; display:block; background:#fff }
   input[type=file]{ display:none }
-
   .placeholder{ position:absolute; pointer-events:none; color:#9ca3af; font-size:14px; text-align:center; padding:8px }
-
-  .controls{ width:100%; display:flex; gap:10px; flex-direction:column }
-  .btn-row{ display:flex; gap:10px; width:100% }
+  .controls{ width:100%; display:flex; gap:10px; flex-direction:column; }
+  .row{ display:flex; gap:10px; width:100% }
   button{ padding:10px 12px; border-radius:8px; border:none; font-size:15px; cursor:pointer; flex:1 }
-  button:disabled{ opacity:0.5; cursor:not-allowed }
-
-  #btnDownload{ background:#2563eb; color:#fff; width:100% }
+  #btnDownload{ background:#2563eb; color:#fff }
   #btnShare{ background:#16a34a; color:#fff }
   #btnReset{ background:#ef4444; color:#fff }
-
-  .hidden{ display:none !important; }
-
-  /* small responsive text */
+  #btnDownload:disabled{ opacity:0.5; cursor:not-allowed }
+  .hidden{ display:none !important }
   @media (max-width:360px){ .placeholder{ font-size:13px } }
 </style>
 </head>
 <body>
-  <div class="container">
-    <div id="dropArea" class="drop-area" aria-label="Area unggah gambar">
-      <input id="fileInput" type="file" accept="image/*" />
-      <canvas id="canvas" width="800" height="800"></canvas>
+  <div class="wrap">
+    <div id="drop" class="drop" aria-label="Drop area">
+      <input id="file" type="file" accept="image/*">
+      <canvas id="canvas"></canvas>
       <div id="placeholder" class="placeholder">Tarik & Lepas gambar atau ketuk untuk pilih</div>
     </div>
 
     <div class="controls">
       <div id="downloadGroup"><button id="btnDownload" disabled>Unduh</button></div>
-      <div id="shareResetGroup" class="btn-row hidden">
+      <div id="shareReset" class="row hidden">
         <button id="btnShare">Bagikan</button>
         <button id="btnReset">Reset</button>
       </div>
@@ -54,404 +46,322 @@
   </div>
 
 <script>
-/* --------- Elements --------- */
-const dropArea = document.getElementById('dropArea');
-const fileInput = document.getElementById('fileInput');
+/* Elements */
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('file');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const placeholder = document.getElementById('placeholder');
 
 const btnDownload = document.getElementById('btnDownload');
-const shareResetGroup = document.getElementById('shareResetGroup');
+const downloadGroup = document.getElementById('downloadGroup');
+const shareReset = document.getElementById('shareReset');
 const btnShare = document.getElementById('btnShare');
 const btnReset = document.getElementById('btnReset');
-const downloadGroup = document.getElementById('downloadGroup');
 
-/* --------- State --------- */
-let userImage = null;
+/* State */
+let userImg = null;
 const twibbon = new Image();
-twibbon.src = 'twibbon.png'; // <-- ganti jika perlu (default 1024x1024)
+twibbon.src = 'twibbon.png'; // ganti ke twibbon 1024x1024 Anda
 let scale = 1;
-let imgX = 0, imgY = 0; // top-left in canvas coords
-let pointerDown = false, movedSinceDown = false, lastClientX = 0, lastClientY = 0;
+let imgX = 0, imgY = 0; // top-left x,y in canvas coords
+let ongoingTouches = [];
 let lastTouchDist = 0;
+let pointerDown = false;
+let lastClientX=0, lastClientY=0;
 let isProcessing = false;
 
-/* --------- Resize canvas to fit container --------- */
-function resizeCanvas(){
-  const rect = dropArea.getBoundingClientRect();
-  // set drawingBuffer size equal to displayed size for sharpness
-  canvas.width = Math.round(rect.width);
-  canvas.height = Math.round(rect.height);
-  // if image loaded, re-fit if necessary (keep current scale/pos)
-  if (!userImage) drawPlaceholder();
+/* Resize canvas to drop size (drawing buffer equals display size) */
+function resize(){
+  const r = drop.getBoundingClientRect();
+  const w = Math.round(r.width);
+  const h = Math.round(r.height);
+  canvas.width = w;
+  canvas.height = h;
+  if (!userImg) drawPlaceholder();
   else draw();
 }
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+window.addEventListener('resize', resize);
+resize();
 
-/* --------- Drawing functions --------- */
+/* Drawing */
 function drawPlaceholder(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.fillStyle = '#fff';
   ctx.fillRect(0,0,canvas.width,canvas.height);
   placeholder.style.display = 'block';
 }
-
-function draw(options = {}){
-  // options: { twibbonAlpha, overlay } overlay handled separately
+function draw(options = {}){ // options: { twibbonAlpha }
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  if (!userImage) {
+  if (!userImg) {
     placeholder.style.display = 'block';
     return;
   }
   placeholder.style.display = 'none';
 
-  // draw user image
-  const iw = userImage.width * scale;
-  const ih = userImage.height * scale;
-  ctx.drawImage(userImage, imgX, imgY, iw, ih);
+  const iw = userImg.width * scale;
+  const ih = userImg.height * scale;
+  ctx.drawImage(userImg, imgX, imgY, iw, ih);
 
-  // twibbon overlay
-  ctx.globalAlpha = typeof options.twibbonAlpha === 'number' ? options.twibbonAlpha : 1;
+  ctx.globalAlpha = (typeof options.twibbonAlpha === 'number') ? options.twibbonAlpha : 1;
   if (twibbon.complete) ctx.drawImage(twibbon, 0, 0, canvas.width, canvas.height);
   ctx.globalAlpha = 1;
 }
 
-/* --------- Helper: client->canvas coords --------- */
-function clientToCanvas(clientX, clientY){
-  const rect = canvas.getBoundingClientRect();
-  return {
-    x: (clientX - rect.left),
-    y: (clientY - rect.top)
-  };
-}
+/* Utility */
+function readFileAsDataURL(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
+function ptouch(t){ return { id:t.identifier, x:t.clientX, y:t.clientY }; }
+function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
 
-/* --------- Upload / Drop handling --------- */
-dropArea.addEventListener('click', (e)=>{
-  // prevent opening file if click was part of drag interaction
+/* Upload handlers (preserve normal behavior strictly) */
+/* Prevent accidental file open when dragging: track movedSinceDown */
+let movedSinceDown = false;
+drop.addEventListener('pointerdown', e => { movedSinceDown = false; });
+drop.addEventListener('pointermove', e => { movedSinceDown = true; });
+
+drop.addEventListener('click', (e)=>{
+  // don't open file dialog if user just dragged/moved
   if (movedSinceDown) { movedSinceDown = false; return; }
+  if (!fileInput.disabled) fileInput.click();
+});
+
+drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('hover'); });
+drop.addEventListener('dragleave', ()=>drop.classList.remove('hover'));
+drop.addEventListener('drop', e=>{
+  e.preventDefault(); drop.classList.remove('hover');
   if (fileInput.disabled) return;
-  fileInput.click();
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) loadFile(f);
 });
 
-dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('hover'); });
-dropArea.addEventListener('dragleave', () => dropArea.classList.remove('hover'));
-dropArea.addEventListener('drop', e => {
-  e.preventDefault(); dropArea.classList.remove('hover');
-  if (fileInput.disabled) return;
-  const f = e.dataTransfer.files && e.dataTransfer.files[0];
-  if (f) handleFile(f);
+fileInput.addEventListener('change', e=>{
+  if (fileInput.files && fileInput.files[0]) loadFile(fileInput.files[0]);
 });
-
-fileInput.addEventListener('change', e => {
-  if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
-});
-
-function handleFile(file){
+async function loadFile(file){
   if (!file || !file.type.startsWith('image/')) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    const img = new Image();
-    img.onload = () => {
-      userImage = img;
-      // fit image to canvas preserving aspect
-      const fit = Math.min(canvas.width / img.width, canvas.height / img.height);
-      scale = fit;
-      imgX = (canvas.width - img.width * scale) / 2;
-      imgY = (canvas.height - img.height * scale) / 2;
-      // disable fileInput until reset to match previous behavior
-      fileInput.disabled = true;
-      btnDownload.disabled = false;
-      draw();
-    };
-    img.src = reader.result;
+  const data = await readFileAsDataURL(file);
+  const img = new Image();
+  img.onload = () => {
+    userImg = img;
+    // fit image to canvas preserving aspect ratio, center it
+    const fit = Math.min(canvas.width / img.width, canvas.height / img.height);
+    scale = fit;
+    imgX = (canvas.width - img.width*scale)/2;
+    imgY = (canvas.height - img.height*scale)/2;
+    // disable input until reset (keputusan awal)
+    fileInput.disabled = true;
+    btnDownload.disabled = false;
+    draw();
   };
-  reader.readAsDataURL(file);
+  img.src = data;
 }
 
-/* --------- Pointer/mouse interactions (pointer events + touch) --------- */
-/* Use pointer events for mouse & stylus; use touch for multi-touch pinch logic */
-canvas.addEventListener('pointerdown', (e) => {
-  if (!userImage) return;
+/* Prevent default page gestures on drop area */
+['touchstart','touchmove'].forEach(ev => drop.addEventListener(ev, e => e.preventDefault(), { passive:false }));
+
+/* Pointer + touch interactions: keep gestures smooth and not trigger file open */
+canvas.addEventListener('pointerdown', e=>{
+  if (!userImg) return;
   pointerDown = true;
-  movedSinceDown = false;
-  lastClientX = e.clientX;
-  lastClientY = e.clientY;
+  lastClientX = e.clientX; lastClientY = e.clientY;
   canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
 });
-canvas.addEventListener('pointermove', (e) => {
-  if (!pointerDown || !userImage) return;
-  const dx = e.clientX - lastClientX;
-  const dy = e.clientY - lastClientY;
-  if (Math.hypot(dx,dy) > 2) movedSinceDown = true;
-  imgX += dx;
-  imgY += dy;
-  lastClientX = e.clientX;
-  lastClientY = e.clientY;
+canvas.addEventListener('pointermove', e=>{
+  if (!pointerDown || !userImg) return;
+  const dx = e.clientX - lastClientX, dy = e.clientY - lastClientY;
+  if (Math.hypot(dx,dy)>1) movedSinceDown = true;
+  imgX += dx; imgY += dy;
+  lastClientX = e.clientX; lastClientY = e.clientY;
   draw({ twibbonAlpha: 0.5 });
 });
-canvas.addEventListener('pointerup', (e) => {
+['pointerup','pointercancel','pointerleave'].forEach(ev=>canvas.addEventListener(ev, e=>{
   pointerDown = false;
   canvas.releasePointerCapture && canvas.releasePointerCapture(e.pointerId);
   draw();
-});
-canvas.addEventListener('pointercancel', ()=>{ pointerDown=false; draw(); });
+}));
 
-/* Touch for pinch (multi-touch). We use touch events for pinch center math. */
-let ongoingTouches = [];
-canvas.addEventListener('touchstart', (e)=> {
-  if (!userImage) return;
-  // add touches
-  for (const t of e.changedTouches) ongoingTouches.push(copyTouch(t));
-  if (ongoingTouches.length === 1){
-    lastClientX = ongoingTouches[0].clientX;
-    lastClientY = ongoingTouches[0].clientY;
-  } else if (ongoingTouches.length === 2){
-    lastTouchDist = distance(ongoingTouches[0], ongoingTouches[1]);
+/* Touch for pinch */
+canvas.addEventListener('touchstart', e=>{
+  if (!userImg) return;
+  for(const t of e.changedTouches) ongoingTouches.push(ptouch(t));
+  if (ongoingTouches.length===1){
+    lastClientX = ongoingTouches[0].x; lastClientY = ongoingTouches[0].y;
+  } else if (ongoingTouches.length===2){
+    lastTouchDist = dist(ongoingTouches[0], ongoingTouches[1]);
   }
 });
-canvas.addEventListener('touchmove', (e)=> {
-  e.preventDefault(); // prevent page zoom/scroll
-  if (!userImage) return;
-  // update ongoingTouches
-  for (const t of e.changedTouches) {
-    for (let i=0;i<ongoingTouches.length;i++){
-      if (ongoingTouches[i].identifier === t.identifier){
-        ongoingTouches[i] = copyTouch(t);
-      }
+canvas.addEventListener('touchmove', e=>{
+  e.preventDefault();
+  if (!userImg) return;
+  // update touches
+  for(const t of e.changedTouches){
+    for(let i=0;i<ongoingTouches.length;i++){
+      if (ongoingTouches[i].id === t.identifier) ongoingTouches[i] = ptouch(t);
     }
   }
-  if (ongoingTouches.length === 1 && pointerDown !== true) {
-    // single finger drag
+  if (ongoingTouches.length===1){
     const t = ongoingTouches[0];
-    const dx = t.clientX - lastClientX;
-    const dy = t.clientY - lastClientY;
-    if (Math.hypot(dx,dy) > 1) movedSinceDown = true;
+    const dx = t.x - lastClientX; const dy = t.y - lastClientY;
+    if (Math.hypot(dx,dy)>1) movedSinceDown = true;
     imgX += dx; imgY += dy;
-    lastClientX = t.clientX; lastClientY = t.clientY;
+    lastClientX = t.x; lastClientY = t.y;
     draw({ twibbonAlpha: 0.5 });
-  } else if (ongoingTouches.length === 2){
-    const a = ongoingTouches[0], b = ongoingTouches[1];
-    const dist = distance(a,b);
-    if (lastTouchDist) {
-      // compute pinch center in canvas coords
+  } else if (ongoingTouches.length===2){
+    const d = dist(ongoingTouches[0], ongoingTouches[1]);
+    if (lastTouchDist){
+      // compute pinch center in canvas coords to keep focus stable
       const rect = canvas.getBoundingClientRect();
-      const cx = ((a.clientX + b.clientX)/2) - rect.left;
-      const cy = ((a.clientY + b.clientY)/2) - rect.top;
-      // image coords under center
+      const cx = ((ongoingTouches[0].x + ongoingTouches[1].x)/2) - rect.left;
+      const cy = ((ongoingTouches[0].y + ongoingTouches[1].y)/2) - rect.top;
       const ix = (cx - imgX) / scale;
       const iy = (cy - imgY) / scale;
-      const factor = dist / lastTouchDist;
+      const factor = d / lastTouchDist;
       scale *= factor;
       scale = Math.max(0.05, Math.min(20, scale));
-      // recompute imgX/imgY to keep (ix,iy) under same canvas point
       imgX = cx - ix * scale;
       imgY = cy - iy * scale;
       draw({ twibbonAlpha: 0.5 });
     }
-    lastTouchDist = dist;
-  }
-}, { passive:false });
-
-canvas.addEventListener('touchend', (e)=> {
-  // remove ended touches
-  for (const t of e.changedTouches){
-    for (let i=0;i<ongoingTouches.length;i++){
-      if (ongoingTouches[i].identifier === t.identifier) ongoingTouches.splice(i,1);
-    }
-  }
-  if (ongoingTouches.length === 0) {
-    lastTouchDist = 0;
-    draw();
+    lastTouchDist = d;
   }
 });
-
-function copyTouch(t){ return { identifier: t.identifier, clientX: t.clientX, clientY: t.clientY }; }
-function distance(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
+canvas.addEventListener('touchend', e=>{
+  for(const t of e.changedTouches){
+    for(let i=0;i<ongoingTouches.length;i++){
+      if (ongoingTouches[i].id===t.identifier) ongoingTouches.splice(i,1);
+    }
+  }
+  if (ongoingTouches.length===0){ lastTouchDist=0; draw(); }
+});
 
 /* Wheel zoom (desktop) */
-canvas.addEventListener('wheel', (e) => {
-  if (!userImage) return;
+canvas.addEventListener('wheel', e=>{
+  if (!userImg) return;
   e.preventDefault();
   const rect = canvas.getBoundingClientRect();
-  const cx = e.clientX - rect.left;
-  const cy = e.clientY - rect.top;
-  const ix = (cx - imgX) / scale;
-  const iy = (cy - imgY) / scale;
-  const delta = -e.deltaY;
-  const zoom = 1 + (delta > 0 ? 0.08 : -0.08);
-  scale *= zoom;
-  scale = Math.max(0.05, Math.min(20, scale));
-  imgX = cx - ix * scale;
-  imgY = cy - iy * scale;
+  const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+  const ix = (cx - imgX) / scale, iy = (cy - imgY) / scale;
+  const zoom = 1 + (e.deltaY < 0 ? 0.08 : -0.08);
+  scale *= zoom; scale = Math.max(0.05, Math.min(20, scale));
+  imgX = cx - ix * scale; imgY = cy - iy * scale;
   draw({ twibbonAlpha: 0.5 });
   clearTimeout(window._wheelTimer);
   window._wheelTimer = setTimeout(()=>draw(), 150);
 }, { passive:false });
 
-/* Prevent page gestures interfering on dropArea */
-['touchstart','touchmove'].forEach(ev => {
-  dropArea.addEventListener(ev, (e)=>{ e.preventDefault(); }, { passive:false });
-});
-
-/* Prevent click from drag: track movedSinceDown */
-canvas.addEventListener('pointerdown', ()=>{ movedSinceDown = false; });
-canvas.addEventListener('pointermove', ()=>{ /* movedSinceDown updated in pointermove */ });
-canvas.addEventListener('pointerup', ()=>{ /* noop */ });
-
-/* --------- Processing overlay + HD export (3000) --------- */
+/* --------- Overlay animation + export 1024x1024 --------- */
 function animateOverlayThenExport(){
-  if (!userImage || isProcessing) return;
+  if (!userImg || isProcessing) return;
   isProcessing = true;
   btnDownload.disabled = true;
 
   const totalMs = 15000;
   const start = performance.now();
+  let rafId = 0;
 
-  function frame(now){
+  function step(now){
     const elapsed = now - start;
-    const t = Math.min(elapsed / totalMs, 1);
-    // redraw base
-    draw();
-    // overlay
-    ctx.fillStyle = `rgba(240,240,240,${0.55})`;
+    const t = Math.min(1, elapsed / totalMs);
+    draw(); // draw current state
+    // overlay grey
+    ctx.fillStyle = 'rgba(240,240,240,0.6)';
     ctx.fillRect(0,0,canvas.width,canvas.height);
-
     // dot pulse top-left (inside canvas)
     const pulse = 4 + 3 * Math.abs(Math.sin((elapsed/1000) * 3.5));
     const dotX = Math.round(Math.max(12, canvas.width * 0.03));
     const dotY = Math.round(Math.max(12, canvas.height * 0.03));
-    ctx.beginPath();
-    ctx.arc(dotX, dotY, pulse, 0, Math.PI*2);
-    ctx.fillStyle = 'black';
-    ctx.fill();
-
+    ctx.beginPath(); ctx.arc(dotX, dotY, pulse, 0, Math.PI*2); ctx.fillStyle='black'; ctx.fill();
     // animated dots for text
-    const dots = Math.floor((elapsed / 500) % 4); // 0..3
+    const dots = Math.floor((elapsed / 500) % 4);
     const text = 'Sedang proses' + '.'.repeat(dots);
-
-    // center text
     ctx.fillStyle = '#111';
     const fontSize = Math.max(12, Math.round(canvas.width * 0.06));
     ctx.font = `${fontSize}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(text, canvas.width/2, canvas.height/2);
-
-    // countdown (seconds remaining)
-    const remaining = Math.max(0, Math.ceil((totalMs - elapsed) / 1000));
+    // countdown
+    const remaining = Math.max(0, Math.ceil((totalMs - elapsed)/1000));
     ctx.font = `${Math.max(10, Math.round(canvas.width * 0.045))}px Arial`;
     ctx.textBaseline = 'top';
     ctx.fillText(`sisa: ${remaining}s`, canvas.width/2, canvas.height/2 + fontSize*0.9);
 
-    if (elapsed < totalMs) {
-      requestAnimationFrame(frame);
-    } else {
-      // finish: export HD
-      exportHD();
+    if (elapsed < totalMs) rafId = requestAnimationFrame(step);
+    else {
+      cancelAnimationFrame(rafId);
+      exportCanvas1024();
     }
   }
-  requestAnimationFrame(frame);
+  rafId = requestAnimationFrame(step);
 }
 
-function exportHD(){
-  const size = 3000;
+function exportCanvas1024(){
+  const size = 1024;
   const hd = document.createElement('canvas');
   hd.width = size; hd.height = size;
   const hctx = hd.getContext('2d');
+  // white bg
+  hctx.fillStyle = '#ffffff'; hctx.fillRect(0,0,size,size);
 
-  // fill white background
-  hctx.fillStyle = '#ffffff';
-  hctx.fillRect(0,0,size,size);
-
-  // scale factor
   const factor = size / canvas.width;
-
-  // draw user image scaled/positioned
-  if (userImage) {
+  if (userImg){
     const sx = imgX * factor;
     const sy = imgY * factor;
-    const sw = userImage.width * scale * factor;
-    const sh = userImage.height * scale * factor;
-    hctx.drawImage(userImage, sx, sy, sw, sh);
+    const sw = userImg.width * scale * factor;
+    const sh = userImg.height * scale * factor;
+    hctx.drawImage(userImg, sx, sy, sw, sh);
   }
+  if (twibbon.complete) hctx.drawImage(twibbon, 0, 0, size, size);
 
-  // draw twibbon as full cover
-  if (twibbon.complete) {
-    hctx.globalAlpha = 1;
-    hctx.drawImage(twibbon, 0, 0, size, size);
-    hctx.globalAlpha = 1;
-  }
-
-  // toBlob and download
-  hd.toBlob((blob) => {
-    if (!blob) {
-      alert('Gagal membuat file PNG.');
-      btnDownload.disabled = false;
-      isProcessing = false;
-      return;
-    }
+  hd.toBlob((blob)=>{
+    if (!blob) { alert('Gagal membuat file.'); btnDownload.disabled=false; isProcessing=false; return; }
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'twibbon-hd.png';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    const a = document.createElement('a'); a.href = url; a.download = 'twibbon-1024.png'; document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
-
-    // UI: hide download, show share+reset
+    // UI swap
     downloadGroup.style.display = 'none';
-    shareResetGroup.classList.remove('hidden');
-
+    shareReset.classList.remove('hidden');
     isProcessing = false;
   }, 'image/png', 1.0);
 }
 
-/* --------- Button handlers --------- */
-btnDownload.addEventListener('click', () => {
-  if (!userImage) return;
-  animateOverlayThenExport();
-});
+/* Buttons */
+btnDownload.addEventListener('click', ()=>{ if (!userImg) return; animateOverlayThenExport(); });
 
-btnShare.addEventListener('click', async () => {
-  if (!userImage) return;
-  // generate HD blob for share
-  const size = 3000;
-  const hd = document.createElement('canvas');
-  hd.width = size; hd.height = size;
-  const hctx = hd.getContext('2d');
-  hctx.fillStyle = '#ffffff'; hctx.fillRect(0,0,size,size);
+btnShare.addEventListener('click', async ()=>{
+  if (!userImg) return;
+  // build HD blob same as export
+  const size = 1024;
+  const hd = document.createElement('canvas'); hd.width=size; hd.height=size; const hctx=hd.getContext('2d');
+  hctx.fillStyle='#fff'; hctx.fillRect(0,0,size,size);
   const factor = size / canvas.width;
-  if (userImage) hctx.drawImage(userImage, imgX*factor, imgY*factor, userImage.width * scale * factor, userImage.height * scale * factor);
-  if (twibbon.complete) hctx.drawImage(twibbon, 0, 0, size, size);
-  hd.toBlob(async (blob) => {
+  if (userImg) hctx.drawImage(userImg, imgX*factor, imgY*factor, userImg.width*scale*factor, userImg.height*scale*factor);
+  if (twibbon.complete) hctx.drawImage(twibbon,0,0,size,size);
+  hd.toBlob(async (blob)=>{
     if (!blob) return alert('Gagal membuat file untuk dibagikan.');
-    const file = new File([blob], 'twibbon-hd.png', { type:'image/png' });
+    const file = new File([blob], 'twibbon-1024.png', { type:'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try { await navigator.share({ files:[file], title:'Twibbon Saya' }); }
-      catch(err){ alert('Gagal membagikan: '+err.message); }
+      catch(err){ alert('Gagal membagikan: '+(err.message||err)); }
     } else {
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      setTimeout(()=>URL.revokeObjectURL(url),2000);
+      const url = URL.createObjectURL(blob); window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),2000);
     }
   }, 'image/png');
 });
 
-btnReset.addEventListener('click', () => {
-  userImage = null;
+btnReset.addEventListener('click', ()=>{
+  // restore to initial
+  userImg = null;
   fileInput.value = '';
   fileInput.disabled = false;
   btnDownload.disabled = true;
   downloadGroup.style.display = 'block';
-  shareResetGroup.classList.add('hidden');
+  shareReset.classList.add('hidden');
   imgX = imgY = 0; scale = 1;
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  isProcessing = false;
   drawPlaceholder();
 });
 
-/* --------- init --------- */
+/* init placeholder */
 drawPlaceholder();
 </script>
 </body>
