@@ -1,99 +1,328 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Twibbon Generator</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Twibbon PFP — Fixed Upload</title>
 <style>
-  body { font-family: Arial, sans-serif; text-align: center; background: #f0f0f0; margin: 0; }
-  canvas { border: 1px solid #ccc; max-width: 100%; background: white; display: block; margin: 10px auto; }
-  button { padding: 10px; border: none; cursor: pointer; margin: 5px; font-size: 16px; }
-  #overlay {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(128, 128, 128, 0.6); display: none; justify-content: center; align-items: center;
-    flex-direction: column; z-index: 10;
-  }
-  .dot-pulse {
-    width: 10px; height: 10px; border-radius: 50%; background: black;
-    animation: pulse 1s infinite ease-in-out;
-    position: absolute; top: 10px; left: 10px;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 0.2; transform: scale(0.9); }
-    50% { opacity: 1; transform: scale(1.1); }
-  }
-  .loading-text { font-size: 20px; color: white; }
-  .dots::after {
-    content: ''; animation: dots 1s steps(3, end) infinite;
-  }
-  @keyframes dots {
-    0% { content: ''; }
-    33% { content: '.'; }
-    66% { content: '..'; }
-    100% { content: '...'; }
-  }
+  :root{ --maxW:480px; --gap:10px }
+  body{ font-family:system-ui,Segoe UI,Roboto,Arial; background:#f3f4f6; margin:16px; display:flex; justify-content:center }
+  .wrap{ width:100%; max-width:var(--maxW); display:flex; flex-direction:column; gap:var(--gap); align-items:center; }
+  .drop{ width:100%; aspect-ratio:1/1; border-radius:12px; overflow:hidden; position:relative;
+    border:2px dashed #c7c7c7; background:#fff; display:flex; align-items:center; justify-content:center;
+    touch-action:none; -webkit-user-select:none; user-select:none; }
+  .drop.hover{ border-color:#6b7280; background:#fbfbfd }
+  canvas{ position:absolute; inset:0; width:100%; height:100%; display:block; background:#fff }
+  input[type=file]{ display:none }
+  .placeholder{ position:absolute; pointer-events:none; color:#9ca3af; font-size:14px; text-align:center; padding:8px }
+  .controls{ width:100%; display:flex; gap:var(--gap); flex-direction:column; }
+  .row{ display:flex; gap:var(--gap); width:100% }
+  button{ padding:10px 12px; border-radius:8px; border:none; font-size:15px; cursor:pointer; }
+  /* download full width */
+  #downloadGroup { width:100%; }
+  #btnDownload{ width:100%; display:block; background:#2563eb; color:#fff; }
+  #btnDownload:disabled{ opacity:0.5; cursor:not-allowed; }
+  #shareReset{ display:flex; gap:var(--gap); width:100%; }
+  #btnShare{ flex:1; background:#16a34a; color:#fff; }
+  #btnReset{ flex:1; background:#ef4444; color:#fff; }
+  .hidden{ display:none !important; }
+  @media (max-width:360px){ .placeholder{ font-size:13px } }
 </style>
 </head>
 <body>
+  <div class="wrap">
+    <div id="drop" class="drop" aria-label="Area unggah gambar">
+      <input id="fileInput" type="file" accept="image/*" />
+      <canvas id="canvas" width="800" height="800"></canvas>
+      <div id="placeholder" class="placeholder">Tarik & Lepas gambar atau ketuk untuk pilih</div>
+    </div>
 
-<h2>Twibbon Generator</h2>
-<canvas id="canvas" width="1024" height="1024"></canvas><br>
-<input type="file" id="upload" accept="image/*"><br>
-<button id="downloadBtn" disabled>Unduh</button>
-
-<div id="overlay">
-  <div class="dot-pulse" id="dotPulse"></div>
-  <div class="loading-text">
-    Sedang proses<span class="dots"></span><br>
-    <span id="countdown">15</span> detik
+    <div class="controls">
+      <div id="downloadGroup"><button id="btnDownload" disabled>Unduh</button></div>
+      <div id="shareReset" class="hidden">
+        <button id="btnShare">Bagikan</button>
+        <button id="btnReset">Reset</button>
+      </div>
+    </div>
   </div>
-</div>
 
 <script>
+/* Elements */
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('fileInput');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const upload = document.getElementById('upload');
-const downloadBtn = document.getElementById('downloadBtn');
-const overlay = document.getElementById('overlay');
-const dotPulse = document.getElementById('dotPulse');
-const countdownEl = document.getElementById('countdown');
+const placeholder = document.getElementById('placeholder');
 
-let img = new Image();
+const btnDownload = document.getElementById('btnDownload');
+const downloadGroup = document.getElementById('downloadGroup');
+const shareReset = document.getElementById('shareReset');
+const btnShare = document.getElementById('btnShare');
+const btnReset = document.getElementById('btnReset');
 
-upload.addEventListener('change', function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(evt) {
-    img.onload = function() {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-      downloadBtn.disabled = false;
-    }
-    img.src = evt.target.result;
+/* State */
+let userImg = null;
+const twibbon = new Image();
+twibbon.src = 'twibbon.png'; // <-- ganti file twibbon (1024x1024)
+let scale = 1;
+let imgX = 0, imgY = 0;
+
+let ongoingTouches = [];
+let lastTouchDist = 0;
+let pointerDownFlag = false;
+let movedSinceDown = false;
+let lastClientX = 0, lastClientY = 0;
+let isProcessing = false;
+
+/* Resize canvas to element size */
+function resizeCanvas(){
+  const r = drop.getBoundingClientRect();
+  const w = Math.round(r.width), h = Math.round(r.height);
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w; canvas.height = h;
+    if (!userImg) drawPlaceholder(); else draw();
   }
-  reader.readAsDataURL(file);
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+/* Drawing */
+function drawPlaceholder(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  placeholder.style.display = 'block';
+}
+function draw(opts={}){ // opts.twibbonAlpha
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if (!userImg) { placeholder.style.display='block'; return; }
+  placeholder.style.display='none';
+  const iw = userImg.width * scale;
+  const ih = userImg.height * scale;
+  ctx.drawImage(userImg, imgX, imgY, iw, ih);
+  ctx.globalAlpha = (typeof opts.twibbonAlpha === 'number') ? opts.twibbonAlpha : 1;
+  if (twibbon.complete) ctx.drawImage(twibbon, 0, 0, canvas.width, canvas.height);
+  ctx.globalAlpha = 1;
+}
+
+/* Helpers */
+const readFileAsDataURL = (file) => new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); });
+const pt = t => ({ id:t.identifier, x:t.clientX, y:t.clientY });
+const distance = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+
+/* Upload / drop: robust pointer-based click handling */
+/* pointerdown inside drop -> set pointerDownFlag; pointermove inside drop sets movedSinceDown;
+   pointerup anywhere -> if pointerDownFlag and pointerUp coords inside drop and not movedSinceDown => open file dialog */
+drop.addEventListener('pointerdown', e => { pointerDownFlag = true; movedSinceDown = false; });
+drop.addEventListener('pointermove', e => { if (pointerDownFlag) movedSinceDown = true; });
+
+document.addEventListener('pointerup', (e) => {
+  if (!pointerDownFlag) return;
+  pointerDownFlag = false;
+  const r = drop.getBoundingClientRect();
+  const x = e.clientX, y = e.clientY;
+  const inside = x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  if (inside && !movedSinceDown && !fileInput.disabled) {
+    fileInput.click();
+  }
+  movedSinceDown = false;
 });
 
-downloadBtn.addEventListener('click', function() {
-  overlay.style.display = 'flex';
-  let count = 15;
-  countdownEl.textContent = count;
-  const timer = setInterval(() => {
-    count--;
-    countdownEl.textContent = count;
-    if (count <= 0) {
-      clearInterval(timer);
-      overlay.style.display = 'none';
-      const link = document.createElement('a');
-      link.download = 'twibbon.png';
-      link.href = canvas.toDataURL();
-      link.click();
+/* drag & drop */
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('hover'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('hover'));
+drop.addEventListener('drop', e => {
+  e.preventDefault(); drop.classList.remove('hover');
+  if (fileInput.disabled) return;
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) loadFile(f);
+});
+
+fileInput.addEventListener('change', e => {
+  if (fileInput.files && fileInput.files[0]) loadFile(fileInput.files[0]);
+});
+
+async function loadFile(file){
+  if (!file || !file.type.startsWith('image/')) return;
+  const data = await readFileAsDataURL(file);
+  const img = new Image();
+  img.onload = () => {
+    userImg = img;
+    // fit to canvas preserving ratio, center
+    const fit = Math.min(canvas.width / img.width, canvas.height / img.height);
+    scale = fit;
+    imgX = (canvas.width - img.width*scale)/2;
+    imgY = (canvas.height - img.height*scale)/2;
+    fileInput.disabled = true; // keep until reset
+    btnDownload.disabled = false;
+    shareReset.classList.add('hidden');
+    downloadGroup.style.display = 'block';
+    draw();
+  };
+  img.src = data;
+}
+
+/* Prevent page gestures on drop */
+['touchstart','touchmove'].forEach(ev => drop.addEventListener(ev, e => e.preventDefault(), { passive:false }));
+
+/* Pointer (mouse) drag */
+canvas.addEventListener('pointerdown', (e) => {
+  if (!userImg) return;
+  lastClientX = e.clientX; lastClientY = e.clientY;
+  canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (typeof lastClientX !== 'number') return;
+  if (!userImg) return;
+  const dx = e.clientX - lastClientX, dy = e.clientY - lastClientY;
+  if (Math.hypot(dx,dy) > 1) movedSinceDown = true;
+  imgX += dx; imgY += dy;
+  lastClientX = e.clientX; lastClientY = e.clientY;
+  draw({ twibbonAlpha: 0.5 });
+});
+['pointerup','pointercancel','pointerleave'].forEach(ev => canvas.addEventListener(ev, (e)=>{
+  lastClientX = undefined; lastClientY = undefined;
+  draw();
+}));
+
+/* Touch pinch & drag */
+canvas.addEventListener('touchstart', e => {
+  if (!userImg) return;
+  for (const t of e.changedTouches) ongoingTouches.push(pt(t));
+  if (ongoingTouches.length === 1) {
+    lastClientX = ongoingTouches[0].x; lastClientY = ongoingTouches[0].y;
+  } else if (ongoingTouches.length === 2) {
+    lastTouchDist = distance(ongoingTouches[0], ongoingTouches[1]);
+  }
+});
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!userImg) return;
+  for (const t of e.changedTouches) {
+    for (let i=0;i<ongoingTouches.length;i++){
+      if (ongoingTouches[i].id === t.identifier) ongoingTouches[i] = pt(t);
     }
-  }, 1000);
+  }
+  if (ongoingTouches.length === 1) {
+    const t = ongoingTouches[0];
+    const dx = t.x - lastClientX, dy = t.y - lastClientY;
+    if (Math.hypot(dx,dy) > 1) movedSinceDown = true;
+    imgX += dx; imgY += dy;
+    lastClientX = t.x; lastClientY = t.y;
+    draw({ twibbonAlpha: 0.5 });
+  } else if (ongoingTouches.length === 2) {
+    const d = distance(ongoingTouches[0], ongoingTouches[1]);
+    if (lastTouchDist) {
+      const rect = canvas.getBoundingClientRect();
+      const cx = ((ongoingTouches[0].x + ongoingTouches[1].x)/2) - rect.left;
+      const cy = ((ongoingTouches[0].y + ongoingTouches[1].y)/2) - rect.top;
+      const ix = (cx - imgX) / scale;
+      const iy = (cy - imgY) / scale;
+      const factor = d / lastTouchDist;
+      scale *= factor;
+      scale = Math.max(0.05, Math.min(20, scale));
+      imgX = cx - ix * scale; imgY = cy - iy * scale;
+      draw({ twibbonAlpha: 0.5 });
+    }
+    lastTouchDist = d;
+  }
+}, { passive:false });
+canvas.addEventListener('touchend', e => {
+  for (const t of e.changedTouches){
+    for (let i=0;i<ongoingTouches.length;i++) if (ongoingTouches[i].id === t.identifier) ongoingTouches.splice(i,1);
+  }
+  if (ongoingTouches.length === 0) { lastTouchDist = 0; draw(); }
 });
-</script>
 
+/* Wheel zoom */
+canvas.addEventListener('wheel', e=>{
+  if (!userImg) return;
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+  const ix = (cx - imgX) / scale, iy = (cy - imgY) / scale;
+  const zoom = 1 + (e.deltaY < 0 ? 0.08 : -0.08);
+  scale *= zoom; scale = Math.max(0.05, Math.min(20, scale));
+  imgX = cx - ix * scale; imgY = cy - iy * scale;
+  draw({ twibbonAlpha: 0.5 });
+  clearTimeout(window._wheelTimer);
+  window._wheelTimer = setTimeout(()=>draw(), 150);
+}, { passive:false });
+
+/* Overlay animation + export 1024x1024 */
+function animateOverlayThenExport(){
+  if (!userImg || isProcessing) return;
+  isProcessing = true; btnDownload.disabled = true;
+  const totalMs = 15000;
+  const start = performance.now();
+  let raf;
+  function step(now){
+    const elapsed = now - start;
+    draw();
+    ctx.fillStyle = 'rgba(240,240,240,0.6)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    const pulse = 4 + 3 * Math.abs(Math.sin((elapsed/1000) * 3.5));
+    const dotX = Math.round(Math.max(12, canvas.width * 0.03)); const dotY = Math.round(Math.max(12, canvas.height * 0.03));
+    ctx.beginPath(); ctx.arc(dotX, dotY, pulse, 0, Math.PI*2); ctx.fillStyle='black'; ctx.fill();
+    const dots = Math.floor((elapsed/500)%4); const text = 'Sedang proses' + '.'.repeat(dots);
+    ctx.fillStyle = '#111'; const fontSize = Math.max(12, Math.round(canvas.width * 0.06));
+    ctx.font = `${fontSize}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(text, canvas.width/2, canvas.height/2);
+    const remaining = Math.max(0, Math.ceil((totalMs - elapsed)/1000));
+    ctx.font = `${Math.max(10, Math.round(canvas.width * 0.045))}px Arial`; ctx.textBaseline='top';
+    ctx.fillText(`sisa: ${remaining}s`, canvas.width/2, canvas.height/2 + fontSize*0.9);
+    if (elapsed < totalMs) raf = requestAnimationFrame(step);
+    else { cancelAnimationFrame(raf); export1024(); }
+  }
+  raf = requestAnimationFrame(step);
+}
+function export1024(){
+  const size = 1024;
+  const hd = document.createElement('canvas'); hd.width=size; hd.height=size;
+  const hctx = hd.getContext('2d');
+  hctx.fillStyle = '#fff'; hctx.fillRect(0,0,size,size);
+  const factor = size / canvas.width;
+  if (userImg){
+    const sx = imgX * factor, sy = imgY * factor, sw = userImg.width * scale * factor, sh = userImg.height * scale * factor;
+    hctx.drawImage(userImg, sx, sy, sw, sh);
+  }
+  if (twibbon.complete) hctx.drawImage(twibbon, 0, 0, size, size);
+  hd.toBlob((blob)=>{
+    if (!blob) { alert('Gagal membuat file.'); btnDownload.disabled=false; isProcessing=false; return; }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='twibbon-1024.png'; document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    downloadGroup.style.display='none'; shareReset.classList.remove('hidden'); isProcessing=false;
+  }, 'image/png', 1.0);
+}
+
+/* Buttons */
+btnDownload.addEventListener('click', ()=>{ if (!userImg) return; animateOverlayThenExport(); });
+
+btnShare.addEventListener('click', async ()=>{
+  if (!userImg) return;
+  const size = 1024; const hd = document.createElement('canvas'); hd.width=size; hd.height=size; const hctx=hd.getContext('2d');
+  hctx.fillStyle='#fff'; hctx.fillRect(0,0,size,size);
+  const factor = size / canvas.width;
+  if (userImg) hctx.drawImage(userImg, imgX*factor, imgY*factor, userImg.width*scale*factor, userImg.height*scale*factor);
+  if (twibbon.complete) hctx.drawImage(twibbon,0,0,size,size);
+  hd.toBlob(async (blob)=>{
+    if (!blob) return alert('Gagal membuat file untuk dibagikan.');
+    const file = new File([blob],'twibbon-1024.png',{type:'image/png'});
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files:[file], title:'Twibbon Saya' }); }
+      catch(err){ alert('Gagal membagikan: '+(err.message||err)); }
+    } else {
+      const url = URL.createObjectURL(blob); window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),2000);
+    }
+  }, 'image/png');
+});
+
+btnReset.addEventListener('click', ()=>{
+  userImg = null; fileInput.value=''; fileInput.disabled = false; btnDownload.disabled = true;
+  downloadGroup.style.display='block'; shareReset.classList.add('hidden'); imgX=imgY=0; scale=1; isProcessing=false; drawPlaceholder();
+});
+
+/* init */
+drawPlaceholder();
+</script>
 </body>
 </html>
