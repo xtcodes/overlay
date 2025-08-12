@@ -111,8 +111,6 @@ const pt = t => ({ id:t.identifier, x:t.clientX, y:t.clientY });
 const distance = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
 
 /* Upload / drop: robust pointer-based click handling */
-/* pointerdown inside drop -> set pointerDownFlag; pointermove inside drop sets movedSinceDown;
-   pointerup anywhere -> if pointerDownFlag and pointerUp coords inside drop and not movedSinceDown => open file dialog */
 drop.addEventListener('pointerdown', e => { pointerDownFlag = true; movedSinceDown = false; });
 drop.addEventListener('pointermove', e => { if (pointerDownFlag) movedSinceDown = true; });
 
@@ -267,7 +265,7 @@ function animateOverlayThenExport(){
     ctx.fillStyle = '#111'; const fontSize = Math.max(12, Math.round(canvas.width * 0.06));
     ctx.font = `${fontSize}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(text, canvas.width/2, canvas.height/2);
     const remaining = Math.max(0, Math.ceil((totalMs - elapsed)/1000));
-    ctx.font = `${Math.max(10, Math.round(canvas.width * 0.045))}px Arial`; ctx.textBaseline='top';
+    ctx.font = `${Math.max(10, Math.round(canvas.width * 0.045))}px Arial`; ctx.textBaseline = 'top';
     ctx.fillText(`sisa: ${remaining}s`, canvas.width/2, canvas.height/2 + fontSize*0.9);
     if (elapsed < totalMs) raf = requestAnimationFrame(step);
     else { cancelAnimationFrame(raf); export1024(); }
@@ -275,6 +273,10 @@ function animateOverlayThenExport(){
   raf = requestAnimationFrame(step);
 }
 function export1024(){
+  // ensure canvas returns to normal before export completes (clears overlay)
+  // draw() will redraw original image + twibbon without overlay
+  draw();
+
   const size = 1024;
   const hd = document.createElement('canvas'); hd.width=size; hd.height=size;
   const hctx = hd.getContext('2d');
@@ -286,10 +288,22 @@ function export1024(){
   }
   if (twibbon.complete) hctx.drawImage(twibbon, 0, 0, size, size);
   hd.toBlob((blob)=>{
-    if (!blob) { alert('Gagal membuat file.'); btnDownload.disabled=false; isProcessing=false; return; }
+    if (!blob) { 
+      alert('Gagal membuat file.'); 
+      btnDownload.disabled=false; 
+      isProcessing=false; 
+      // redraw to make sure overlay is gone
+      draw();
+      return; 
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href=url; a.download='twibbon-1024.png'; document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
+
+    // ensure on-screen canvas restored (no overlay left)
+    draw();
+
+    // UI swap
     downloadGroup.style.display='none'; shareReset.classList.remove('hidden'); isProcessing=false;
   }, 'image/png', 1.0);
 }
