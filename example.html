@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Twibbon PFP — Fixed Upload (Overlay Fix)</title>
+<title>Twibbon PFP — Fixed Upload (Overlay Stable)</title>
 <style>
   :root{ --maxW:480px; --gap:10px }
   body{ font-family:system-ui,Segoe UI,Roboto,Arial; background:#f3f4f6; margin:16px; display:flex; justify-content:center }
@@ -74,10 +74,10 @@ let movedSinceDown = false;
 let lastClientX = 0, lastClientY = 0;
 let isProcessing = false;
 
-/* overlay control */
-let overlayRaf = null;     // RAF id for overlay animation
+/* Overlay animation control */
+let overlayRaf = null;
 let overlayStart = 0;
-const OVERLAY_MS = 15000;  // 15 seconds
+const OVERLAY_MS = 15000; // 15s
 
 /* ---------- Resize canvas to element size ---------- */
 function resizeCanvas(){
@@ -252,33 +252,38 @@ canvas.addEventListener('wheel', e=>{
   window._wheelTimer = setTimeout(()=>draw(), 150);
 }, { passive:false });
 
-/* ---------- Overlay animation + export 1024x1024 (FIXED) ---------- */
+/* ---------- Overlay animation + export 1024x1024 (fixed) ---------- */
 
 function animateOverlayThenExport(){
   if (!userImg || isProcessing) return;
   isProcessing = true; btnDownload.disabled = true;
 
-  // start time & kick off RAF
+  // start overlay
   overlayStart = performance.now();
   if (overlayRaf) cancelAnimationFrame(overlayRaf);
 
   function overlayStep(now){
+    if (!isProcessing) { // cancelled externally (Reset)
+      if (overlayRaf) { cancelAnimationFrame(overlayRaf); overlayRaf = null; }
+      draw(); // ensure cleared
+      return;
+    }
     const elapsed = now - overlayStart;
-    // draw base content first
+    // draw base image + twibbon
     draw();
-    // draw overlay on top (use save/restore so we don't pollute ctx state)
+    // draw overlay
     ctx.save();
     ctx.fillStyle = 'rgba(240,240,240,0.6)';
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // dot pulse: smooth sin-based pulse
-    const freq = 2.8; // speed of pulse
+    // pulse — smooth sin-based
+    const freq = 2.5;
     const pulse = 4 + 3 * Math.abs(Math.sin((elapsed/1000) * Math.PI * freq));
     const dotX = Math.round(Math.max(12, canvas.width * 0.03));
     const dotY = Math.round(Math.max(12, canvas.height * 0.03));
     ctx.beginPath(); ctx.arc(dotX, dotY, pulse, 0, Math.PI*2); ctx.fillStyle='black'; ctx.fill();
 
-    // loading text with animated dots
+    // loading text + animated dots
     const dots = Math.floor((elapsed / 500) % 4);
     const text = 'Sedang proses' + '.'.repeat(dots);
     ctx.fillStyle = '#111';
@@ -288,7 +293,7 @@ function animateOverlayThenExport(){
     ctx.textBaseline = 'middle';
     ctx.fillText(text, canvas.width/2, canvas.height/2);
 
-    // countdown seconds remaining
+    // countdown (sisa)
     const remaining = Math.max(0, Math.ceil((OVERLAY_MS - elapsed)/1000));
     ctx.font = `${Math.max(10, Math.round(canvas.width * 0.045))}px Arial`;
     ctx.textBaseline = 'top';
@@ -299,12 +304,12 @@ function animateOverlayThenExport(){
     if (elapsed < OVERLAY_MS && isProcessing) {
       overlayRaf = requestAnimationFrame(overlayStep);
     } else {
-      // finish: stop overlay animation and clear it from screen immediately
+      // finish overlay: cancel RAF and clear overlay visuals immediately
       if (overlayRaf) { cancelAnimationFrame(overlayRaf); overlayRaf = null; }
-      // draw() will clear overlay visuals
+      // draw base content to remove overlay visuals before export
       draw();
-      // continue with export (ke HD) — keep isProcessing=true until export finishes
-      export1024();
+      // small delay to ensure screen updated, then export
+      setTimeout(()=>export1024(), 30);
     }
   }
 
@@ -323,13 +328,12 @@ function export1024(){
   }
   if (twibbon.complete) hctx.drawImage(twibbon, 0, 0, size, size);
 
-  // toBlob -> trigger download
   hd.toBlob((blob)=>{
     if (!blob) {
       alert('Gagal membuat file.');
       btnDownload.disabled = false;
       isProcessing = false;
-      draw(); // ensure overlay cleared
+      draw();
       return;
     }
     const url = URL.createObjectURL(blob);
@@ -337,14 +341,13 @@ function export1024(){
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
 
-    // final UI update: hide download, show share+reset
+    // UI swap after successful export
     downloadGroup.style.display='none';
     shareReset.classList.remove('hidden');
 
-    // restore state
+    // restore
     isProcessing = false;
-    // ensure main canvas is redrawn (no overlay)
-    draw();
+    draw(); // ensure overlay cleared on screen
   }, 'image/png', 1.0);
 }
 
@@ -371,7 +374,7 @@ btnShare.addEventListener('click', async ()=>{
 });
 
 btnReset.addEventListener('click', ()=>{
-  // if overlay running, cancel it and clear visuals
+  // cancel overlay RAF if running
   if (overlayRaf) { cancelAnimationFrame(overlayRaf); overlayRaf = null; }
   isProcessing = false;
   userImg = null; fileInput.value=''; fileInput.disabled = false; btnDownload.disabled = true;
