@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Twibbon PFP — Fixed Upload (Overlay Stable)</title>
 <style>
-  :root{ --maxW:600px; --gap:10px }
+  :root{ --maxW:480px; --gap:10px }
   body{ font-family:system-ui,Segoe UI,Roboto,Arial; background:#f3f4f6; margin: 16px; display:flex; justify-content:center }
   .wrap{ width:100%; max-width:var(--maxW); display:flex; flex-direction:column; gap:var(--gap); align-items:center; }
   .drop{ width:100%; aspect-ratio:1/1; border-radius:12px; overflow:hidden; position:relative;
@@ -26,7 +26,6 @@
   #btnShare{ flex:1; background:#16a34a; color:#fff; }
   #btnReset{ flex:1; background:#ef4444; color:#fff; }
   .hidden{ display:none !important; }
-  @media (max-width: 700px) { .wrap { margin: 0 auto; width: auto; } }
   @media (max-width:360px){ .placeholder{ font-size:13px } }
 </style>
 </head>
