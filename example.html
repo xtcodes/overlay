@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Twibbon PFP — Fixed Upload</title>
+<title>Twibbon PFP — Fixed Upload (Overlay Fix)</title>
 <style>
   :root{ --maxW:480px; --gap:10px }
   body{ font-family:system-ui,Segoe UI,Roboto,Arial; background:#f3f4f6; margin:16px; display:flex; justify-content:center }
@@ -47,7 +47,7 @@
   </div>
 
 <script>
-/* Elements */
+/* ---------- Elements ---------- */
 const drop = document.getElementById('drop');
 const fileInput = document.getElementById('fileInput');
 const canvas = document.getElementById('canvas');
@@ -60,7 +60,7 @@ const shareReset = document.getElementById('shareReset');
 const btnShare = document.getElementById('btnShare');
 const btnReset = document.getElementById('btnReset');
 
-/* State */
+/* ---------- State ---------- */
 let userImg = null;
 const twibbon = new Image();
 twibbon.src = 'twibbon.png'; // <-- ganti file twibbon (1024x1024)
@@ -74,7 +74,12 @@ let movedSinceDown = false;
 let lastClientX = 0, lastClientY = 0;
 let isProcessing = false;
 
-/* Resize canvas to element size */
+/* overlay control */
+let overlayRaf = null;     // RAF id for overlay animation
+let overlayStart = 0;
+const OVERLAY_MS = 15000;  // 15 seconds
+
+/* ---------- Resize canvas to element size ---------- */
 function resizeCanvas(){
   const r = drop.getBoundingClientRect();
   const w = Math.round(r.width), h = Math.round(r.height);
@@ -86,7 +91,7 @@ function resizeCanvas(){
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-/* Drawing */
+/* ---------- Drawing ---------- */
 function drawPlaceholder(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.fillStyle = '#fff';
@@ -105,14 +110,12 @@ function draw(opts={}){ // opts.twibbonAlpha
   ctx.globalAlpha = 1;
 }
 
-/* Helpers */
+/* ---------- Helpers ---------- */
 const readFileAsDataURL = (file) => new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); });
 const pt = t => ({ id:t.identifier, x:t.clientX, y:t.clientY });
 const distance = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
 
-/* Upload / drop: robust pointer-based click handling */
-/* pointerdown inside drop -> set pointerDownFlag; pointermove inside drop sets movedSinceDown;
-   pointerup anywhere -> if pointerDownFlag and pointerUp coords inside drop and not movedSinceDown => open file dialog */
+/* ---------- Upload / drop handling (unchanged) ---------- */
 drop.addEventListener('pointerdown', e => { pointerDownFlag = true; movedSinceDown = false; });
 drop.addEventListener('pointermove', e => { if (pointerDownFlag) movedSinceDown = true; });
 
@@ -249,31 +252,65 @@ canvas.addEventListener('wheel', e=>{
   window._wheelTimer = setTimeout(()=>draw(), 150);
 }, { passive:false });
 
-/* Overlay animation + export 1024x1024 */
+/* ---------- Overlay animation + export 1024x1024 (FIXED) ---------- */
+
 function animateOverlayThenExport(){
   if (!userImg || isProcessing) return;
   isProcessing = true; btnDownload.disabled = true;
-  const totalMs = 15000;
-  const start = performance.now();
-  let raf;
-  function step(now){
-    const elapsed = now - start;
+
+  // start time & kick off RAF
+  overlayStart = performance.now();
+  if (overlayRaf) cancelAnimationFrame(overlayRaf);
+
+  function overlayStep(now){
+    const elapsed = now - overlayStart;
+    // draw base content first
     draw();
-    ctx.fillStyle = 'rgba(240,240,240,0.6)'; ctx.fillRect(0,0,canvas.width,canvas.height);
-    const pulse = 4 + 3 * Math.abs(Math.sin((elapsed/1000) * 3.5));
-    const dotX = Math.round(Math.max(12, canvas.width * 0.03)); const dotY = Math.round(Math.max(12, canvas.height * 0.03));
+    // draw overlay on top (use save/restore so we don't pollute ctx state)
+    ctx.save();
+    ctx.fillStyle = 'rgba(240,240,240,0.6)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // dot pulse: smooth sin-based pulse
+    const freq = 2.8; // speed of pulse
+    const pulse = 4 + 3 * Math.abs(Math.sin((elapsed/1000) * Math.PI * freq));
+    const dotX = Math.round(Math.max(12, canvas.width * 0.03));
+    const dotY = Math.round(Math.max(12, canvas.height * 0.03));
     ctx.beginPath(); ctx.arc(dotX, dotY, pulse, 0, Math.PI*2); ctx.fillStyle='black'; ctx.fill();
-    const dots = Math.floor((elapsed/500)%4); const text = 'Sedang proses' + '.'.repeat(dots);
-    ctx.fillStyle = '#111'; const fontSize = Math.max(12, Math.round(canvas.width * 0.06));
-    ctx.font = `${fontSize}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(text, canvas.width/2, canvas.height/2);
-    const remaining = Math.max(0, Math.ceil((totalMs - elapsed)/1000));
-    ctx.font = `${Math.max(10, Math.round(canvas.width * 0.045))}px Arial`; ctx.textBaseline='top';
+
+    // loading text with animated dots
+    const dots = Math.floor((elapsed / 500) % 4);
+    const text = 'Sedang proses' + '.'.repeat(dots);
+    ctx.fillStyle = '#111';
+    const fontSize = Math.max(12, Math.round(canvas.width * 0.06));
+    ctx.font = `${fontSize}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, canvas.width/2, canvas.height/2);
+
+    // countdown seconds remaining
+    const remaining = Math.max(0, Math.ceil((OVERLAY_MS - elapsed)/1000));
+    ctx.font = `${Math.max(10, Math.round(canvas.width * 0.045))}px Arial`;
+    ctx.textBaseline = 'top';
     ctx.fillText(`sisa: ${remaining}s`, canvas.width/2, canvas.height/2 + fontSize*0.9);
-    if (elapsed < totalMs) raf = requestAnimationFrame(step);
-    else { cancelAnimationFrame(raf); export1024(); }
+
+    ctx.restore();
+
+    if (elapsed < OVERLAY_MS && isProcessing) {
+      overlayRaf = requestAnimationFrame(overlayStep);
+    } else {
+      // finish: stop overlay animation and clear it from screen immediately
+      if (overlayRaf) { cancelAnimationFrame(overlayRaf); overlayRaf = null; }
+      // draw() will clear overlay visuals
+      draw();
+      // continue with export (ke HD) — keep isProcessing=true until export finishes
+      export1024();
+    }
   }
-  raf = requestAnimationFrame(step);
+
+  overlayRaf = requestAnimationFrame(overlayStep);
 }
+
 function export1024(){
   const size = 1024;
   const hd = document.createElement('canvas'); hd.width=size; hd.height=size;
@@ -285,16 +322,33 @@ function export1024(){
     hctx.drawImage(userImg, sx, sy, sw, sh);
   }
   if (twibbon.complete) hctx.drawImage(twibbon, 0, 0, size, size);
+
+  // toBlob -> trigger download
   hd.toBlob((blob)=>{
-    if (!blob) { alert('Gagal membuat file.'); btnDownload.disabled=false; isProcessing=false; return; }
+    if (!blob) {
+      alert('Gagal membuat file.');
+      btnDownload.disabled = false;
+      isProcessing = false;
+      draw(); // ensure overlay cleared
+      return;
+    }
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href=url; a.download='twibbon-1024.png'; document.body.appendChild(a); a.click(); a.remove();
+    const a = document.createElement('a'); a.href=url; a.download='twibbon-1024.png';
+    document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
-    downloadGroup.style.display='none'; shareReset.classList.remove('hidden'); isProcessing=false;
+
+    // final UI update: hide download, show share+reset
+    downloadGroup.style.display='none';
+    shareReset.classList.remove('hidden');
+
+    // restore state
+    isProcessing = false;
+    // ensure main canvas is redrawn (no overlay)
+    draw();
   }, 'image/png', 1.0);
 }
 
-/* Buttons */
+/* ---------- Buttons ---------- */
 btnDownload.addEventListener('click', ()=>{ if (!userImg) return; animateOverlayThenExport(); });
 
 btnShare.addEventListener('click', async ()=>{
@@ -317,8 +371,12 @@ btnShare.addEventListener('click', async ()=>{
 });
 
 btnReset.addEventListener('click', ()=>{
+  // if overlay running, cancel it and clear visuals
+  if (overlayRaf) { cancelAnimationFrame(overlayRaf); overlayRaf = null; }
+  isProcessing = false;
   userImg = null; fileInput.value=''; fileInput.disabled = false; btnDownload.disabled = true;
-  downloadGroup.style.display='block'; shareReset.classList.add('hidden'); imgX=imgY=0; scale=1; isProcessing=false; drawPlaceholder();
+  downloadGroup.style.display='block'; shareReset.classList.add('hidden'); imgX=imgY=0; scale=1;
+  drawPlaceholder();
 });
 
 /* init */
