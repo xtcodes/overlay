@@ -342,13 +342,27 @@
 
   // ====== RESET (tombol di header) ======
   function resetAll(){
-    hasImage = false; img = null; // jangan null-kan twibbon, tetap ada sebagai default
+    // Hapus gambar user dan kembalikan twibbon ke default
+    hasImage = false;
+    img = null;
+
+    // Muat ulang twibbon default supaya bila user sebelumnya mengganti twibbon,
+    // setelah reset twibbon kembali ke file TWIBBON_DEFAULT_URL
+    try {
+      const defaultTw = new Image();
+      defaultTw.onload = () => { twibbon = defaultTw; scheduleDraw(); };
+      defaultTw.src = TWIBBON_DEFAULT_URL;
+    } catch (e) {
+      // jika gagal, kosongkan twibbon dan gambar akan tetap hilang
+      twibbon = null;
+      scheduleDraw();
+    }
+
     ph.style.display = '';
     afterBar.classList.remove('show');
     enableEditing();
     scale = 1; tx = 0; ty = 0; pointers.clear();
     pickerMode = 'photo'; updatePickerFab();
-    scheduleDraw();
   }
   resetAllTop.addEventListener('click', resetAll);
 
