@@ -157,7 +157,7 @@
     canvas.width = Math.round(w * DPR);
     canvas.height = Math.round(h * DPR);
     ctx.setTransform(DPR,0,0,DPR,0,0);
-    dirty = true; draw();
+    dirty = true; scheduleDraw();
   }
   window.addEventListener('resize', resizeCanvasToBox);
 
@@ -167,6 +167,7 @@
   }
 
   function draw(){
+    // always draw once when requested; guard helps avoid redundant draws
     if (!dirty) return;
     dirty = false;
     clear();
@@ -215,7 +216,7 @@
       hasImage = true;
       ph.style.display = 'none';
       fitImage();
-      draw();
+      scheduleDraw(); // <-- pastikan gambar langsung dirender
       enableEditing();
       pickerMode = 'twibbon';
       updatePickerFab();
@@ -353,7 +354,7 @@
 
   // ====== INIT ======
   resizeCanvasToBox();
-  draw();
+  scheduleDraw();
 })();
 </script>
 </body>
