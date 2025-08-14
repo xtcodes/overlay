@@ -225,48 +225,14 @@
     _img.src = url;
   }
 
-//  function loadTwibbonImage(file){
-//    if (!file) return;
-//    const url = URL.createObjectURL(file);
-//    const _tw = new Image();
-//    _tw.onload = () => { twibbon = _tw; scheduleDraw(); URL.revokeObjectURL(url); };
-//    _tw.src = url;
-//  }
-
-
-  fungsi loadTwibbonImage diubah)
   function loadTwibbonImage(file){
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    const _tw = new Image();
-    _tw.onload = () => {
-      // === Validasi transparansi ===
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = _tw.width;
-      tempCanvas.height = _tw.height;
-      const tempCtx = tempCanvas.getContext('2d');
-      tempCtx.drawImage(_tw, 0, 0);
-      const pixels = tempCtx.getImageData(0, 0, _tw.width, _tw.height).data;
-
-      let hasTransparency = false;
-      for (let i = 3; i < pixels.length; i += 4) {
-        if (pixels[i] < 255) { hasTransparency = true; break; }
-      }
-
-      if (!hasTransparency) {
-        alert('❌ Gagal: Gambar twibbon harus memiliki bidang transparan (PNG dengan background transparan).');
-        URL.revokeObjectURL(url);
-        return;
-      }
-
-      // Jika lolos validasi
-      twibbon = _tw;
-      scheduleDraw();
-      URL.revokeObjectURL(url);
-    };
+    const url = URL.createObjectURL(file);    const _tw = new Image();
+    _tw.onload = () => { twibbon = _tw; scheduleDraw(); URL.revokeObjectURL(url); };
     _tw.src = url;
   }
-  
+
+
   // ====== PICKER FAB MODES ======
   let pickerMode = 'photo'; // 'photo' sebelum upload, berubah ke 'twibbon' setelah ada foto
   function updatePickerFab(){ pickerFab.textContent = pickerMode === 'photo' ? 'Pilih Gambar' : 'Ganti Twibbon'; }
