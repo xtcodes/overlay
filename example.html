@@ -1,105 +1,314 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Aplikasi Twibbon — Canvas + Drop, Gestur Halus, Proses 15s</title>
-  <style>
-    :root{
-      --bg:#0f1115; --muted:#1a1f29; --ink:#e8eefc; --ink-dim:#b6c0d4; --acc:#3a86ff;
-      --ok:#22c55e; --warn:#f59e0b; --err:#ef4444; --shadow:0 10px 30px rgba(0,0,0,.25);
-      --cardW: min(92vw, 520px); --pad:12px; --radius:16px; --gap:10px;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif}
-    .wrap{max-width:var(--cardW);margin:28px auto;padding:0 var(--pad)}
-    .card{background:var(--muted);border:1px solid #202636;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-    .head{padding:14px 16px;border-bottom:1px solid #202636;display:flex;align-items:center;justify-content:space-between;gap:8px}
-    .title{font-weight:700}
-    .body{padding:12px 12px 16px}
-    .canvasBox{position:relative; width:100%; aspect-ratio:1/1; background:#0d1117; border-radius:14px; border:1px dashed #2a3242; overflow:hidden;}
-    canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none;}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Twibbon Editor</title>
+<style>
+/* ====== THEME BASE ====== */
+body {
+  margin: 0;
+  font-family: sans-serif;
+  transition: background-color 0.3s, color 0.3s;
+}
 
-    .placeholder{position:absolute; inset:0; display:grid; place-content:center; gap:10px; text-align:center; color:var(--ink-dim); pointer-events:none}
-    .placeholder .dropIcon{font-size:42px;opacity:.7}
+/* Variabel tema */
+body.dark-mode {
+  --canvas-bg: #0d1117;
+  --ui-bg: #161b22;
+  --ui-text: #ffffff;
+  --ui-border: #30363d;
+  --ui-hover: #1f6feb;
+  background-color: var(--ui-bg);
+  color: var(--ui-text);
+}
 
-    .fab{position:absolute; left:10px; bottom:10px; z-index:5; padding:10px 12px; border-radius:12px; border:1px solid #2a3242; background:#121621; color:var(--ink); font-weight:700}
-    .fab:disabled{opacity:.6}
+body.light-mode {
+  --canvas-bg: #ffffff;
+  --ui-bg: #f5f5f5;
+  --ui-text: #000000;
+  --ui-border: #cccccc;
+  --ui-hover: #0366d6;
+  background-color: var(--ui-bg);
+  color: var(--ui-text);
+}
 
-    .dropOverlay{position:absolute; inset:0; border:2px dashed var(--acc); border-radius:14px; display:none; place-content:center; color:var(--acc); background:rgba(58,134,255,.08); font-weight:600}
-    .canvasBox.dragover .dropOverlay{display:grid}
+/* ====== UI ELEMENTS ====== */
+#canvasBox {
+  width: 100%;
+  max-width: 500px;
+  margin: 20px auto;
+  background-color: var(--canvas-bg);
+  border: 2px dashed var(--ui-border);
+  position: relative;
+  transition: background-color 0.3s, border-color 0.3s;
+}
 
-    .controls{display:grid; gap:10px; grid-template-columns:1fr auto; align-items:center; margin-top:12px}
-    .row{display:flex; gap:10px}
-    .btn{appearance:none; border:1px solid #2a3242; background:#121621; color:var(--ink); padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer}
-    .btn:disabled{opacity:.6; cursor:not-allowed}
-    .btn.primary{background:var(--acc); border-color:transparent; color:white}
-    .btn.ghost{background:transparent}
+#stage {
+  display: block;
+  width: 100%;
+  height: auto;
+}
 
-    .processMask{position:absolute; inset:0; background:rgba(17,24,39,.72); display:none}
-    .processMask.active{display:block}
-    .spinnerWrap{position:absolute; right:10px; bottom:10px; width:52px; height:52px}
-    .spinner{position:absolute; inset:0; border:5px solid rgba(255,255,255,.18); border-top-color:white; border-radius:50%; animation:spin 1s linear infinite}
-    .countNum{position:absolute; inset:0; display:grid; place-items:center; font-weight:800; font-feature-settings:"tnum" 1, "ss01" 1}
-    @keyframes spin{to{transform:rotate(360deg)}}
+#ph {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--ui-text);
+  opacity: 0.6;
+  text-align: center;
+}
 
-    .afterBar{display:none; gap:10px; margin-top:12px}
-    .afterBar.show{display:grid; grid-template-columns:1fr 1fr}
+#pickerFab,
+#resetAllTop,
+#themeToggle,
+#processBtn,
+#dlBtn,
+#shareBtn {
+  background-color: var(--ui-bg);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-border);
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 
-    .tips{font-size:.9rem; color:var(--ink-dim); margin-top:8px}
-    body.dark-mode {--canvas-bg: #0d1117; background-color: #0d1117; color: #fff;}
-    body.light-mode {--canvas-bg: #ffffff; background-color: #f5f5f5; color: #000;}
-  </style>
+#pickerFab:hover,
+#resetAllTop:hover,
+#themeToggle:hover,
+#processBtn:hover,
+#dlBtn:hover,
+#shareBtn:hover {
+  background-color: var(--ui-hover);
+  color: #fff;
+}
+
+#canvasBox.dragover {
+  background-color: rgba(0, 128, 255, 0.15);
+}
+
+#afterBar {
+  background-color: var(--ui-bg);
+  color: var(--ui-text);
+  padding: 8px;
+  border-top: 1px solid var(--ui-border);
+  display: none;
+  text-align: center;
+}
+
+#afterBar.show {
+  display: block;
+}
+
+#mask {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 24px;
+  align-items: center;
+  justify-content: center;
+}
+
+#mask.active {
+  display: flex;
+}
+
+/* ===== Animasi tombol tema ===== */
+#themeToggle svg {
+  transition: transform 0.4s ease;
+}
+
+#themeToggle.rotate svg {
+  transform: rotate(180deg);
+}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <div class="head">
-        <div class="title">Aplikasi Twibbon</div>
-        <button id="resetAllTop" class="btn ghost" title="Reset cepat">Reset</button>
-        <button id="themeToggle">🌙</button>
 
-      </div>
-      <div class="body">
-        <div class="canvasBox" id="canvasBox">
-          <canvas id="stage" width="1024" height="1024" aria-label="Area Twibbon"></canvas>
+<div style="text-align:center; padding:10px;">
+  <button id="pickerFab">Pilih Gambar</button>
+  <input id="fileInput" type="file" accept="image/*" style="display:none;">
+  <input id="twibbonInput" type="file" accept="image/png" style="display:none;">
+  <button id="resetAllTop">Reset</button>
+  <button id="themeToggle" title="Ganti Tema"></button>
+</div>
 
-          <button id="pickerFab" class="fab">Pilih Gambar</button>
+<div id="canvasBox">
+  <canvas id="stage"></canvas>
+  <div id="ph">Tarik & letakkan gambar di sini<br>atau klik tombol Pilih Gambar</div>
+  <div id="mask"><span id="countNum">15</span></div>
+</div>
 
-          <div class="placeholder" id="ph">
-            <div class="dropIcon">⬇️</div>
-            <div><b>Tarik & lepas</b> gambar ke sini<br/>atau <b>ketuk</b> untuk memilih</div>
-          </div>
-          <div class="dropOverlay">Lepaskan untuk mengunggah…</div>
-          <div class="processMask" id="mask">
-            <div class="spinnerWrap">
-              <div class="spinner"></div>
-              <div class="countNum" id="countNum">15</div>
-            </div>
-          </div>
-        </div>
+<div style="text-align:center; margin-top:10px;">
+  <button id="processBtn" disabled>Proses</button>
+</div>
 
-        <div class="controls">
-          <div class="row">
-            <button id="processBtn" class="btn primary" disabled>Buat</button>
-          </div>
-          <div class="row">
-            <small class="tips">Gestur: geser 1 jari · cubit 2 jari untuk zoom (halus)</small>
-          </div>
-        </div>
+<div id="afterBar">
+  <button id="dlBtn">Unduh</button>
+  <button id="shareBtn">Bagikan</button>
+</div>
 
-        <div class="afterBar" id="afterBar">
-          <button id="dlBtn" class="btn">Unduh</button>
-          <button id="shareBtn" class="btn">Bagikan</button>
-        </div>
+<script>
+(() => {
+  const d = document;
+  const box = d.getElementById('canvasBox');
+  const canvas = d.getElementById('stage');
+  const ctx = canvas.getContext('2d');
+  const ph = d.getElementById('ph');
+  const pickerFab = d.getElementById('pickerFab');
+  const fileInput = d.getElementById('fileInput');
+  const twibbonInput = d.getElementById('twibbonInput');
+  const processBtn = d.getElementById('processBtn');
+  const mask = d.getElementById('mask');
+  const afterBar = d.getElementById('afterBar');
+  const resetAllTop = d.getElementById('resetAllTop');
+  const themeToggle = d.getElementById('themeToggle');
 
-        <input id="fileInput" type="file" accept="image/*" hidden />
-        <input id="twibbonInput" type="file" accept="image/png,image/*" hidden />
-      </div>
-    </div>
-  </div>
+  let hasImage = false;
+  let img = null;
+  let scale = 1, tx = 0, ty = 0;
+  const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  let twibbon = null;
+  const TWIBBON_DEFAULT_URL = 'twibbon.png';
 
-  <!-- Panggil script eksternal -->
-  <script src="script.js"></script>
+  (function preloadTwibbon(){
+    const im = new Image();
+    im.onload = ()=>{ twibbon = im; scheduleDraw(); };
+    im.src = TWIBBON_DEFAULT_URL;
+  })();
+
+  function resizeCanvasToBox(){
+    const rect = box.getBoundingClientRect();
+    const w = Math.floor(rect.width);
+    canvas.style.width = w + 'px';
+    canvas.style.height = w + 'px';
+    canvas.width = Math.round(w * DPR);
+    canvas.height = Math.round(w * DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    scheduleDraw();
+  }
+  window.addEventListener('resize', resizeCanvasToBox);
+
+  function clear(){
+    const bgColor = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim() || '#0d1117';
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0,0,canvas.width/DPR,canvas.height/DPR);
+  }
+
+  function draw(){
+    clear();
+    const W = canvas.width / DPR, H = canvas.height / DPR;
+    if (hasImage && img){
+      ctx.save();
+      ctx.translate(W/2 + tx, H/2 + ty);
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, -img.width/2, -img.height/2);
+      ctx.restore();
+    }
+    if (hasImage && twibbon) {
+      const r = Math.max(W / twibbon.width, H / twibbon.height);
+      ctx.drawImage(twibbon, (W - twibbon.width*r)/2, (H - twibbon.height*r)/2, twibbon.width*r, twibbon.height*r);
+    }
+  }
+  function scheduleDraw(){ requestAnimationFrame(draw); }
+  function fitImage(){
+    const W = canvas.width / DPR, H = canvas.height / DPR;
+    scale = Math.min(W / img.width, H / img.height);
+    tx = 0; ty = 0;
+  }
+
+  function loadUserImage(file){
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const _img = new Image();
+    _img.onload = () => {
+      img = _img;
+      hasImage = true;
+      ph.style.display = 'none';
+      fitImage();
+      scheduleDraw();
+      pickerMode = 'twibbon';
+      updatePickerFab();
+      URL.revokeObjectURL(url);
+    };
+    _img.src = url;
+  }
+
+  function loadTwibbonImage(file){
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const _tw = new Image();
+    _tw.onload = () => {
+      twibbon = _tw;
+      scheduleDraw();
+      URL.revokeObjectURL(url);
+    };
+    _tw.src = url;
+  }
+
+  let pickerMode = 'photo';
+  function updatePickerFab(){
+    pickerFab.textContent = pickerMode === 'photo' ? 'Pilih Gambar' : 'Ganti Twibbon';
+  }
+  pickerFab.addEventListener('click', () => {
+    (pickerMode === 'photo' ? fileInput : twibbonInput).click();
+  });
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) loadUserImage(e.target.files[0]);
+    fileInput.value = '';
+  });
+  twibbonInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) loadTwibbonImage(e.target.files[0]);
+    twibbonInput.value = '';
+  });
+
+  function resetAll(){
+    hasImage = false;
+    img = null;
+    ph.style.display = '';
+    afterBar.classList.remove('show');
+    pickerMode = 'photo'; updatePickerFab();
+    twibbon = new Image();
+    twibbon.onload = scheduleDraw;
+    twibbon.src = TWIBBON_DEFAULT_URL;
+  }
+  resetAllTop.addEventListener('click', resetAll);
+
+  function applyTheme(theme) {
+    document.body.classList.remove('light-mode', 'dark-mode');
+    document.body.classList.add(theme);
+    localStorage.setItem('theme', theme);
+    updateThemeIcon();
+    scheduleDraw();
+  }
+
+  function updateThemeIcon() {
+    const isDark = document.body.classList.contains('dark-mode');
+    themeToggle.innerHTML = isDark
+      ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M6 0a6 6 0 0 0 0 12 6 6 0 1 0 0-12z"/></svg> Gelap'
+      : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"/><path d="M8 1a.5.5 0 0 1 .5.5V3a.5.5 0 0 1-1 0V1.5A.5.5 0 0 1 8 1z"/></svg> Terang';
+  }
+
+  themeToggle.addEventListener('click', () => {
+    themeToggle.classList.add('rotate');
+    setTimeout(() => themeToggle.classList.remove('rotate'), 400);
+    const current = document.body.classList.contains('dark-mode') ? 'dark-mode' : 'light-mode';
+    applyTheme(current === 'dark-mode' ? 'light-mode' : 'dark-mode');
+  });
+
+  const savedTheme = localStorage.getItem('theme') || 'dark-mode';
+  applyTheme(savedTheme);
+
+  resizeCanvasToBox();
+  scheduleDraw();
+})();
+</script>
 </body>
 </html>
