@@ -15,6 +15,7 @@
   const dlBtn = d.getElementById('dlBtn');
   const shareBtn = d.getElementById('shareBtn');
   const resetAllTop = d.getElementById('resetAllTop');
+  const themeToggle = d.getElementById('themeToggle'); // 🔹 tombol tema baru
 
   // ====== STATE ======
   let hasImage = false;
@@ -55,7 +56,7 @@
   window.addEventListener('resize', resizeCanvasToBox);
 
   function clear(){
-    ctx.fillStyle = '#0d1117';
+    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg') || '#0d1117';
     ctx.fillRect(0,0,canvas.width/DPR,canvas.height/DPR);
   }
 
@@ -154,7 +155,7 @@
   }
   updatePickerFab();
 
-  // 🔹 FIX: hentikan bubbling di sini
+  // 🔹 FIX: hentikan bubbling
   pickerFab.addEventListener('click', (e) => {
     e.stopPropagation();
     (pickerMode === 'photo' ? fileInput : twibbonInput).click();
@@ -246,7 +247,7 @@
   processBtn.addEventListener('click', async ()=>{
     if (!hasImage || processing) return;
     processing = true; disableEditing();
-    gesturesEnabled = false; // 🔹 matikan geser & zoom saat proses
+    gesturesEnabled = false;
     mask.classList.add('active');
     afterBar.classList.remove('show');
 
@@ -289,7 +290,7 @@
   function resetAll(){
     hasImage = false;
     img = null;
-    gesturesEnabled = true; // 🔹 aktifkan kembali geser & zoom
+    gesturesEnabled = true;
     const defaultTw = new Image();
     defaultTw.onload = () => { twibbon = defaultTw; scheduleDraw(); };
     defaultTw.src = TWIBBON_DEFAULT_URL;
@@ -300,6 +301,22 @@
     pickerMode = 'photo'; updatePickerFab();
   }
   resetAllTop.addEventListener('click', resetAll);
+
+  // ====== THEME TOGGLE ======
+  function applyTheme(theme) {
+    document.body.classList.remove('light-mode', 'dark-mode');
+    document.body.classList.add(theme + '-mode');
+    themeToggle.textContent = theme === 'dark' ? '🌙' : '☀️';
+    localStorage.setItem('theme', theme);
+  }
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  applyTheme(savedTheme);
+  themeToggle.addEventListener('click', () => {
+    const currentTheme = localStorage.getItem('theme') || 'dark';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    applyTheme(newTheme);
+    scheduleDraw();
+  });
 
   // ====== INIT ======
   resizeCanvasToBox();
