@@ -10,25 +10,34 @@
       --ok:#22c55e; --warn:#f59e0b; --err:#ef4444; --shadow:0 10px 30px rgba(0,0,0,.25);
       --cardW: min(92vw, 520px); --pad:12px; --radius:16px; --gap:10px;
     }
+    body.light{
+      --bg:#f5f6fa; --muted:#ffffff; --ink:#1e1e1e; --ink-dim:#555;
+      --acc:#3a86ff; --ok:#22c55e; --warn:#f59e0b; --err:#ef4444;
+    }
     *{box-sizing:border-box}
     html,body{height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif}
     .wrap{max-width:var(--cardW);margin:28px auto;padding:0 var(--pad)}
     .card{background:var(--muted);border:1px solid #202636;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
     .head{padding:14px 16px;border-bottom:1px solid #202636;display:flex;align-items:center;justify-content:space-between;gap:8px}
     .title{font-weight:700}
+    .head .btn-group{display:flex;gap:6px;}
     .body{padding:12px 12px 16px}
     .canvasBox{position:relative; width:100%; aspect-ratio:1/1; background:#0d1117; border-radius:14px; border:1px dashed #2a3242; overflow:hidden;}
     canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none;}
 
+    /* Placeholder */
     .placeholder{position:absolute; inset:0; display:grid; place-content:center; gap:10px; text-align:center; color:var(--ink-dim); pointer-events:none}
     .placeholder .dropIcon{font-size:42px;opacity:.7}
 
+    /* Tombol mengambang */
     .fab{position:absolute; left:10px; bottom:10px; z-index:5; padding:10px 12px; border-radius:12px; border:1px solid #2a3242; background:#121621; color:var(--ink); font-weight:700}
     .fab:disabled{opacity:.6}
 
+    /* Drop overlay */
     .dropOverlay{position:absolute; inset:0; border:2px dashed var(--acc); border-radius:14px; display:none; place-content:center; color:var(--acc); background:rgba(58,134,255,.08); font-weight:600}
     .canvasBox.dragover .dropOverlay{display:grid}
 
+    /* Panel kontrol */
     .controls{display:grid; gap:10px; grid-template-columns:1fr auto; align-items:center; margin-top:12px}
     .row{display:flex; gap:10px}
     .btn{appearance:none; border:1px solid #2a3242; background:#121621; color:var(--ink); padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer}
@@ -36,6 +45,7 @@
     .btn.primary{background:var(--acc); border-color:transparent; color:white}
     .btn.ghost{background:transparent}
 
+    /* Proses overlay */
     .processMask{position:absolute; inset:0; background:rgba(17,24,39,.72); display:none}
     .processMask.active{display:block}
     .spinnerWrap{position:absolute; right:10px; bottom:10px; width:52px; height:52px}
@@ -43,9 +53,11 @@
     .countNum{position:absolute; inset:0; display:grid; place-items:center; font-weight:800; font-feature-settings:"tnum" 1, "ss01" 1}
     @keyframes spin{to{transform:rotate(360deg)}}
 
+    /* Bar bawah */
     .afterBar{display:none; gap:10px; margin-top:12px}
     .afterBar.show{display:grid; grid-template-columns:1fr 1fr}
 
+    /* Tips */
     .tips{font-size:.9rem; color:var(--ink-dim); margin-top:8px}
   </style>
 </head>
@@ -54,7 +66,10 @@
     <div class="card">
       <div class="head">
         <div class="title">Aplikasi Twibbon</div>
-        <button id="resetAllTop" class="btn ghost" title="Reset cepat">Reset</button>
+        <div class="btn-group">
+          <button id="resetAllTop" class="btn ghost" title="Reset cepat">Reset</button>
+          <button id="themeToggle" class="btn ghost" title="Mode terang/gelap">🌙</button>
+        </div>
       </div>
       <div class="body">
         <div class="canvasBox" id="canvasBox">
@@ -97,5 +112,17 @@
 
   <!-- Panggil script eksternal -->
   <script src="script.js"></script>
+<script>
+(() => {
+  // Tambahan: Toggle mode terang/gelap
+  const themeToggle = document.getElementById('themeToggle');
+  themeToggle.addEventListener('click', () => {
+    document.body.classList.toggle('light');
+    themeToggle.textContent = document.body.classList.contains('light') ? '☀️' : '🌙';
+  });
+
+  // (Seluruh script asli kamu tetap, hanya ditambahkan code di atas)
+})();
+</script>
 </body>
 </html>
