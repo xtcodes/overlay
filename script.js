@@ -114,7 +114,6 @@
     _img.src = url;
   }
 
-  // 🔹 Validasi Twibbon punya transparansi
   function loadTwibbonImage(file){
     if (!file) return;
     const url = URL.createObjectURL(file);
@@ -155,7 +154,9 @@
   }
   updatePickerFab();
 
-  pickerFab.addEventListener('click', () => {
+  // 🔹 FIX: hentikan bubbling di sini
+  pickerFab.addEventListener('click', (e) => {
+    e.stopPropagation();
     (pickerMode === 'photo' ? fileInput : twibbonInput).click();
   });
 
@@ -170,7 +171,10 @@
     twibbonInput.value = '';
   });
 
-  box.addEventListener('click', (e) => { if (!hasImage) fileInput.click(); });
+  // 🔹 FIX: pastikan klik box hanya jika target box itu sendiri
+  box.addEventListener('click', (e) => { 
+    if (!hasImage && e.target === box) fileInput.click(); 
+  });
 
   ['dragenter','dragover'].forEach(ev=>{
     box.addEventListener(ev, (e)=>{ e.preventDefault(); e.stopPropagation(); box.classList.add('dragover'); });
