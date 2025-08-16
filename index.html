@@ -29,7 +29,7 @@
     .dropOverlay{position:absolute; inset:0; border:2px dashed var(--acc); border-radius:14px; display:none; place-content:center; color:var(--acc); background:rgba(58,134,255,.08); font-weight:600}
     .canvasBox.dragover .dropOverlay{display:grid}
 
-    .controls{display:grid; gap:10px; margin-top:12px}
+    .controls{display:grid; gap:10px; grid-template-columns:1fr auto; align-items:center; margin-top:12px}
     .row{display:flex; gap:10px}
     .btn{appearance:none; border:1px solid #2a3242; background:#121621; color:var(--ink); padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer}
     .btn:disabled{opacity:.6; cursor:not-allowed}
@@ -88,7 +88,6 @@
         <div class="controls">
           <div class="row">
             <button id="processBtn" class="btn primary" disabled>Buat</button>
-            <button id="twibbonBtn" class="btn">Pilih Twibbon</button>
           </div>
           <div class="row">
             <small class="tips">Gestur: geser 1 jari · cubit 2 jari untuk zoom (halus)</small>
@@ -119,7 +118,6 @@
   const pickerFab = d.getElementById('pickerFab');
   const fileInput = d.getElementById('fileInput');
   const twibbonInput = d.getElementById('twibbonInput');
-  const twibbonBtn = d.getElementById('twibbonBtn');
   const processBtn = d.getElementById('processBtn');
   const mask = d.getElementById('mask');
   const countNum = d.getElementById('countNum');
@@ -136,7 +134,7 @@
   const pointers = new Map();
   let raf = null;
   let dirty = true;
-  let isTransforming = false;
+  let isTransforming = false; // << flag baru
 
   const TWIBBON_DEFAULT_URL = 'twibbon.png';
   let twibbon = null;
@@ -178,7 +176,7 @@
       const r = Math.max(W / twibbon.width, H / twibbon.height);
       const twW = twibbon.width * r, twH = twibbon.height * r;
       ctx.save();
-      if (isTransforming) ctx.globalAlpha = 0.5;
+      if (isTransforming) ctx.globalAlpha = 0.5; // << transparan saat geser/zoom
       ctx.drawImage(twibbon, (W - twW)/2, (H - twH)/2, twW, twH);
       ctx.restore();
     }
@@ -194,12 +192,14 @@
   function enableEditing(){ processBtn.disabled = !hasImage; }
   function disableEditing(){ processBtn.disabled = true; }
 
+  // ==== ALERT ====
   function showAlert(msg){
     alertBox.textContent = msg;
     alertBox.classList.add('show');
     setTimeout(()=>{ alertBox.classList.remove('show'); }, 3000);
   }
 
+  // ==== Loaders ====
   function loadUserImage(file){
     if (!file) return;
     const url = URL.createObjectURL(file);
@@ -209,6 +209,7 @@
       hasImage = true;
       ph.style.display = 'none';
       fitImage(); scheduleDraw(); enableEditing();
+      pickerMode = 'twibbon'; updatePickerFab();
       URL.revokeObjectURL(url);
     };
     _img.src = url;
@@ -238,13 +239,12 @@
     _tw.src = url;
   }
 
-  // tombol pojok kiri canvas selalu untuk unggah gambar user
-  pickerFab.textContent = "Pilih Gambar";
-  pickerFab.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) loadUserImage(f); fileInput.value = ''; });
+  let pickerMode = 'photo';
+  function updatePickerFab(){ pickerFab.textContent = pickerMode === 'photo' ? 'Pilih Gambar' : 'Ganti Twibbon'; }
+  updatePickerFab();
 
-  // tombol pilih twibbon
-  twibbonBtn.addEventListener('click', () => twibbonInput.click());
+  pickerFab.addEventListener('click', () => { (pickerMode === 'photo' ? fileInput : twibbonInput).click(); });
+  fileInput.addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) loadUserImage(f); fileInput.value = ''; });
   twibbonInput.addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) loadTwibbonImage(f); twibbonInput.value = ''; });
 
   box.addEventListener('click', (e) => { if (!hasImage) fileInput.click(); });
@@ -252,7 +252,7 @@
   ['dragleave','drop'].forEach(ev=>{ box.addEventListener(ev, (e)=>{ e.preventDefault(); box.classList.remove('dragover'); }); });
   box.addEventListener('drop', (e)=>{ const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) loadUserImage(f); });
 
-  // Gestures
+  // ==== Gestures ====
   let gesturesEnabled = true;
   let last = {x:0, y:0};
   let pinch = null;
@@ -261,7 +261,7 @@
 
   canvas.addEventListener('pointerdown', (e)=>{
     if (!gesturesEnabled || !hasImage) return;
-    isTransforming = true;
+    isTransforming = true; // << mulai transformasi
     canvas.setPointerCapture(e.pointerId);
     pointers.set(e.pointerId, {x:e.offsetX, y:e.offsetY});
     if (pointers.size === 1){ last = {x:e.offsetX, y:e.offsetY}; }
@@ -292,21 +292,21 @@
     if (pointers.has(e.pointerId)) pointers.delete(e.pointerId); 
     if (pointers.size < 2) pinch = null; 
     if (pointers.size === 0) { 
-      isTransforming = false;
-      scheduleDraw();
+      isTransforming = false; // << selesai transformasi
+      scheduleDraw(); // redraw full opacity
     }
   }
   canvas.addEventListener('pointerup', endPointer);
   canvas.addEventListener('pointercancel', endPointer);
   canvas.addEventListener('pointerleave', endPointer);
 
-  // Proses
+  // ==== Proses ====
   const PROCESS_SECONDS = 15;
   let processing = false;
   processBtn.addEventListener('click', async ()=>{
     if (!hasImage || processing) return;
     processing = true; disableEditing();
-    gesturesEnabled = false;
+    gesturesEnabled = false; // MATIKAN geser/zoom
     mask.classList.add('active');
     afterBar.classList.remove('show');
 
@@ -319,26 +319,36 @@
     processing = false; enableEditing();
   });
 
-  dlBtn.addEventListener('click', async ()=>{
-    try{
-      const blob = await new Promise(res => canvas.toBlob(res,'image/png'));
-      const link = d.createElement('a'); link.download = 'twibbon.png'; link.href = URL.createObjectURL(blob); link.click();
-    }catch(err){ console.error(err); }
-  });
-
-  shareBtn.addEventListener('click', async ()=>{
-    try{
-      const blob = await new Promise(res => canvas.toBlob(res,'image/png'));
-      if(navigator.share){
-        const file = new File([blob],'twibbon.png',{type:'image/png'});
-        await navigator.share({files:[file],title:'Twibbon'});
-      }else{
-        const link = d.createElement('a'); link.download = 'twibbon.png'; link.href = URL.createObjectURL(blob); link.click();
+  dlBtn.addEventListener('click', ()=>{ const link = d.createElement('a'); link.download = 'twibbon.png'; link.href = canvas.toDataURL('image/png'); link.click(); });
+  shareBtn.addEventListener('click', ()=>{
+    canvas.toBlob(async (blob)=>{
+      if (!blob) return;
+      const file = new File([blob], 'twibbon.png', {type:'image/png'});
+      if (navigator.canShare && navigator.canShare({ files:[file] }) && navigator.share){
+        try{ await navigator.share({ files:[file], title:'Twibbon', text:'Hasil twibbon saya' }); }
+        catch(e){}
+      } else {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(()=>URL.revokeObjectURL(url), 15000);
       }
-    }catch(err){ console.error(err); }
+    });
   });
 
-  function resetAll(){ hasImage = false; img=null; scale=1; tx=ty=0; ph.style.display=''; afterBar.classList.remove('show'); disableEditing(); scheduleDraw(); }
+  function resetAll(){
+    hasImage = false; img = null;
+    try {
+      const defaultTw = new Image();
+      defaultTw.onload = () => { twibbon = defaultTw; scheduleDraw(); };
+      defaultTw.src = TWIBBON_DEFAULT_URL;
+    } catch (e) { twibbon = null; scheduleDraw(); }
+    ph.style.display = '';
+    afterBar.classList.remove('show');
+    enableEditing();
+    scale = 1; tx = 0; ty = 0; pointers.clear();
+    pickerMode = 'photo'; updatePickerFab();
+    gesturesEnabled = true; // aktifkan kembali geser/zoom
+  }
   resetAllTop.addEventListener('click', resetAll);
 
   resizeCanvasToBox(); scheduleDraw();
