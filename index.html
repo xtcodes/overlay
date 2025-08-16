@@ -134,6 +134,7 @@
   const pointers = new Map();
   let raf = null;
   let dirty = true;
+  let isTransforming = false; // << flag baru
 
   const TWIBBON_DEFAULT_URL = 'twibbon.png';
   let twibbon = null;
@@ -174,7 +175,10 @@
     if (hasImage && twibbon && twibbon.complete && twibbon.naturalWidth) {
       const r = Math.max(W / twibbon.width, H / twibbon.height);
       const twW = twibbon.width * r, twH = twibbon.height * r;
+      ctx.save();
+      if (isTransforming) ctx.globalAlpha = 0.5; // << transparan saat geser/zoom
       ctx.drawImage(twibbon, (W - twW)/2, (H - twH)/2, twW, twH);
+      ctx.restore();
     }
     if (!hasImage) {
       ctx.strokeStyle = 'rgba(255,255,255,.06)';
@@ -239,7 +243,7 @@
   function updatePickerFab(){ pickerFab.textContent = pickerMode === 'photo' ? 'Pilih Gambar' : 'Ganti Twibbon'; }
   updatePickerFab();
 
-  pickerFab.addEventListener('click', (e) => { e.stopPropagation(); (pickerMode === 'photo' ? fileInput : twibbonInput).click(); });
+  pickerFab.addEventListener('click', () => { (pickerMode === 'photo' ? fileInput : twibbonInput).click(); });
   fileInput.addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) loadUserImage(f); fileInput.value = ''; });
   twibbonInput.addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) loadTwibbonImage(f); twibbonInput.value = ''; });
 
@@ -257,6 +261,7 @@
 
   canvas.addEventListener('pointerdown', (e)=>{
     if (!gesturesEnabled || !hasImage) return;
+    isTransforming = true; // << mulai transformasi
     canvas.setPointerCapture(e.pointerId);
     pointers.set(e.pointerId, {x:e.offsetX, y:e.offsetY});
     if (pointers.size === 1){ last = {x:e.offsetX, y:e.offsetY}; }
@@ -283,7 +288,14 @@
       scale = newScale; scheduleDraw();
     }
   });
-  function endPointer(e){ if (pointers.has(e.pointerId)) pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null; }
+  function endPointer(e){ 
+    if (pointers.has(e.pointerId)) pointers.delete(e.pointerId); 
+    if (pointers.size < 2) pinch = null; 
+    if (pointers.size === 0) { 
+      isTransforming = false; // << selesai transformasi
+      scheduleDraw(); // redraw full opacity
+    }
+  }
   canvas.addEventListener('pointerup', endPointer);
   canvas.addEventListener('pointercancel', endPointer);
   canvas.addEventListener('pointerleave', endPointer);
