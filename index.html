@@ -29,7 +29,7 @@
     .dropOverlay{position:absolute; inset:0; border:2px dashed var(--acc); border-radius:14px; display:none; place-content:center; color:var(--acc); background:rgba(58,134,255,.08); font-weight:600}
     .canvasBox.dragover .dropOverlay{display:grid}
 
-    .controls{display:grid; gap:10px; grid-template-columns:1fr auto; align-items:center; margin-top:12px}
+    .controls{display:grid; gap:10px; margin-top:12px}
     .row{display:flex; gap:10px}
     .btn{appearance:none; border:1px solid #2a3242; background:#121621; color:var(--ink); padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer}
     .btn:disabled{opacity:.6; cursor:not-allowed}
@@ -88,6 +88,7 @@
         <div class="controls">
           <div class="row">
             <button id="processBtn" class="btn primary" disabled>Buat</button>
+            <button id="twibbonBtn" class="btn">Pilih Twibbon</button>
           </div>
           <div class="row">
             <small class="tips">Gestur: geser 1 jari · cubit 2 jari untuk zoom (halus)</small>
@@ -118,6 +119,7 @@
   const pickerFab = d.getElementById('pickerFab');
   const fileInput = d.getElementById('fileInput');
   const twibbonInput = d.getElementById('twibbonInput');
+  const twibbonBtn = d.getElementById('twibbonBtn');
   const processBtn = d.getElementById('processBtn');
   const mask = d.getElementById('mask');
   const countNum = d.getElementById('countNum');
@@ -240,6 +242,9 @@
   pickerFab.textContent = "Pilih Gambar";
   pickerFab.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) loadUserImage(f); fileInput.value = ''; });
+
+  // tombol pilih twibbon
+  twibbonBtn.addEventListener('click', () => twibbonInput.click());
   twibbonInput.addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) loadTwibbonImage(f); twibbonInput.value = ''; });
 
   box.addEventListener('click', (e) => { if (!hasImage) fileInput.click(); });
@@ -314,7 +319,13 @@
     processing = false; enableEditing();
   });
 
-  dlBtn.addEventListener('click', ()=>{ const link = d.createElement('a'); link.download = 'twibbon.png'; link.href = canvas.toDataURL('image/png'); link.click(); });
+  dlBtn.addEventListener('click', async ()=>{
+    try{
+      const blob = await new Promise(res => canvas.toBlob(res,'image/png'));
+      const link = d.createElement('a'); link.download = 'twibbon.png'; link.href = URL.createObjectURL(blob); link.click();
+    }catch(err){ console.error(err); }
+  });
+
   shareBtn.addEventListener('click', async ()=>{
     try{
       const blob = await new Promise(res => canvas.toBlob(res,'image/png'));
