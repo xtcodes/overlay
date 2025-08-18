@@ -209,6 +209,9 @@
       fitImage(); scheduleDraw(); enableEditing();
       pickerMode = 'twibbon'; updatePickerFab();
       URL.revokeObjectURL(url);
+
+      // sembunyikan tombol unduh & bagikan sementara
+      afterBar.classList.remove('show');
     };
     _img.src = url;
   }
@@ -238,7 +241,6 @@
         // sembunyikan tombol unduh & bagikan sementara
         afterBar.classList.remove('show');
 
-        // aktifkan kembali geser/zoom setelah ganti twibbon
         gesturesEnabled = true;
       });
     };
@@ -314,12 +316,11 @@
     processing = true; disableEditing();
     gesturesEnabled = false;
     mask.classList.add('active');
-    afterBar.classList.remove('show');
-
-    const tick = () => new Promise(r => setTimeout(r, 1000));
-    for (let remain = PROCESS_SECONDS; remain > 0; remain--){ countNum.textContent = remain; await tick(); }
+    let sec = PROCESS_SECONDS;
+    countNum.textContent = sec;
+    const tick = () => new Promise(r=>setTimeout(r,1000));
+    while(sec > 0){ await tick(); sec--; countNum.textContent = sec; }
     countNum.textContent = '0';
-
     mask.classList.remove('active');
     afterBar.classList.add('show');
     processing = false; enableEditing();
@@ -327,20 +328,18 @@
 
   // ==== Unduh ====
   dlBtn.addEventListener('click', ()=>{
-    gesturesEnabled = false; // matikan geser/zoom setelah unduh
+    gesturesEnabled = false;
     const link = d.createElement('a');
     link.download = 'twibbon.png';
     link.href = canvas.toDataURL('image/png');
     link.click();
   });
-
   shareBtn.addEventListener('click', ()=>{
     canvas.toBlob(async (blob)=>{
       if (!blob) return;
       const file = new File([blob], 'twibbon.png', {type:'image/png'});
       if (navigator.canShare && navigator.canShare({ files:[file] }) && navigator.share){
-        try{ await navigator.share({ files:[file], title:'Twibbon', text:'Hasil twibbon saya' }); }
-        catch(e){}
+        try{ await navigator.share({ files:[file], title:'Twibbon', text:'Hasil twibbon saya' }); } catch(e){}
       } else {
         const url = URL.createObjectURL(blob);
         window.open(url, '_blank');
