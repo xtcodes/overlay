@@ -231,8 +231,15 @@
     _tw.onload = () => {
       checkTransparency(_tw, (ok)=>{
         if(!ok){ showAlert("Twibbon harus memiliki latar transparan!"); URL.revokeObjectURL(url); return; }
-        twibbon = _tw; scheduleDraw(); URL.revokeObjectURL(url);
-        gesturesEnabled = true; // aktifkan kembali geser/zoom setelah ganti twibbon
+        twibbon = _tw; 
+        scheduleDraw(); 
+        URL.revokeObjectURL(url);
+
+        // sembunyikan tombol unduh & bagikan sementara
+        afterBar.classList.remove('show');
+
+        // aktifkan kembali geser/zoom setelah ganti twibbon
+        gesturesEnabled = true;
       });
     };
     _tw.src = url;
