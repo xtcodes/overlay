@@ -232,7 +232,8 @@
       checkTransparency(_tw, (ok)=>{
         if(!ok){ showAlert("Twibbon harus memiliki latar transparan!"); URL.revokeObjectURL(url); return; }
         twibbon = _tw; scheduleDraw(); URL.revokeObjectURL(url);
-        gesturesEnabled = true; // aktifkan kembali geser/zoom setelah ganti twibbon
+        gesturesEnabled = true; 
+        showAlert("Gestur aktif kembali setelah ganti twibbon");
       });
     };
     _tw.src = url;
@@ -320,7 +321,8 @@
 
   // ==== Unduh ====
   dlBtn.addEventListener('click', ()=>{
-    gesturesEnabled = false; // matikan geser/zoom setelah unduh
+    gesturesEnabled = false; 
+    showAlert("Gestur dinonaktifkan setelah unduh");
     const link = d.createElement('a');
     link.download = 'twibbon.png';
     link.href = canvas.toDataURL('image/png');
