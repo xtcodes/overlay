@@ -1,113 +1,201 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Twibbon Maker</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aplikasi Twibbon — Canvas + Drop, Gestur Halus, Proses 15s</title>
   <style>
-    body {margin:0;font-family:sans-serif;display:flex;flex-direction:column;height:100vh;}
-    #box {flex:1;display:flex;align-items:center;justify-content:center;background:#f0f0f0;overflow:hidden;}
-    canvas {max-width:100%;max-height:100%;}
-    .ph {color:#888;position:absolute;pointer-events:none;}
-
-    .bar {padding:10px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
-    button {padding:10px 16px;font-size:16px;border:none;border-radius:6px;cursor:pointer;transition:all .3s ease;display:inline-flex;align-items:center;gap:8px;}
-    button:disabled {opacity:.6;cursor:not-allowed;}
-
-    button.primary {background:#1976d2;color:#fff;}
-    button.processing {background:#fbc02d;color:#000;}
-    button.done {background:#388e3c;color:#fff;}
-
-    .fab {position:fixed;bottom:80px;right:20px;width:56px;height:56px;border-radius:50%;background:#1976d2;color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.3);}
-
-    .after-bar {position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #ccc;padding:10px;display:flex;gap:10px;justify-content:center;transform:translateY(100%);transition:transform .3s ease;}
-    .after-bar.show {transform:translateY(0);}
-
-    #mask {position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:24px;z-index:10;display:none;}
-    #mask.active {display:flex;}
-
-    /* Spinner style */
-    .spinner {
-      border: 3px solid rgba(0,0,0,0.2);
-      border-top: 3px solid #000;
-      border-radius: 50%;
-      width: 16px;
-      height: 16px;
-      animation: spin 1s linear infinite;
+    :root{
+      --bg:#0f1115; --muted:#1a1f29; --ink:#e8eefc; --ink-dim:#b6c0d4; --acc:#3a86ff;
+      --ok:#22c55e; --warn:#f59e0b; --err:#ef4444; --shadow:0 10px 30px rgba(0,0,0,.25);
+      --cardW: min(92vw, 520px); --pad:12px; --radius:16px; --gap:10px;
     }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    *{box-sizing:border-box}
+    html,body{height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif}
+    .wrap{max-width:var(--cardW);margin:28px auto;padding:0 var(--pad)}
+    .card{background:var(--muted);border:1px solid #202636;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .head{padding:14px 16px;border-bottom:1px solid #202636;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .title{font-weight:700}
+    .body{padding:12px 12px 16px}
+    .canvasBox{position:relative; width:100%; aspect-ratio:1/1; background:#0d1117; border-radius:14px; border:1px dashed #2a3242; overflow:hidden;}
+    canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none;}
+
+    .placeholder{position:absolute; inset:0; display:grid; place-content:center; gap:10px; text-align:center; color:var(--ink-dim); pointer-events:none}
+    .placeholder .dropIcon{font-size:42px;opacity:.7}
+
+    .fab{position:absolute; left:10px; bottom:10px; z-index:5; padding:10px 12px; border-radius:12px; border:1px solid #2a3242; background:#121621; color:var(--ink); font-weight:700}
+    .fab:disabled{opacity:.6}
+
+    .dropOverlay{position:absolute; inset:0; border:2px dashed var(--acc); border-radius:14px; display:none; place-content:center; color:var(--acc); background:rgba(58,134,255,.08); font-weight:600}
+    .canvasBox.dragover .dropOverlay{display:grid}
+
+    .controls{display:grid; gap:10px; grid-template-columns:1fr auto; align-items:center; margin-top:12px}
+    .row{display:flex; gap:10px}
+    .btn{appearance:none; border:1px solid #2a3242; background:#121621; color:var(--ink); padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer; transition:all .3s ease}
+    .btn:disabled{opacity:.6; cursor:not-allowed}
+    .btn.primary{background:var(--acc); border-color:transparent; color:white}
+    .btn.processing{background:var(--warn) !important; color:white !important}
+    .btn.done{background:var(--ok) !important; color:white !important}
+    .btn.ghost{background:transparent}
+
+    .processMask{position:absolute; inset:0; background:rgba(17,24,39,.72); display:none}
+    .processMask.active{display:block}
+    .spinnerWrap{position:absolute; right:10px; bottom:10px; width:52px; height:52px}
+    .spinner{position:absolute; inset:0; border:5px solid rgba(255,255,255,.18); border-top-color:white; border-radius:50%; animation:spin 1s linear infinite}
+    .countNum{position:absolute; inset:0; display:grid; place-items:center; font-weight:800; font-feature-settings:"tnum" 1, "ss01" 1}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .afterBar{display:none; gap:10px; margin-top:12px}
+    .afterBar.show{display:grid; grid-template-columns:1fr 1fr}
+
+    .tips{font-size:.9rem; color:var(--ink-dim); margin-top:8px}
+
+    /* ALERT */
+    .alert{
+      position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+      background:var(--err); color:white; padding:10px 16px; border-radius:12px;
+      box-shadow:var(--shadow); opacity:0; pointer-events:none;
+      transition:opacity .3s, transform .3s;
+      max-width:90%; text-align:center; z-index:999;
     }
+    .alert.show{opacity:1; transform:translateX(-50%) translateY(0);}
   </style>
 </head>
 <body>
-  <div class="bar top-bar">
-    <input type="file" id="photoInput" accept="image/*" style="display:none">
-    <input type="file" id="twibbonInput" accept="image/*" style="display:none">
-    <button id="resetAllTop">Reset</button>
-    <button id="processBtn" class="primary" disabled><span>Buat</span></button>
-  </div>
-  <div id="box">
-    <span class="ph">Pilih foto</span>
-    <canvas id="canvas"></canvas>
-  </div>
-  <div class="fab" id="pickerFab">📷</div>
-  <div id="mask"><div>Memproses... <span id="countNum"></span></div></div>
-  <div class="after-bar" id="afterBar">
-    <button id="dlBtn">Unduh</button>
-    <button id="shareBtn">Bagikan</button>
+  <div class="wrap">
+    <div class="card">
+      <div class="head">
+        <div class="title">Aplikasi Twibbon</div>
+        <button id="resetAllTop" class="btn ghost" title="Reset cepat">Reset</button>
+      </div>
+      <div class="body">
+        <div class="canvasBox" id="canvasBox">
+          <canvas id="stage" width="1024" height="1024" aria-label="Area Twibbon"></canvas>
+
+          <button id="pickerFab" class="fab">Pilih Gambar</button>
+
+          <div class="placeholder" id="ph">
+            <div class="dropIcon">⬇️</div>
+            <div><b>Tarik & lepas</b> gambar ke sini<br/>atau <b>ketuk</b> untuk memilih</div>
+          </div>
+          <div class="dropOverlay">Lepaskan untuk mengunggah…</div>
+          <div class="processMask" id="mask">
+            <div class="spinnerWrap">
+              <div class="spinner"></div>
+              <div class="countNum" id="countNum">15</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <div class="row">
+            <button id="processBtn" class="btn primary" disabled>Buat</button>
+          </div>
+          <div class="row">
+            <small class="tips">Gestur: geser 1 jari · cubit 2 jari untuk zoom (halus)</small>
+          </div>
+        </div>
+
+        <div class="afterBar" id="afterBar">
+          <button id="dlBtn" class="btn">Unduh</button>
+          <button id="shareBtn" class="btn">Bagikan</button>
+        </div>
+
+        <input id="fileInput" type="file" accept="image/*" hidden />
+        <input id="twibbonInput" type="file" accept="image/png,image/*" hidden />
+      </div>
+    </div>
   </div>
 
+  <!-- Alert box -->
+  <div id="alertBox" class="alert"></div>
+
 <script>
-(function(){
+(() => {
   const d = document;
-  const canvas = d.getElementById('canvas'), ctx = canvas.getContext('2d');
-  const ph = d.querySelector('.ph');
+  const box = d.getElementById('canvasBox');
+  const canvas = d.getElementById('stage');
+  const ctx = canvas.getContext('2d');
+  const ph = d.getElementById('ph');
+  const pickerFab = d.getElementById('pickerFab');
+  const fileInput = d.getElementById('fileInput');
+  const twibbonInput = d.getElementById('twibbonInput');
   const processBtn = d.getElementById('processBtn');
-  const afterBar = d.getElementById('afterBar');
   const mask = d.getElementById('mask');
   const countNum = d.getElementById('countNum');
+  const afterBar = d.getElementById('afterBar');
   const dlBtn = d.getElementById('dlBtn');
   const shareBtn = d.getElementById('shareBtn');
   const resetAllTop = d.getElementById('resetAllTop');
+  const alertBox = d.getElementById('alertBox');
 
-  let img = null, twibbon = null;
   let hasImage = false;
-  let scale = 1, tx = 0, ty = 0;
-  let gesturesEnabled = true;
+  let img = null;
+  let scale = 1, minScale = 0.2, maxScale = 5;
+  let tx = 0, ty = 0;
+  const pointers = new Map();
+  let raf = null;
+  let dirty = true;
+  let isTransforming = false;
 
-  const TWIBBON_DEFAULT_URL = ''; // bisa isi twibbon default kalau ada
+  const TWIBBON_DEFAULT_URL = 'twibbon.png';
+  let twibbon = null;
+  (function preloadTwibbon(){
+    const im = new Image();
+    im.onload = ()=>{ twibbon = im; scheduleDraw(); };
+    im.src = TWIBBON_DEFAULT_URL;
+  })();
 
+  const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
   function resizeCanvasToBox(){
-    const box = d.getElementById('box');
-    canvas.width = box.clientWidth;
-    canvas.height = box.clientHeight;
-    scheduleDraw();
+    const rect = box.getBoundingClientRect();
+    const w = Math.floor(rect.width);
+    const h = Math.floor(rect.width);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    canvas.width = Math.round(w * DPR);
+    canvas.height = Math.round(h * DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    dirty = true; scheduleDraw();
   }
+  window.addEventListener('resize', resizeCanvasToBox);
 
-  function scheduleDraw(){
-    requestAnimationFrame(draw);
-  }
+  function clear(){ ctx.fillStyle = '#0d1117'; ctx.fillRect(0,0,canvas.width/DPR,canvas.height/DPR); }
 
   function draw(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if (!dirty) return;
+    dirty = false;
+    clear();
+    const W = canvas.width / DPR, H = canvas.height / DPR;
     if (hasImage && img){
       ctx.save();
-      ctx.translate(canvas.width/2+tx, canvas.height/2+ty);
+      ctx.translate(W/2 + tx, H/2 + ty);
       ctx.scale(scale, scale);
-      const ratio = Math.min(canvas.width/img.width, canvas.height/img.height);
-      const w = img.width*ratio, h = img.height*ratio;
-      ctx.drawImage(img, -w/2, -h/2, w, h);
+      ctx.drawImage(img, -img.width/2, -img.height/2);
       ctx.restore();
     }
-    if (twibbon){
-      ctx.drawImage(twibbon, 0, 0, canvas.width, canvas.height);
+    if (hasImage && twibbon && twibbon.complete && twibbon.naturalWidth) {
+      const r = Math.max(W / twibbon.width, H / twibbon.height);
+      const twW = twibbon.width * r, twH = twibbon.height * r;
+      ctx.save();
+      if (isTransforming) ctx.globalAlpha = 0.5;
+      ctx.drawImage(twibbon, (W - twW)/2, (H - twH)/2, twW, twH);
+      ctx.restore();
+    }
+    if (!hasImage) {
+      ctx.strokeStyle = 'rgba(255,255,255,.06)';
+      const step = 24;
+      for (let x = 0; x < W; x += step) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+      for (let y = 0; y < H; y += step) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
     }
   }
+  function scheduleDraw(){ if (!raf){ raf = requestAnimationFrame(()=>{ raf=null; draw(); }); } dirty = true; }
+  function fitImage(){ const W = canvas.width / DPR, H = canvas.height / DPR; const sr = Math.min(W / img.width, H / img.height); scale = sr; tx = 0; ty = 0; }
 
-  function fitImage(){
-    scale = 1; tx = 0; ty = 0;
+  function showAlert(msg){
+    alertBox.textContent = msg;
+    alertBox.classList.add('show');
+    setTimeout(()=>{ alertBox.classList.remove('show'); }, 3000);
   }
 
   function loadUserImage(file){
@@ -119,29 +207,116 @@
       hasImage = true;
       ph.style.display = 'none';
       fitImage(); scheduleDraw();
-      processBtn.querySelector("span").textContent = "Buat";
+      processBtn.textContent = "Buat";
       processBtn.classList.remove("processing","done");
       processBtn.classList.add("primary");
       processBtn.disabled = false;
+      pickerMode = 'twibbon'; updatePickerFab();
       URL.revokeObjectURL(url);
       afterBar.classList.remove('show');
     };
     _img.src = url;
   }
 
+  function checkTransparency(image, cb){
+    const c = d.createElement('canvas');
+    const cx = c.getContext('2d');
+    c.width = image.width; c.height = image.height;
+    cx.drawImage(image,0,0);
+    const data = cx.getImageData(0,0,c.width,c.height).data;
+    let hasAlpha = false;
+    for (let i=3;i<data.length;i+=4){ if(data[i]<255){ hasAlpha=true; break; } }
+    cb(hasAlpha);
+  }
+
+  function loadTwibbonImage(file){
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const _tw = new Image();
+    _tw.onload = () => {
+      checkTransparency(_tw, (ok)=>{
+        if(!ok){ showAlert("Twibbon harus memiliki latar transparan!"); URL.revokeObjectURL(url); return; }
+        twibbon = _tw; 
+        scheduleDraw(); 
+        URL.revokeObjectURL(url);
+        afterBar.classList.remove('show');
+        gesturesEnabled = true;
+      });
+    };
+    _tw.src = url;
+  }
+
+  let pickerMode = 'photo';
+  function updatePickerFab(){ pickerFab.textContent = pickerMode === 'photo' ? 'Pilih Gambar' : 'Ganti Twibbon'; }
+  updatePickerFab();
+
+  pickerFab.addEventListener('click', (e) => { e.stopPropagation(); (pickerMode === 'photo' ? fileInput : twibbonInput).click(); });
+  fileInput.addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) loadUserImage(f); fileInput.value = ''; });
+  twibbonInput.addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) loadTwibbonImage(f); twibbonInput.value = ''; });
+
+  box.addEventListener('click', (e) => { if (!hasImage) fileInput.click(); });
+  ['dragenter','dragover'].forEach(ev=>{ box.addEventListener(ev, (e)=>{ e.preventDefault(); box.classList.add('dragover'); }); });
+  ['dragleave','drop'].forEach(ev=>{ box.addEventListener(ev, (e)=>{ e.preventDefault(); box.classList.remove('dragover'); }); });
+  box.addEventListener('drop', (e)=>{ const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) loadUserImage(f); });
+
+  // ==== Gestures ====
+  let gesturesEnabled = true;
+  let last = {x:0, y:0};
+  let pinch = null;
+  function getCenter(){ const pts = Array.from(pointers.values()); const c = {x:0, y:0}; for(const p of pts){ c.x += p.x; c.y += p.y; } c.x /= pts.length; c.y /= pts.length; return c; }
+  function distance(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
+
+  canvas.addEventListener('pointerdown', (e)=>{
+    if (!gesturesEnabled || !hasImage) return;
+    isTransforming = true;
+    canvas.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, {x:e.offsetX, y:e.offsetY});
+    if (pointers.size === 1){ last = {x:e.offsetX, y:e.offsetY}; }
+    if (pointers.size === 2){ const [p1,p2] = Array.from(pointers.values()); pinch = { startDist: distance(p1,p2), startScale: scale, startTx: tx, startTy: ty }; }
+  });
+  canvas.addEventListener('pointermove', (e)=>{
+    if (!gesturesEnabled || !hasImage || !pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, {x:e.offsetX, y:e.offsetY});
+    if (pointers.size === 1){
+      const p = pointers.get(e.pointerId);
+      const dx = p.x - last.x; const dy = p.y - last.y;
+      last = {x:p.x, y:p.y};
+      tx += dx; ty += dy; scheduleDraw();
+    } else if (pointers.size === 2 && pinch){
+      const [p1,p2] = Array.from(pointers.values());
+      const dist = distance(p1,p2);
+      const scaleRaw = pinch.startScale * (dist / Math.max(10, pinch.startDist));
+      const newScale = Math.min(maxScale, Math.max(minScale, scaleRaw));
+      const center = getCenter();
+      const W = canvas.clientWidth, H = canvas.clientHeight;
+      const cx = center.x - W/2, cy = center.y - H/2;
+      tx = pinch.startTx + cx * (1) - cx * (newScale / pinch.startScale);
+      ty = pinch.startTy + cy * (1) - cy * (newScale / pinch.startScale);
+      scale = newScale; scheduleDraw();
+    }
+  });
+  function endPointer(e){ 
+    if (pointers.has(e.pointerId)) pointers.delete(e.pointerId); 
+    if (pointers.size < 2) pinch = null; 
+    if (pointers.size === 0) { 
+      isTransforming = false; 
+      scheduleDraw();
+    }
+  }
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+  canvas.addEventListener('pointerleave', endPointer);
+
   // ==== Proses ====
   const PROCESS_SECONDS = 15;
   let processing = false;
   processBtn.addEventListener('click', async ()=>{
     if (!hasImage || processing) return;
-
     processing = true;
     processBtn.disabled = true;
+    processBtn.textContent = "Memproses...";
     processBtn.classList.remove("primary","done");
     processBtn.classList.add("processing");
-
-    // Tambah spinner
-    processBtn.innerHTML = '<div class="spinner"></div><span>Memproses...</span>';
 
     gesturesEnabled = false;
     mask.classList.add('active');
@@ -156,7 +331,7 @@
     afterBar.classList.add('show');
 
     processing = false;
-    processBtn.innerHTML = '<span>Selesai</span>';
+    processBtn.textContent = "Selesai";
     processBtn.classList.remove("primary","processing");
     processBtn.classList.add("done");
     processBtn.disabled = true;
@@ -194,11 +369,12 @@
     } catch (e) { twibbon = null; scheduleDraw(); }
     ph.style.display = '';
     afterBar.classList.remove('show');
-    processBtn.innerHTML = '<span>Buat</span>';
+    processBtn.textContent = "Buat";
     processBtn.classList.remove("processing","done");
     processBtn.classList.add("primary");
     processBtn.disabled = true;
-    scale = 1; tx = 0; ty = 0;
+    scale = 1; tx = 0; ty = 0; pointers.clear();
+    pickerMode = 'photo'; updatePickerFab();
     gesturesEnabled = true;
   }
   resetAllTop.addEventListener('click', resetAll);
