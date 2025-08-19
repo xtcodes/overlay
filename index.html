@@ -241,6 +241,12 @@
         URL.revokeObjectURL(url);
         afterBar.classList.remove('show');
         gesturesEnabled = true;
+
+        // 🔥 Tambahan supaya tombol Buat direset seperti saat unggah gambar
+        processBtn.textContent = "Buat";
+        processBtn.classList.remove("processing","done");
+        processBtn.classList.add("primary");
+        processBtn.disabled = !hasImage;
       });
     };
     _tw.src = url;
