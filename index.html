@@ -31,9 +31,11 @@
 
     .controls{display:grid; gap:10px; grid-template-columns:1fr auto; align-items:center; margin-top:12px}
     .row{display:flex; gap:10px}
-    .btn{appearance:none; border:1px solid #2a3242; background:#121621; color:var(--ink); padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer}
+    .btn{appearance:none; border:1px solid #2a3242; background:#121621; color:var(--ink); padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer; transition:all .3s ease}
     .btn:disabled{opacity:.6; cursor:not-allowed}
     .btn.primary{background:var(--acc); border-color:transparent; color:white}
+    .btn.processing{background:var(--warn) !important; color:white !important}
+    .btn.done{background:var(--ok) !important; color:white !important}
     .btn.ghost{background:transparent}
 
     .processMask{position:absolute; inset:0; background:rgba(17,24,39,.72); display:none}
@@ -189,8 +191,6 @@
   }
   function scheduleDraw(){ if (!raf){ raf = requestAnimationFrame(()=>{ raf=null; draw(); }); } dirty = true; }
   function fitImage(){ const W = canvas.width / DPR, H = canvas.height / DPR; const sr = Math.min(W / img.width, H / img.height); scale = sr; tx = 0; ty = 0; }
-  function enableEditing(){ processBtn.disabled = !hasImage; }
-  function disableEditing(){ processBtn.disabled = true; }
 
   function showAlert(msg){
     alertBox.textContent = msg;
@@ -206,11 +206,13 @@
       img = _img;
       hasImage = true;
       ph.style.display = 'none';
-      fitImage(); scheduleDraw(); enableEditing();
+      fitImage(); scheduleDraw();
+      processBtn.textContent = "Buat";
+      processBtn.classList.remove("processing","done");
+      processBtn.classList.add("primary");
+      processBtn.disabled = false;
       pickerMode = 'twibbon'; updatePickerFab();
       URL.revokeObjectURL(url);
-
-      // sembunyikan tombol unduh & bagikan sementara
       afterBar.classList.remove('show');
     };
     _img.src = url;
@@ -237,10 +239,7 @@
         twibbon = _tw; 
         scheduleDraw(); 
         URL.revokeObjectURL(url);
-
-        // sembunyikan tombol unduh & bagikan sementara
         afterBar.classList.remove('show');
-
         gesturesEnabled = true;
       });
     };
@@ -313,20 +312,32 @@
   let processing = false;
   processBtn.addEventListener('click', async ()=>{
     if (!hasImage || processing) return;
-    processing = true; disableEditing();
+    processing = true;
+    processBtn.disabled = true;
+    processBtn.textContent = "Memproses...";
+    processBtn.classList.remove("primary","done");
+    processBtn.classList.add("processing");
+
     gesturesEnabled = false;
     mask.classList.add('active');
+
     let sec = PROCESS_SECONDS;
     countNum.textContent = sec;
     const tick = () => new Promise(r=>setTimeout(r,1000));
     while(sec > 0){ await tick(); sec--; countNum.textContent = sec; }
+
     countNum.textContent = '0';
     mask.classList.remove('active');
     afterBar.classList.add('show');
-    processing = false; enableEditing();
+
+    processing = false;
+    processBtn.textContent = "Selesai";
+    processBtn.classList.remove("primary","processing");
+    processBtn.classList.add("done");
+    processBtn.disabled = true;
   });
 
-  // ==== Unduh ====
+  // ==== Unduh & Bagikan ====
   dlBtn.addEventListener('click', ()=>{
     gesturesEnabled = false;
     const link = d.createElement('a');
@@ -348,6 +359,7 @@
     });
   });
 
+  // ==== Reset ====
   function resetAll(){
     hasImage = false; img = null;
     try {
@@ -357,7 +369,10 @@
     } catch (e) { twibbon = null; scheduleDraw(); }
     ph.style.display = '';
     afterBar.classList.remove('show');
-    enableEditing();
+    processBtn.textContent = "Buat";
+    processBtn.classList.remove("processing","done");
+    processBtn.classList.add("primary");
+    processBtn.disabled = true;
     scale = 1; tx = 0; ty = 0; pointers.clear();
     pickerMode = 'photo'; updatePickerFab();
     gesturesEnabled = true;
