@@ -430,13 +430,23 @@
     afterBar.classList.add('show');
 
     processing = false;
-    processBtn.textContent = "Selesai 🎉";
+    processBtn.textContent = "Selesai...";
     processBtn.classList.remove("primary","processing");
     processBtn.classList.add("done");
     processBtn.disabled = true;
 
     // 🚀 Mulai kembang api
+  //  startFireworks();
+
+    // 🚀 Mulai kembang api (ulang selama 5 detik)
+  let fireworkTimer = setInterval(() => {
     startFireworks();
+  }, 800); // setiap 0.8 detik muncul batch baru
+
+  setTimeout(() => {
+    clearInterval(fireworkTimer);
+  }, 5000); // stop setelah 5 detik
+    
   });
 
   // ==== Unduh & Bagikan ====
