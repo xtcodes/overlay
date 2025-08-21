@@ -100,6 +100,9 @@
           <button id="dlBtn" class="btn">Unduh</button>
           <button id="shareBtn" class="btn">Bagikan</button>
         </div>
+        <p class="tips" id="altDownload" style="display:none; text-align:center; margin-top:6px;">
+          Jika unduhan tidak dimulai otomatis, <a id="altDlLink" href="#" download="twibbon.png">klik di sini</a>
+        </p>
 
         <input id="fileInput" type="file" accept="image/*" hidden />
         <input id="twibbonInput" type="file" accept="image/png,image/*" hidden />
@@ -436,27 +439,32 @@
     processBtn.disabled = true;
 
     // 🚀 Mulai kembang api
-  //  startFireworks();
-
-    // 🚀 Mulai kembang api (ulang selama 5 detik)
-  let fireworkTimer = setInterval(() => {
-    startFireworks();
-  }, 800); // setiap 0.8 detik muncul batch baru
-
-  setTimeout(() => {
-    clearInterval(fireworkTimer);
-  }, 5000); // stop setelah 5 detik
-    
+    let fireworkTimer = setInterval(() => {
+      startFireworks();
+    }, 800);
+    setTimeout(() => {
+      clearInterval(fireworkTimer);
+    }, 5000);
   });
 
   // ==== Unduh & Bagikan ====
   dlBtn.addEventListener('click', ()=>{
     gesturesEnabled = false;
+    const url = canvas.toDataURL('image/png');
+
+    // cara utama (otomatis)
     const link = d.createElement('a');
     link.download = 'twibbon.png';
-    link.href = canvas.toDataURL('image/png');
+    link.href = url;
     link.click();
+
+    // link alternatif
+    const alt = d.getElementById('altDownload');
+    const altLink = d.getElementById('altDlLink');
+    altLink.href = url;
+    alt.style.display = 'block';
   });
+
   shareBtn.addEventListener('click', ()=>{
     canvas.toBlob(async (blob)=>{
       if (!blob) return;
@@ -481,6 +489,7 @@
     } catch (e) { twibbon = null; scheduleDraw(); }
     ph.style.display = '';
     afterBar.classList.remove('show');
+    d.getElementById('altDownload').style.display = 'none';
     processBtn.textContent = "Buat";
     processBtn.classList.remove("processing","done");
     processBtn.classList.add("primary");
