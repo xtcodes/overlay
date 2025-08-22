@@ -312,205 +312,147 @@
   }
   canvas.addEventListener('pointerup', endPointer);
   canvas.addEventListener('pointercancel', endPointer);
-  canvas.addEventListener('pointerleave', endPointer);
+  canvas.addEventListener('pointerout', endPointer);
 
-  
-    draw(ctx) {
-    // ==== Fireworks ====
-class Particle {
-  constructor(x, y, color, vel, life) {
-    this.x = x;
-    this.y = y;
-    this.color = color;
-    this.vel = vel;
-    this.life = life;
-    this.age = 0;
-    this.size = 2 + Math.random() * 2; // variasi ukuran
-  }
-  update() {
-    this.x += this.vel.x;
-    this.y += this.vel.y;
-    this.vel.x *= 0.98; // gesekan kecil biar halus
-    this.vel.y += 0.05; // gravitasi lembut
-    this.age++;
-  }
-  draw(ctx) {
-    const t = this.age / this.life;
-    const alpha = 1 - t * t; // easing (memudar lebih lembut)
-    const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size * 2);
-    grad.addColorStop(0, this.color);
-    grad.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = grad;
-    ctx.globalAlpha = alpha;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size * (1 - t * 0.5), 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-  get dead() { return this.age >= this.life; }
-}
+  // Mouse wheel zoom
+  canvas.addEventListener('wheel', (e)=>{
+    if (!gesturesEnabled || !hasImage) return;
+    e.preventDefault();
+    const delta = -e.deltaY * 0.001;
+    const factor = Math.exp(delta);
+    const newScale = Math.min(maxScale, Math.max(minScale, scale * factor));
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left - rect.width/2;
+    const cy = e.clientY - rect.top - rect.height/2;
+    tx -= cx * (newScale/scale - 1);
+    ty -= cy * (newScale/scale - 1);
+    scale = newScale; scheduleDraw();
+  }, {passive:false});
 
-class Firework {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-    this.particles = [];
-    this.exploded = false;
-    this.rocketVel = -6 - Math.random() * 3;
-  }
-  update() {
-    if (!this.exploded) {
-      this.y += this.rocketVel;
-      this.rocketVel += 0.15;
-      if (this.rocketVel >= 0) {
-        this.explode();
-        this.exploded = true;
-      }
-    } else {
-      this.particles.forEach(p => p.update());
-      this.particles = this.particles.filter(p => !p.dead);
-    }
-  }
-  explode() {
-    const count = 60 + Math.random() * 40; // lebih banyak partikel
-    const colors = ["#ff4d4d","#4dff4d","#4da6ff","#ffff66","#ff66ff","#66ffff"];
-    for (let i = 0; i < count; i++) {
-      const angle = (Math.PI * 2 * i) / count;
-      const speed = 2 + Math.random() * 3;
-      this.particles.push(new Particle(
-        this.x,
-        this.y,
-        colors[Math.floor(Math.random()*colors.length)],
-        {x: Math.cos(angle)*speed, y: Math.sin(angle)*speed},
-        80 + Math.random()*40
-      ));
-    }
-  }
-  draw(ctx) {
-    if (!this.exploded) {
-      ctx.fillStyle = "#fff";
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
-      ctx.fill();
-    } else {
-      this.particles.forEach(p => p.draw(ctx));
-    }
-  }
-  get done() { return this.exploded && this.particles.length === 0; }
-}
-
-let fireworks = [];
-function startFireworks() {
-  fireworks.push(new Firework(
-    Math.random() * canvas.width / DPR,
-    canvas.height / DPR
-  ));
-  if (fireworks.length === 1) animateFireworks();
-}
-
-function animateFireworks() {
-  // tambahkan lapisan hitam transparan agar ada jejak partikel
-  ctx.fillStyle = "rgba(0,0,0,0.2)";
-  ctx.fillRect(0, 0, canvas.width / DPR, canvas.height / DPR);
-
-  fireworks.forEach(fw => { fw.update(); fw.draw(ctx); });
-  fireworks = fireworks.filter(fw => !fw.done);
-
-  if (fireworks.length > 0) requestAnimationFrame(animateFireworks);
-}
-
-  // ==== Proses ====
-  const PROCESS_SECONDS = 15;
+  // ==== Processing ====
   let processing = false;
-  processBtn.addEventListener('click', async ()=>{
-    if (!hasImage || processing) return;
+  let timer = null, remain = 15;
+  processBtn.addEventListener('click', ()=>{
+    if (!hasImage || !twibbon) return;
+    if (processing) return;
     processing = true;
-    processBtn.disabled = true;
-    processBtn.textContent = "Memproses...";
+    gesturesEnabled = false;
     processBtn.classList.remove("primary","done");
     processBtn.classList.add("processing");
+    processBtn.textContent = "Memproses…";
+    remain = 15; countNum.textContent = remain;
+    mask.classList.add("active");
+    timer = setInterval(()=>{
+      remain--;
+      countNum.textContent = remain;
+      if (remain<=0){ clearInterval(timer); finishProcess(); }
+    },1000);
+  });
 
-    gesturesEnabled = false;
-    mask.classList.add('active');
-
-    let sec = PROCESS_SECONDS;
-    countNum.textContent = sec;
-    const tick = () => new Promise(r=>setTimeout(r,1000));
-    while(sec > 0){ await tick(); sec--; countNum.textContent = sec; }
-
-    countNum.textContent = '0';
-    mask.classList.remove('active');
-    afterBar.classList.add('show');
-
-    processing = false;
-    processBtn.textContent = "Selesai...";
-    processBtn.classList.remove("primary","processing");
+  function finishProcess(){
+    mask.classList.remove("active");
+    processBtn.classList.remove("processing");
     processBtn.classList.add("done");
-    processBtn.disabled = true;
-
-    // 🚀 Mulai kembang api
-    let fireworkTimer = setInterval(() => {
-      startFireworks();
-    }, 800);
-    setTimeout(() => {
-      clearInterval(fireworkTimer);
-    }, 5000);
-  });
-
-  // ==== Unduh & Bagikan ====
-  dlBtn.addEventListener('click', ()=>{
-    gesturesEnabled = false;
-    const url = canvas.toDataURL('image/png');
-
-    // cara utama (otomatis)
-    const link = d.createElement('a');
-    link.download = 'twibbon.png';
-    link.href = url;
-    link.click();
-
-    // link alternatif
-    const alt = d.getElementById('altDownload');
-    const altLink = d.getElementById('altDlLink');
-    altLink.href = url;
-    alt.style.display = 'block';
-  });
-
-  shareBtn.addEventListener('click', ()=>{
-    canvas.toBlob(async (blob)=>{
-      if (!blob) return;
-      const file = new File([blob], 'twibbon.png', {type:'image/png'});
-      if (navigator.canShare && navigator.canShare({ files:[file] }) && navigator.share){
-        try{ await navigator.share({ files:[file], title:'Twibbon', text:'Hasil twibbon saya' }); } catch(e){}
-      } else {
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        setTimeout(()=>URL.revokeObjectURL(url), 15000);
-      }
-    });
-  });
-
-  // ==== Reset ====
-  function resetAll(){
-    hasImage = false; img = null;
-    try {
-      const defaultTw = new Image();
-      defaultTw.onload = () => { twibbon = defaultTw; scheduleDraw(); };
-      defaultTw.src = TWIBBON_DEFAULT_URL;
-    } catch (e) { twibbon = null; scheduleDraw(); }
-    ph.style.display = '';
-    afterBar.classList.remove('show');
-    d.getElementById('altDownload').style.display = 'none';
-    processBtn.textContent = "Buat";
-    processBtn.classList.remove("processing","done");
-    processBtn.classList.add("primary");
-    processBtn.disabled = true;
-    scale = 1; tx = 0; ty = 0; pointers.clear();
-    pickerMode = 'photo'; updatePickerFab();
+    processBtn.textContent = "Selesai!";
+    afterBar.classList.add("show");
     gesturesEnabled = true;
+    processing = false;
+    launchFireworks();
   }
-  resetAllTop.addEventListener('click', resetAll);
 
-  resizeCanvasToBox(); scheduleDraw();
+  // ==== Export ====
+  function exportImage(){
+    const expCanvas = d.createElement('canvas');
+    expCanvas.width = 2048; expCanvas.height = 2048;
+    const ex = expCanvas.getContext('2d');
+    ex.fillStyle = '#0d1117'; ex.fillRect(0,0,expCanvas.width,expCanvas.height);
+    if (img){
+      ex.save();
+      ex.translate(expCanvas.width/2 + tx*2, expCanvas.height/2 + ty*2);
+      ex.scale(scale*2, scale*2);
+      ex.drawImage(img, -img.width/2, -img.height/2);
+      ex.restore();
+    }
+    if (twibbon){
+      const r = Math.max(expCanvas.width / twibbon.width, expCanvas.height / twibbon.height);
+      const twW = twibbon.width * r, twH = twibbon.height * r;
+      ex.drawImage(twibbon, (expCanvas.width - twW)/2, (expCanvas.height - twH)/2, twW, twH);
+    }
+    return expCanvas.toDataURL('image/png');
+  }
+
+  dlBtn.addEventListener('click', ()=>{
+    const url = exportImage();
+    const a = d.createElement('a');
+    a.href = url; a.download = 'twibbon.png';
+    d.body.appendChild(a); a.click(); d.body.removeChild(a);
+    setTimeout(()=>{ URL.revokeObjectURL(url); }, 1000);
+  });
+
+  shareBtn.addEventListener('click', async ()=>{
+    try{
+      const dataUrl = exportImage();
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob],'twibbon.png',{type:'image/png'});
+      if (navigator.share && navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title:'Twibbon Saya'});
+      } else {
+        dlBtn.click();
+        d.getElementById("altDownload").style.display="block";
+        d.getElementById("altDlLink").href=dataUrl;
+      }
+    }catch(err){ console.error(err); }
+  });
+
+  resetAllTop.addEventListener('click', ()=>{
+    img = null; hasImage=false; tx=ty=0; scale=1;
+    ph.style.display='grid';
+    afterBar.classList.remove('show');
+    processBtn.disabled=true;
+    processBtn.classList.remove("primary","processing","done");
+    processBtn.textContent="Buat";
+    pickerMode='photo'; updatePickerFab();
+    scheduleDraw();
+  });
+
+  resizeCanvasToBox();
+
+  // ==== Fireworks ====
+  function launchFireworks(){
+    const fw = d.createElement('canvas');
+    fw.width = window.innerWidth; fw.height = window.innerHeight;
+    fw.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999';
+    d.body.appendChild(fw);
+    const fx = fw.getContext('2d');
+    let particles = [];
+
+    function spawn(x,y,color){
+      for(let i=0;i<80;i++){
+        const angle = (Math.PI*2*i)/80 + Math.random()*0.1;
+        const speed = 2+Math.random()*3;
+        particles.push({x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,life:120,color});
+      }
+    }
+    spawn(fw.width/2, fw.height/2, 'hsl('+Math.random()*360+',100%,60%)');
+
+    function loop(){
+      fx.fillStyle='rgba(0,0,0,0.2)'; fx.fillRect(0,0,fw.width,fw.height);
+      particles.forEach(p=>{
+        p.x+=p.vx; p.y+=p.vy;
+        p.vy+=0.03;
+        p.life--;
+        fx.fillStyle=p.color;
+        fx.beginPath();
+        fx.arc(p.x,p.y,2,0,Math.PI*2);
+        fx.fill();
+      });
+      particles=particles.filter(p=>p.life>0);
+      if(particles.length>0) requestAnimationFrame(loop);
+      else fw.remove();
+    }
+    loop();
+  }
+
 })();
 </script>
 </body>
