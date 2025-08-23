@@ -386,28 +386,117 @@
         this.particles.forEach(p => p.draw(ctx));
       }
     }
-    get done() { return this.exploded && this.particles.length === 0; }
+// ==== Fireworks (versi halus & lembut) ====
+class Particle {
+  constructor(x, y, color, vel, life) {
+    this.x = x;
+    this.y = y;
+    this.color = color;
+    this.vel = vel;
+    this.life = life;
+    this.age = 0;
+    this.size = 3 + Math.random() * 2; // radius awal partikel
   }
+  update() {
+    this.x += this.vel.x;
+    this.y += this.vel.y;
 
-  let fireworks = [];
-  function startFireworks() {
-    fireworks = [];
-    for (let i=0;i<6;i++) {
-      fireworks.push(new Firework(
-        canvas.width/(DPR*6)*(i+1),
-        canvas.height/DPR
+    // gravitasi & gesekan lebih lembut
+    this.vel.y += 0.02;      // jatuh perlahan
+    this.vel.x *= 0.99;      // gesekan udara
+    this.vel.y *= 0.99;
+
+    this.age++;
+    this.size *= 0.98; // mengecil seiring waktu
+  }
+  draw(ctx) {
+    const alpha = 1 - this.age / this.life;
+    if (alpha <= 0) return;
+
+    const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size * 2);
+    gradient.addColorStop(0, this.color);
+    gradient.addColorStop(1, "rgba(0,0,0,0)");
+
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size * 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  get dead() { return this.age >= this.life; }
+}
+
+class Firework {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.particles = [];
+    this.exploded = false;
+    this.rocketVel = -6 - Math.random() * 3;
+    this.color = ["#ff6666","#66ff66","#6699ff","#ffff66","#ff66ff","#66ffff"][Math.floor(Math.random()*6)];
+  }
+  update() {
+    if (!this.exploded) {
+      this.y += this.rocketVel;
+      this.rocketVel += 0.12;
+      if (this.rocketVel >= 0) {
+        this.explode();
+        this.exploded = true;
+      }
+    } else {
+      this.particles.forEach(p => p.update());
+      this.particles = this.particles.filter(p => !p.dead);
+    }
+  }
+  explode() {
+    const count = 50 + Math.random() * 40;
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count;
+      const speed = 2 + Math.random() * 2.5;
+      this.particles.push(new Particle(
+        this.x,
+        this.y,
+        this.color,
+        {x: Math.cos(angle)*speed, y: Math.sin(angle)*speed},
+        80 + Math.random()*40
       ));
     }
-    animateFireworks();
   }
-  function animateFireworks() {
-    scheduleDraw();
-    ctx.save();
-    fireworks.forEach(fw => { fw.update(); fw.draw(ctx); });
-    ctx.restore();
-    fireworks = fireworks.filter(fw => !fw.done);
-    if (fireworks.length > 0) requestAnimationFrame(animateFireworks);
+  draw(ctx) {
+    if (!this.exploded) {
+      // rocket bersinar kecil
+      ctx.save();
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = this.color;
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else {
+      this.particles.forEach(p => p.draw(ctx));
+    }
   }
+  get done() { return this.exploded && this.particles.length === 0; }
+}
+
+let fireworks = [];
+function startFireworks() {
+  fireworks.push(new Firework(
+    Math.random() * (canvas.width / DPR * 0.8) + canvas.width / DPR * 0.1,
+    canvas.height / DPR
+  ));
+  animateFireworks();
+}
+function animateFireworks() {
+  scheduleDraw();
+  ctx.save();
+  fireworks.forEach(fw => { fw.update(); fw.draw(ctx); });
+  ctx.restore();
+  fireworks = fireworks.filter(fw => !fw.done);
+  if (fireworks.length > 0) requestAnimationFrame(animateFireworks);
+}
 
   // ==== Proses ====
   const PROCESS_SECONDS = 15;
