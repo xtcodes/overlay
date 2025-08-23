@@ -312,284 +312,119 @@
   }
   canvas.addEventListener('pointerup', endPointer);
   canvas.addEventListener('pointercancel', endPointer);
-  canvas.addEventListener('pointerleave', endPointer);
 
-  // ==== Fireworks ====
-  class Particle {
-    constructor(x, y, color, vel, life) {
-      this.x = x;
-      this.y = y;
-      this.color = color;
-      this.vel = vel;
-      this.life = life;
-      this.age = 0;
+  // ==== PROCESS BUTTON ====
+  processBtn.addEventListener('click', ()=>{
+    if (!hasImage || !twibbon) return;
+    if (processBtn.classList.contains("done")) {
+      showAlert("Sudah selesai! Gunakan tombol Unduh atau Bagikan.");
+      return;
     }
-    update() {
-      this.x += this.vel.x;
-      this.y += this.vel.y;
-      this.vel.y += 0.05;
-      this.age++;
-    }
-    draw(ctx) {
-      ctx.globalAlpha = 1 - this.age / this.life;
-      ctx.fillStyle = this.color;
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-    }
-    get dead() { return this.age >= this.life; }
-  }
-  class Firework {
-    constructor(x, y) {
-      this.x = x;
-      this.y = y;
-      this.particles = [];
-      this.exploded = false;
-      this.rocketVel = -6 - Math.random() * 3;
-    }
-    update() {
-      if (!this.exploded) {
-        this.y += this.rocketVel;
-        this.rocketVel += 0.15;
-        if (this.rocketVel >= 0) {
-          this.explode();
-          this.exploded = true;
-        }
-      } else {
-        this.particles.forEach(p => p.update());
-        this.particles = this.particles.filter(p => !p.dead);
-      }
-    }
-    explode() {
-      const count = 40 + Math.random() * 30;
-      const colors = ["#ff4444","#44ff44","#4488ff","#ffff44","#ff44ff","#44ffff"];
-      for (let i = 0; i < count; i++) {
-        const angle = (Math.PI * 2 * i) / count;
-        const speed = 2 + Math.random() * 3;
-        this.particles.push(new Particle(
-          this.x,
-          this.y,
-          colors[Math.floor(Math.random()*colors.length)],
-          {x: Math.cos(angle)*speed, y: Math.sin(angle)*speed},
-          60 + Math.random()*30
-        ));
-      }
-    }
-    draw(ctx) {
-      if (!this.exploded) {
-        ctx.fillStyle = "#fff";
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        this.particles.forEach(p => p.draw(ctx));
-      }
-    }
-// ==== Fireworks (versi halus & lembut) ====
-class Particle {
-  constructor(x, y, color, vel, life) {
-    this.x = x;
-    this.y = y;
-    this.color = color;
-    this.vel = vel;
-    this.life = life;
-    this.age = 0;
-    this.size = 3 + Math.random() * 2; // radius awal partikel
-  }
-  update() {
-    this.x += this.vel.x;
-    this.y += this.vel.y;
-
-    // gravitasi & gesekan lebih lembut
-    this.vel.y += 0.02;      // jatuh perlahan
-    this.vel.x *= 0.99;      // gesekan udara
-    this.vel.y *= 0.99;
-
-    this.age++;
-    this.size *= 0.98; // mengecil seiring waktu
-  }
-  draw(ctx) {
-    const alpha = 1 - this.age / this.life;
-    if (alpha <= 0) return;
-
-    const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size * 2);
-    gradient.addColorStop(0, this.color);
-    gradient.addColorStop(1, "rgba(0,0,0,0)");
-
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size * 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-  get dead() { return this.age >= this.life; }
-}
-
-class Firework {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-    this.particles = [];
-    this.exploded = false;
-    this.rocketVel = -6 - Math.random() * 3;
-    this.color = ["#ff6666","#66ff66","#6699ff","#ffff66","#ff66ff","#66ffff"][Math.floor(Math.random()*6)];
-  }
-  update() {
-    if (!this.exploded) {
-      this.y += this.rocketVel;
-      this.rocketVel += 0.12;
-      if (this.rocketVel >= 0) {
-        this.explode();
-        this.exploded = true;
-      }
-    } else {
-      this.particles.forEach(p => p.update());
-      this.particles = this.particles.filter(p => !p.dead);
-    }
-  }
-  explode() {
-    const count = 50 + Math.random() * 40;
-    for (let i = 0; i < count; i++) {
-      const angle = (Math.PI * 2 * i) / count;
-      const speed = 2 + Math.random() * 2.5;
-      this.particles.push(new Particle(
-        this.x,
-        this.y,
-        this.color,
-        {x: Math.cos(angle)*speed, y: Math.sin(angle)*speed},
-        80 + Math.random()*40
-      ));
-    }
-  }
-  draw(ctx) {
-    if (!this.exploded) {
-      // rocket bersinar kecil
-      ctx.save();
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = this.color;
-      ctx.fillStyle = this.color;
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    } else {
-      this.particles.forEach(p => p.draw(ctx));
-    }
-  }
-  get done() { return this.exploded && this.particles.length === 0; }
-}
-
-let fireworks = [];
-function startFireworks() {
-  fireworks.push(new Firework(
-    Math.random() * (canvas.width / DPR * 0.8) + canvas.width / DPR * 0.1,
-    canvas.height / DPR
-  ));
-  animateFireworks();
-}
-function animateFireworks() {
-  scheduleDraw();
-  ctx.save();
-  fireworks.forEach(fw => { fw.update(); fw.draw(ctx); });
-  ctx.restore();
-  fireworks = fireworks.filter(fw => !fw.done);
-  if (fireworks.length > 0) requestAnimationFrame(animateFireworks);
-}
-
-  // ==== Proses ====
-  const PROCESS_SECONDS = 15;
-  let processing = false;
-  processBtn.addEventListener('click', async ()=>{
-    if (!hasImage || processing) return;
-    processing = true;
     processBtn.disabled = true;
-    processBtn.textContent = "Memproses...";
+    processBtn.textContent = "Memproses…";
     processBtn.classList.remove("primary","done");
     processBtn.classList.add("processing");
 
-    gesturesEnabled = false;
-    mask.classList.add('active');
-
-    let sec = PROCESS_SECONDS;
-    countNum.textContent = sec;
-    const tick = () => new Promise(r=>setTimeout(r,1000));
-    while(sec > 0){ await tick(); sec--; countNum.textContent = sec; }
-
-    countNum.textContent = '0';
-    mask.classList.remove('active');
-    afterBar.classList.add('show');
-
-    processing = false;
-    processBtn.textContent = "Selesai...";
-    processBtn.classList.remove("primary","processing");
-    processBtn.classList.add("done");
-    processBtn.disabled = true;
-
-    // 🚀 Mulai kembang api
-    let fireworkTimer = setInterval(() => {
-      startFireworks();
-    }, 800);
-    setTimeout(() => {
-      clearInterval(fireworkTimer);
-    }, 5000);
-  });
-
-  // ==== Unduh & Bagikan ====
-  dlBtn.addEventListener('click', ()=>{
-    gesturesEnabled = false;
-    const url = canvas.toDataURL('image/png');
-
-    // cara utama (otomatis)
-    const link = d.createElement('a');
-    link.download = 'twibbon.png';
-    link.href = url;
-    link.click();
-
-    // link alternatif
-    const alt = d.getElementById('altDownload');
-    const altLink = d.getElementById('altDlLink');
-    altLink.href = url;
-    alt.style.display = 'block';
-  });
-
-  shareBtn.addEventListener('click', ()=>{
-    canvas.toBlob(async (blob)=>{
-      if (!blob) return;
-      const file = new File([blob], 'twibbon.png', {type:'image/png'});
-      if (navigator.canShare && navigator.canShare({ files:[file] }) && navigator.share){
-        try{ await navigator.share({ files:[file], title:'Twibbon', text:'Hasil twibbon saya' }); } catch(e){}
-      } else {
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        setTimeout(()=>URL.revokeObjectURL(url), 15000);
+    let count = 15;
+    countNum.textContent = count;
+    mask.classList.add("active");
+    const interval = setInterval(()=>{
+      count--; countNum.textContent = count;
+      if (count <= 0){
+        clearInterval(interval);
+        mask.classList.remove("active");
+        processBtn.textContent = "Selesai";
+        processBtn.classList.remove("processing");
+        processBtn.classList.add("done");
+        processBtn.disabled = false;
+        afterBar.classList.add('show');
+        fireFireworks();
       }
-    });
+    },1000);
   });
 
-  // ==== Reset ====
-  function resetAll(){
-    hasImage = false; img = null;
-    try {
-      const defaultTw = new Image();
-      defaultTw.onload = () => { twibbon = defaultTw; scheduleDraw(); };
-      defaultTw.src = TWIBBON_DEFAULT_URL;
-    } catch (e) { twibbon = null; scheduleDraw(); }
-    ph.style.display = '';
-    afterBar.classList.remove('show');
-    d.getElementById('altDownload').style.display = 'none';
-    processBtn.textContent = "Buat";
-    processBtn.classList.remove("processing","done");
-    processBtn.classList.add("primary");
-    processBtn.disabled = true;
-    scale = 1; tx = 0; ty = 0; pointers.clear();
-    pickerMode = 'photo'; updatePickerFab();
-    gesturesEnabled = true;
+  // ==== EXPORT ====
+  function exportCanvas(){
+    const dataUrl = canvas.toDataURL("image/png");
+    return dataUrl;
   }
-  resetAllTop.addEventListener('click', resetAll);
+  dlBtn.addEventListener('click', ()=>{
+    const url = exportCanvas();
+    const a = d.createElement('a');
+    a.href = url; a.download = "twibbon.png"; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  });
+  shareBtn.addEventListener('click', async ()=>{
+    const url = exportCanvas();
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const file = new File([blob], "twibbon.png", {type:"image/png"});
+    try{
+      await navigator.share({ files:[file], title:"Twibbon Saya" });
+    } catch(e){
+      showAlert("Berbagi tidak didukung di perangkat ini.");
+      dlBtn.click();
+    }
+  });
 
-  resizeCanvasToBox(); scheduleDraw();
+  resetAllTop.addEventListener('click', ()=>{
+    hasImage = false; img = null; ph.style.display = ''; scheduleDraw();
+    afterBar.classList.remove('show'); processBtn.disabled = true; processBtn.textContent = "Buat"; processBtn.classList.remove("processing","done"); processBtn.classList.add("primary");
+    pickerMode = 'photo'; updatePickerFab();
+  });
+
+  resizeCanvasToBox();
+
+  // ==== FIREWORKS ====
+  function fireFireworks(){
+    const fwCanvas = d.createElement("canvas");
+    fwCanvas.style.position="fixed"; fwCanvas.style.inset=0; fwCanvas.style.pointerEvents="none"; fwCanvas.style.zIndex=1000;
+    fwCanvas.width=innerWidth; fwCanvas.height=innerHeight;
+    d.body.appendChild(fwCanvas);
+    const c2 = fwCanvas.getContext("2d");
+
+    class Particle {
+      constructor(x,y,color){
+        this.x=x; this.y=y;
+        const angle=Math.random()*2*Math.PI;
+        const speed=Math.random()*4+2;
+        this.vx=Math.cos(angle)*speed;
+        this.vy=Math.sin(angle)*speed;
+        this.alpha=1;
+        this.color=color;
+        this.life=0;
+      }
+      update(){
+        this.x+=this.vx; this.y+=this.vy;
+        this.vy+=0.05;
+        this.alpha-=0.015;
+        this.life++;
+      }
+      draw(ctx){
+        ctx.globalAlpha=this.alpha;
+        ctx.fillStyle=this.color;
+        ctx.beginPath();
+        ctx.arc(this.x,this.y,2,0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+
+    const parts=[];
+    for(let i=0;i<100;i++){
+      parts.push(new Particle(innerWidth/2,innerHeight/2,`hsl(${Math.random()*360},100%,60%)`));
+    }
+
+    function anim(){
+      c2.clearRect(0,0,fwCanvas.width,fwCanvas.height);
+      parts.forEach(p=>{p.update();p.draw(c2);});
+      if(parts.some(p=>p.alpha>0)){
+        requestAnimationFrame(anim);
+      }else{
+        fwCanvas.remove();
+      }
+    }
+    anim();
+  }
 })();
 </script>
 </body>
