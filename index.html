@@ -50,7 +50,6 @@
 
     .tips{font-size:.9rem; color:var(--ink-dim); margin-top:8px}
 
-    /* ALERT */
     .alert{
       position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
       background:var(--err); color:white; padding:10px 16px; border-radius:12px;
@@ -71,9 +70,7 @@
       <div class="body">
         <div class="canvasBox" id="canvasBox">
           <canvas id="stage" width="1024" height="1024" aria-label="Area Twibbon"></canvas>
-
           <button id="pickerFab" class="fab">Pilih Gambar</button>
-
           <div class="placeholder" id="ph">
             <div class="dropIcon">⬇️</div>
             <div><b>Tarik & lepas</b> gambar ke sini<br/>atau <b>ketuk</b> untuk memilih</div>
@@ -110,7 +107,6 @@
     </div>
   </div>
 
-  <!-- Alert box -->
   <div id="alertBox" class="alert"></div>
 
 <script>
@@ -153,11 +149,10 @@
   function resizeCanvasToBox(){
     const rect = box.getBoundingClientRect();
     const w = Math.floor(rect.width);
-    const h = Math.floor(rect.width);
     canvas.style.width = w + 'px';
-    canvas.style.height = h + 'px';
+    canvas.style.height = w + 'px';
     canvas.width = Math.round(w * DPR);
-    canvas.height = Math.round(h * DPR);
+    canvas.height = Math.round(w * DPR);
     ctx.setTransform(DPR,0,0,DPR,0,0);
     dirty = true; scheduleDraw();
   }
@@ -217,6 +212,7 @@
       pickerMode = 'twibbon'; updatePickerFab();
       URL.revokeObjectURL(url);
       afterBar.classList.remove('show');
+      gesturesEnabled = true; // aktifkan geser/zoom saat gambar dipilih
     };
     _img.src = url;
   }
@@ -243,7 +239,7 @@
         scheduleDraw(); 
         URL.revokeObjectURL(url);
         afterBar.classList.remove('show');
-        gesturesEnabled = true;
+        gesturesEnabled = false; // nonaktifkan geser/zoom setelah twibbon dipasang
         processBtn.textContent = "Buat";
         processBtn.classList.remove("processing","done");
         processBtn.classList.add("primary");
@@ -339,15 +335,13 @@
         processBtn.disabled = false;
         afterBar.classList.add('show');
         fireFireworks();
+        gesturesEnabled = false; // nonaktifkan geser/zoom setelah selesai proses
       }
     },1000);
   });
 
   // ==== EXPORT ====
-  function exportCanvas(){
-    const dataUrl = canvas.toDataURL("image/png");
-    return dataUrl;
-  }
+  function exportCanvas(){ return canvas.toDataURL("image/png"); }
   dlBtn.addEventListener('click', ()=>{
     const url = exportCanvas();
     const a = d.createElement('a');
@@ -371,6 +365,7 @@
     hasImage = false; img = null; ph.style.display = ''; scheduleDraw();
     afterBar.classList.remove('show'); processBtn.disabled = true; processBtn.textContent = "Buat"; processBtn.classList.remove("processing","done"); processBtn.classList.add("primary");
     pickerMode = 'photo'; updatePickerFab();
+    gesturesEnabled = true;
   });
 
   resizeCanvasToBox();
@@ -392,21 +387,9 @@
         this.vy=Math.sin(angle)*speed;
         this.alpha=1;
         this.color=color;
-        this.life=0;
       }
-      update(){
-        this.x+=this.vx; this.y+=this.vy;
-        this.vy+=0.05;
-        this.alpha-=0.015;
-        this.life++;
-      }
-      draw(ctx){
-        ctx.globalAlpha=this.alpha;
-        ctx.fillStyle=this.color;
-        ctx.beginPath();
-        ctx.arc(this.x,this.y,2,0,Math.PI*2);
-        ctx.fill();
-      }
+      update(){ this.x+=this.vx; this.y+=this.vy; this.vy+=0.05; this.alpha-=0.015; }
+      draw(ctx){ ctx.globalAlpha=this.alpha; ctx.fillStyle=this.color; ctx.beginPath(); ctx.arc(this.x,this.y,2,0,Math.PI*2); ctx.fill(); }
     }
 
     const parts=[];
@@ -417,11 +400,7 @@
     function anim(){
       c2.clearRect(0,0,fwCanvas.width,fwCanvas.height);
       parts.forEach(p=>{p.update();p.draw(c2);});
-      if(parts.some(p=>p.alpha>0)){
-        requestAnimationFrame(anim);
-      }else{
-        fwCanvas.remove();
-      }
+      if(parts.some(p=>p.alpha>0)){ requestAnimationFrame(anim); } else{ fwCanvas.remove(); }
     }
     anim();
   }
