@@ -19,12 +19,16 @@
     .body{padding:12px 12px 16px}
     .canvasBox{position:relative; width:100%; aspect-ratio:1/1; background:#0d1117; border-radius:14px; border:1px dashed #2a3242; overflow:hidden;}
     canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none;}
+
     .placeholder{position:absolute; inset:0; display:grid; place-content:center; gap:10px; text-align:center; color:var(--ink-dim); pointer-events:none}
     .placeholder .dropIcon{font-size:42px;opacity:.7}
+
     .fab{position:absolute; left:10px; bottom:10px; z-index:5; padding:10px 12px; border-radius:12px; border:1px solid #2a3242; background:#121621; color:var(--ink); font-weight:700}
     .fab:disabled{opacity:.6}
+
     .dropOverlay{position:absolute; inset:0; border:2px dashed var(--acc); border-radius:14px; display:none; place-content:center; color:var(--acc); background:rgba(58,134,255,.08); font-weight:600}
     .canvasBox.dragover .dropOverlay{display:grid}
+
     .controls{display:grid; gap:10px; grid-template-columns:1fr auto; align-items:center; margin-top:12px}
     .row{display:flex; gap:10px}
     .btn{appearance:none; border:1px solid #2a3242; background:#121621; color:var(--ink); padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer; transition:all .3s ease}
@@ -33,15 +37,20 @@
     .btn.processing{background:var(--warn) !important; color:white !important}
     .btn.done{background:var(--ok) !important; color:white !important}
     .btn.ghost{background:transparent}
+
     .processMask{position:absolute; inset:0; background:rgba(17,24,39,.72); display:none}
     .processMask.active{display:block}
     .spinnerWrap{position:absolute; right:10px; bottom:10px; width:52px; height:52px}
     .spinner{position:absolute; inset:0; border:5px solid rgba(255,255,255,.18); border-top-color:white; border-radius:50%; animation:spin 1s linear infinite}
     .countNum{position:absolute; inset:0; display:grid; place-items:center; font-weight:800; font-feature-settings:"tnum" 1, "ss01" 1}
     @keyframes spin{to{transform:rotate(360deg)}}
+
     .afterBar{display:none; gap:10px; margin-top:12px}
     .afterBar.show{display:grid; grid-template-columns:1fr 1fr}
+
     .tips{font-size:.9rem; color:var(--ink-dim); margin-top:8px}
+
+    /* ALERT */
     .alert{
       position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
       background:var(--err); color:white; padding:10px 16px; border-radius:12px;
@@ -62,7 +71,9 @@
       <div class="body">
         <div class="canvasBox" id="canvasBox">
           <canvas id="stage" width="1024" height="1024" aria-label="Area Twibbon"></canvas>
+
           <button id="pickerFab" class="fab">Pilih Gambar</button>
+
           <div class="placeholder" id="ph">
             <div class="dropIcon">⬇️</div>
             <div><b>Tarik & lepas</b> gambar ke sini<br/>atau <b>ketuk</b> untuk memilih</div>
@@ -75,6 +86,7 @@
             </div>
           </div>
         </div>
+
         <div class="controls">
           <div class="row">
             <button id="processBtn" class="btn primary" disabled>Buat</button>
@@ -83,6 +95,7 @@
             <small class="tips">Gestur: geser 1 jari · cubit 2 jari untuk zoom (halus)</small>
           </div>
         </div>
+
         <div class="afterBar" id="afterBar">
           <button id="dlBtn" class="btn">Unduh</button>
           <button id="shareBtn" class="btn">Bagikan</button>
@@ -90,11 +103,14 @@
         <p class="tips" id="altDownload" style="display:none; text-align:center; margin-top:6px;">
           Jika unduhan tidak dimulai otomatis, <a id="altDlLink" href="#" download="twibbon.png">klik di sini</a>
         </p>
+
         <input id="fileInput" type="file" accept="image/*" hidden />
         <input id="twibbonInput" type="file" accept="image/png,image/*" hidden />
       </div>
     </div>
   </div>
+
+  <!-- Alert box -->
   <div id="alertBox" class="alert"></div>
 
 <script>
@@ -137,16 +153,18 @@
   function resizeCanvasToBox(){
     const rect = box.getBoundingClientRect();
     const w = Math.floor(rect.width);
+    const h = Math.floor(rect.width);
     canvas.style.width = w + 'px';
-    canvas.style.height = w + 'px';
+    canvas.style.height = h + 'px';
     canvas.width = Math.round(w * DPR);
-    canvas.height = Math.round(w * DPR);
+    canvas.height = Math.round(h * DPR);
     ctx.setTransform(DPR,0,0,DPR,0,0);
     dirty = true; scheduleDraw();
   }
   window.addEventListener('resize', resizeCanvasToBox);
 
   function clear(){ ctx.fillStyle = '#0d1117'; ctx.fillRect(0,0,canvas.width/DPR,canvas.height/DPR); }
+
   function draw(){
     if (!dirty) return;
     dirty = false;
@@ -199,7 +217,6 @@
       pickerMode = 'twibbon'; updatePickerFab();
       URL.revokeObjectURL(url);
       afterBar.classList.remove('show');
-      gesturesEnabled = true;
     };
     _img.src = url;
   }
@@ -295,116 +312,195 @@
   }
   canvas.addEventListener('pointerup', endPointer);
   canvas.addEventListener('pointercancel', endPointer);
+  canvas.addEventListener('pointerleave', endPointer);
 
-  // ==== PROCESS BUTTON ====
-  processBtn.addEventListener('click', ()=>{
-    if (!hasImage || !twibbon) return;
-    if (processBtn.classList.contains("done")) {
-      showAlert("Sudah selesai! Gunakan tombol Unduh atau Bagikan.");
-      return;
+  // ==== Fireworks ====
+  class Particle {
+    constructor(x, y, color, vel, life) {
+      this.x = x;
+      this.y = y;
+      this.color = color;
+      this.vel = vel;
+      this.life = life;
+      this.age = 0;
     }
+    update() {
+      this.x += this.vel.x;
+      this.y += this.vel.y;
+      this.vel.y += 0.05;
+      this.age++;
+    }
+    draw(ctx) {
+      ctx.globalAlpha = 1 - this.age / this.life;
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    get dead() { return this.age >= this.life; }
+  }
+  class Firework {
+    constructor(x, y) {
+      this.x = x;
+      this.y = y;
+      this.particles = [];
+      this.exploded = false;
+      this.rocketVel = -6 - Math.random() * 3;
+    }
+    update() {
+      if (!this.exploded) {
+        this.y += this.rocketVel;
+        this.rocketVel += 0.15;
+        if (this.rocketVel >= 0) {
+          this.explode();
+          this.exploded = true;
+        }
+      } else {
+        this.particles.forEach(p => p.update());
+        this.particles = this.particles.filter(p => !p.dead);
+      }
+    }
+    explode() {
+      const count = 40 + Math.random() * 30;
+      const colors = ["#ff4444","#44ff44","#4488ff","#ffff44","#ff44ff","#44ffff"];
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count;
+        const speed = 2 + Math.random() * 3;
+        this.particles.push(new Particle(
+          this.x,
+          this.y,
+          colors[Math.floor(Math.random()*colors.length)],
+          {x: Math.cos(angle)*speed, y: Math.sin(angle)*speed},
+          60 + Math.random()*30
+        ));
+      }
+    }
+    draw(ctx) {
+      if (!this.exploded) {
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        this.particles.forEach(p => p.draw(ctx));
+      }
+    }
+    get done() { return this.exploded && this.particles.length === 0; }
+  }
+
+  let fireworks = [];
+  function startFireworks() {
+    fireworks = [];
+    for (let i=0;i<6;i++) {
+      fireworks.push(new Firework(
+        canvas.width/(DPR*6)*(i+1),
+        canvas.height/DPR
+      ));
+    }
+    animateFireworks();
+  }
+  function animateFireworks() {
+    scheduleDraw();
+    ctx.save();
+    fireworks.forEach(fw => { fw.update(); fw.draw(ctx); });
+    ctx.restore();
+    fireworks = fireworks.filter(fw => !fw.done);
+    if (fireworks.length > 0) requestAnimationFrame(animateFireworks);
+  }
+
+  // ==== Proses ====
+  const PROCESS_SECONDS = 15;
+  let processing = false;
+  processBtn.addEventListener('click', async ()=>{
+    if (!hasImage || processing) return;
+    processing = true;
     processBtn.disabled = true;
-    processBtn.textContent = "Memproses…";
+    processBtn.textContent = "Memproses...";
     processBtn.classList.remove("primary","done");
     processBtn.classList.add("processing");
 
-    let count = 15;
-    countNum.textContent = count;
-    mask.classList.add("active");
-    const interval = setInterval(()=>{
-      count--; countNum.textContent = count;
-      if (count <= 0){
-        clearInterval(interval);
-        mask.classList.remove("active");
-        processBtn.textContent = "Selesai";
-        processBtn.classList.remove("processing");
-        processBtn.classList.add("done");
-        processBtn.disabled = false;
-        afterBar.classList.add('show');
-        fireFireworks();
-        gesturesEnabled = false;
-      }
-    },1000);
+    gesturesEnabled = false;
+    mask.classList.add('active');
+
+    let sec = PROCESS_SECONDS;
+    countNum.textContent = sec;
+    const tick = () => new Promise(r=>setTimeout(r,1000));
+    while(sec > 0){ await tick(); sec--; countNum.textContent = sec; }
+
+    countNum.textContent = '0';
+    mask.classList.remove('active');
+    afterBar.classList.add('show');
+
+    processing = false;
+    processBtn.textContent = "Selesai...";
+    processBtn.classList.remove("primary","processing");
+    processBtn.classList.add("done");
+    processBtn.disabled = true;
+
+    // 🚀 Mulai kembang api
+    let fireworkTimer = setInterval(() => {
+      startFireworks();
+    }, 800);
+    setTimeout(() => {
+      clearInterval(fireworkTimer);
+    }, 5000);
   });
 
-  // ==== EXPORT ====
-  function exportCanvas(){ return canvas.toDataURL("image/png"); }
+  // ==== Unduh & Bagikan ====
   dlBtn.addEventListener('click', ()=>{
-    const url = exportCanvas();
-    const a = d.createElement('a');
-    a.href = url; a.download = "twibbon.png"; a.click();
-  });
-  shareBtn.addEventListener('click', async ()=>{
-    const url = exportCanvas();
-    const res = await fetch(url);
-    const blob = await res.blob();
-    const file = new File([blob], "twibbon.png", {type:"image/png"});
-    try {
-      if (navigator.share && navigator.canShare && navigator.canShare({ files:[file] })) {
-        await navigator.share({ files:[file], title:"Twibbon Saya" });
-      } else {
-        throw new Error("Share API tidak tersedia");
-      }
-    } catch(e) {
-      const a = d.createElement("a");
-      const objUrl = URL.createObjectURL(blob);
-      a.href = objUrl;
-      a.download = "twibbon.png";
-      a.click();
-      setTimeout(()=>URL.revokeObjectURL(objUrl),1000);
-    }
+    gesturesEnabled = false;
+    const url = canvas.toDataURL('image/png');
+
+    // cara utama (otomatis)
+    const link = d.createElement('a');
+    link.download = 'twibbon.png';
+    link.href = url;
+    link.click();
+
+    // link alternatif
+    const alt = d.getElementById('altDownload');
+    const altLink = d.getElementById('altDlLink');
+    altLink.href = url;
+    alt.style.display = 'block';
   });
 
-  resetAllTop.addEventListener('click', ()=>{
-    hasImage = false; img = null; ph.style.display = ''; scheduleDraw();
-    afterBar.classList.remove('show'); processBtn.disabled = true; processBtn.textContent = "Buat"; processBtn.classList.remove("processing","done"); processBtn.classList.add("primary");
+  shareBtn.addEventListener('click', ()=>{
+    canvas.toBlob(async (blob)=>{
+      if (!blob) return;
+      const file = new File([blob], 'twibbon.png', {type:'image/png'});
+      if (navigator.canShare && navigator.canShare({ files:[file] }) && navigator.share){
+        try{ await navigator.share({ files:[file], title:'Twibbon', text:'Hasil twibbon saya' }); } catch(e){}
+      } else {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(()=>URL.revokeObjectURL(url), 15000);
+      }
+    });
+  });
+
+  // ==== Reset ====
+  function resetAll(){
+    hasImage = false; img = null;
+    try {
+      const defaultTw = new Image();
+      defaultTw.onload = () => { twibbon = defaultTw; scheduleDraw(); };
+      defaultTw.src = TWIBBON_DEFAULT_URL;
+    } catch (e) { twibbon = null; scheduleDraw(); }
+    ph.style.display = '';
+    afterBar.classList.remove('show');
+    d.getElementById('altDownload').style.display = 'none';
+    processBtn.textContent = "Buat";
+    processBtn.classList.remove("processing","done");
+    processBtn.classList.add("primary");
+    processBtn.disabled = true;
+    scale = 1; tx = 0; ty = 0; pointers.clear();
     pickerMode = 'photo'; updatePickerFab();
     gesturesEnabled = true;
-  });
-
-  resizeCanvasToBox();
-
-  // ==== FIREWORKS ====
-  function fireFireworks(){
-    const fwCanvas = d.createElement("canvas");
-    fwCanvas.style.position="fixed"; fwCanvas.style.inset=0; fwCanvas.style.pointerEvents="none"; fwCanvas.style.zIndex=1000;
-    fwCanvas.width=innerWidth; fwCanvas.height=innerHeight;
-    d.body.appendChild(fwCanvas);
-    const c2 = fwCanvas.getContext("2d");
-
-    class Particle {
-      constructor(x,y,color){
-        this.x=x; this.y=y;
-        const angle=Math.random()*2*Math.PI;
-        const speed=Math.random()*5+1;
-        this.vx=Math.cos(angle)*speed;
-        this.vy=Math.sin(angle)*speed;
-        this.alpha=1;
-        this.color=color;
-      }
-      update(){ this.x+=this.vx; this.y+=this.vy; this.vy+=0.02; this.alpha-=0.003; }
-      draw(ctx){ ctx.globalAlpha=Math.max(this.alpha,0); ctx.fillStyle=this.color; ctx.beginPath(); ctx.arc(this.x,this.y,2,0,Math.PI*2); ctx.fill(); }
-    }
-
-    const parts=[];
-    function spawnFirework(){
-      const cx=Math.random()*innerWidth*0.8+innerWidth*0.1;
-      const cy=Math.random()*innerHeight*0.5+innerHeight*0.2;
-      for(let i=0;i<120;i++){
-        parts.push(new Particle(cx,cy,`hsl(${Math.random()*360},100%,60%)`));
-      }
-    }
-    spawnFirework();
-    const spawner=setInterval(spawnFirework,1500);
-    setTimeout(()=>clearInterval(spawner),3000);
-
-    function anim(){
-      c2.clearRect(0,0,fwCanvas.width,fwCanvas.height);
-      parts.forEach(p=>{p.update();p.draw(c2);});
-      if(parts.some(p=>p.alpha>0)){ requestAnimationFrame(anim); } else{ fwCanvas.remove(); }
-    }
-    anim();
   }
+  resetAllTop.addEventListener('click', resetAll);
+
+  resizeCanvasToBox(); scheduleDraw();
 })();
 </script>
 </body>
