@@ -19,16 +19,12 @@
     .body{padding:12px 12px 16px}
     .canvasBox{position:relative; width:100%; aspect-ratio:1/1; background:#0d1117; border-radius:14px; border:1px dashed #2a3242; overflow:hidden;}
     canvas{position:absolute; inset:0; width:100%; height:100%; touch-action:none;}
-
     .placeholder{position:absolute; inset:0; display:grid; place-content:center; gap:10px; text-align:center; color:var(--ink-dim); pointer-events:none}
     .placeholder .dropIcon{font-size:42px;opacity:.7}
-
     .fab{position:absolute; left:10px; bottom:10px; z-index:5; padding:10px 12px; border-radius:12px; border:1px solid #2a3242; background:#121621; color:var(--ink); font-weight:700}
     .fab:disabled{opacity:.6}
-
     .dropOverlay{position:absolute; inset:0; border:2px dashed var(--acc); border-radius:14px; display:none; place-content:center; color:var(--acc); background:rgba(58,134,255,.08); font-weight:600}
     .canvasBox.dragover .dropOverlay{display:grid}
-
     .controls{display:grid; gap:10px; grid-template-columns:1fr auto; align-items:center; margin-top:12px}
     .row{display:flex; gap:10px}
     .btn{appearance:none; border:1px solid #2a3242; background:#121621; color:var(--ink); padding:10px 14px; border-radius:12px; font-weight:600; cursor:pointer; transition:all .3s ease}
@@ -37,19 +33,15 @@
     .btn.processing{background:var(--warn) !important; color:white !important}
     .btn.done{background:var(--ok) !important; color:white !important}
     .btn.ghost{background:transparent}
-
     .processMask{position:absolute; inset:0; background:rgba(17,24,39,.72); display:none}
     .processMask.active{display:block}
     .spinnerWrap{position:absolute; right:10px; bottom:10px; width:52px; height:52px}
     .spinner{position:absolute; inset:0; border:5px solid rgba(255,255,255,.18); border-top-color:white; border-radius:50%; animation:spin 1s linear infinite}
     .countNum{position:absolute; inset:0; display:grid; place-items:center; font-weight:800; font-feature-settings:"tnum" 1, "ss01" 1}
     @keyframes spin{to{transform:rotate(360deg)}}
-
     .afterBar{display:none; gap:10px; margin-top:12px}
     .afterBar.show{display:grid; grid-template-columns:1fr 1fr}
-
     .tips{font-size:.9rem; color:var(--ink-dim); margin-top:8px}
-
     .alert{
       position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
       background:var(--err); color:white; padding:10px 16px; border-radius:12px;
@@ -83,7 +75,6 @@
             </div>
           </div>
         </div>
-
         <div class="controls">
           <div class="row">
             <button id="processBtn" class="btn primary" disabled>Buat</button>
@@ -92,7 +83,6 @@
             <small class="tips">Gestur: geser 1 jari · cubit 2 jari untuk zoom (halus)</small>
           </div>
         </div>
-
         <div class="afterBar" id="afterBar">
           <button id="dlBtn" class="btn">Unduh</button>
           <button id="shareBtn" class="btn">Bagikan</button>
@@ -100,13 +90,11 @@
         <p class="tips" id="altDownload" style="display:none; text-align:center; margin-top:6px;">
           Jika unduhan tidak dimulai otomatis, <a id="altDlLink" href="#" download="twibbon.png">klik di sini</a>
         </p>
-
         <input id="fileInput" type="file" accept="image/*" hidden />
         <input id="twibbonInput" type="file" accept="image/png,image/*" hidden />
       </div>
     </div>
   </div>
-
   <div id="alertBox" class="alert"></div>
 
 <script>
@@ -159,7 +147,6 @@
   window.addEventListener('resize', resizeCanvasToBox);
 
   function clear(){ ctx.fillStyle = '#0d1117'; ctx.fillRect(0,0,canvas.width/DPR,canvas.height/DPR); }
-
   function draw(){
     if (!dirty) return;
     dirty = false;
@@ -212,7 +199,7 @@
       pickerMode = 'twibbon'; updatePickerFab();
       URL.revokeObjectURL(url);
       afterBar.classList.remove('show');
-      gesturesEnabled = true; // aktifkan geser/zoom saat gambar dipilih
+      gesturesEnabled = true;
     };
     _img.src = url;
   }
@@ -239,7 +226,7 @@
         scheduleDraw(); 
         URL.revokeObjectURL(url);
         afterBar.classList.remove('show');
-        gesturesEnabled = true; // nonaktifkan geser/zoom setelah twibbon dipasang
+        gesturesEnabled = true;
         processBtn.textContent = "Buat";
         processBtn.classList.remove("processing","done");
         processBtn.classList.add("primary");
@@ -335,7 +322,7 @@
         processBtn.disabled = false;
         afterBar.classList.add('show');
         fireFireworks();
-        gesturesEnabled = false; // nonaktifkan geser/zoom setelah selesai proses
+        gesturesEnabled = false;
       }
     },1000);
   });
@@ -346,18 +333,25 @@
     const url = exportCanvas();
     const a = d.createElement('a');
     a.href = url; a.download = "twibbon.png"; a.click();
-    setTimeout(()=>URL.revokeObjectURL(url),1000);
   });
   shareBtn.addEventListener('click', async ()=>{
     const url = exportCanvas();
     const res = await fetch(url);
     const blob = await res.blob();
     const file = new File([blob], "twibbon.png", {type:"image/png"});
-    try{
-      await navigator.share({ files:[file], title:"Twibbon Saya" });
-    } catch(e){
-      showAlert("Berbagi tidak didukung di perangkat ini.");
-      dlBtn.click();
+    try {
+      if (navigator.share && navigator.canShare && navigator.canShare({ files:[file] })) {
+        await navigator.share({ files:[file], title:"Twibbon Saya" });
+      } else {
+        throw new Error("Share API tidak tersedia");
+      }
+    } catch(e) {
+      const a = d.createElement("a");
+      const objUrl = URL.createObjectURL(blob);
+      a.href = objUrl;
+      a.download = "twibbon.png";
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(objUrl),1000);
     }
   });
 
@@ -382,20 +376,27 @@
       constructor(x,y,color){
         this.x=x; this.y=y;
         const angle=Math.random()*2*Math.PI;
-        const speed=Math.random()*4+2;
+        const speed=Math.random()*5+1;
         this.vx=Math.cos(angle)*speed;
         this.vy=Math.sin(angle)*speed;
         this.alpha=1;
         this.color=color;
       }
-      update(){ this.x+=this.vx; this.y+=this.vy; this.vy+=0.05; this.alpha-=0.015; }
-      draw(ctx){ ctx.globalAlpha=this.alpha; ctx.fillStyle=this.color; ctx.beginPath(); ctx.arc(this.x,this.y,2,0,Math.PI*2); ctx.fill(); }
+      update(){ this.x+=this.vx; this.y+=this.vy; this.vy+=0.02; this.alpha-=0.003; }
+      draw(ctx){ ctx.globalAlpha=Math.max(this.alpha,0); ctx.fillStyle=this.color; ctx.beginPath(); ctx.arc(this.x,this.y,2,0,Math.PI*2); ctx.fill(); }
     }
 
     const parts=[];
-    for(let i=0;i<100;i++){
-      parts.push(new Particle(innerWidth/2,innerHeight/2,`hsl(${Math.random()*360},100%,60%)`));
+    function spawnFirework(){
+      const cx=Math.random()*innerWidth*0.8+innerWidth*0.1;
+      const cy=Math.random()*innerHeight*0.5+innerHeight*0.2;
+      for(let i=0;i<120;i++){
+        parts.push(new Particle(cx,cy,`hsl(${Math.random()*360},100%,60%)`));
+      }
     }
+    spawnFirework();
+    const spawner=setInterval(spawnFirework,1500);
+    setTimeout(()=>clearInterval(spawner),3000);
 
     function anim(){
       c2.clearRect(0,0,fwCanvas.width,fwCanvas.height);
