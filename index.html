@@ -239,7 +239,7 @@
         scheduleDraw(); 
         URL.revokeObjectURL(url);
         afterBar.classList.remove('show');
-        gesturesEnabled = false; // nonaktifkan geser/zoom setelah twibbon dipasang
+        gesturesEnabled = true; // nonaktifkan geser/zoom setelah twibbon dipasang
         processBtn.textContent = "Buat";
         processBtn.classList.remove("processing","done");
         processBtn.classList.add("primary");
