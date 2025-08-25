@@ -13,7 +13,7 @@
     border:2px dashed #b5b5b5; border-radius:12px; background:#fafafa; overflow:hidden;
     display:grid; place-items:center; cursor:pointer; user-select:none; -webkit-user-select:none; touch-action:none;
   }
-  canvas{ width:100%; height:100%; display:block; touch-action:none; user-select:none; -webkit-user-select:none; }
+  canvas{ width:100%; height:100%; display:block; touch-action:none; }
   .hint{
     position:absolute; inset:0; display:grid; place-items:center; color:#666; pointer-events:none;
     text-align:center; line-height:1.4; padding:12px;
@@ -59,7 +59,7 @@
 (() => {
   const stage = document.getElementById('stage');
   const canvas = document.getElementById('c');
-  const ctx = canvas.getContext('2d', { alpha: false });
+  const ctx = canvas.getContext('2d');
   const fileInput = document.getElementById('file');
   const hint = document.getElementById('hint');
   const downloadBtn = document.getElementById('downloadBtn');
@@ -71,7 +71,7 @@
 
   // Twibbon custom (PNG transparan)
   const twibbonImg = new Image();
-  twibbonImg.src = "twibbon.png"; // ganti dengan twibbon kamu
+  twibbonImg.src = "twibbon.png"; // ganti dengan file twibbon kamu
 
   const state = {
     img: null, imgW:0, imgH:0,
@@ -115,7 +115,7 @@
         state.s=s0;
         state.x=(canvas.width-state.imgW*state.s)/2;
         state.y=(canvas.height-state.imgH*state.s)/2;
-        state.showTwibbon=true; // tampilkan twibbon setelah upload
+        state.showTwibbon=true; 
         hint.classList.add('hidden');
         downloadBtn.classList.remove('hidden'); // munculkan tombol unduh
         draw();
@@ -144,20 +144,80 @@
     if(f && f.type.startsWith('image/')) loadFile(f);
   });
 
-  function setEditing(on){ if(!state.locked){ state.editing=on; draw(); } }
-
-  // Geser & zoom tetap sama seperti versi sebelumnya...
-  // [kode gesture + zoomAt + wheel + pointer event handling sama persis dengan versi sebelumnya]
-
-  // (Potong untuk ringkas, tapi di file final tetap harus copy bagian pointer & zoom dari versi sebelumnya)
-
   function showToast(){
     toast.classList.remove('hidden');
     clearTimeout(toast._t);
     toast._t=setTimeout(()=>toast.classList.add('hidden'),1200);
   }
 
-  // Unduh
+  function setEditing(on){ if(!state.locked){ state.editing=on; draw(); } }
+
+  // ====== DRAG & ZOOM ======
+  let startX=0, startY=0;
+
+  stage.addEventListener('pointerdown',e=>{
+    if(!state.img || state.locked) return;
+    stage.setPointerCapture(e.pointerId);
+    state.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(state.pointers.size===1){
+      startX=e.clientX - state.x;
+      startY=e.clientY - state.y;
+      setEditing(true);
+    }
+    if(state.pointers.size===2){
+      const pts=[...state.pointers.values()];
+      state.lastPinchDist=Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+      setEditing(true);
+    }
+  });
+  stage.addEventListener('pointermove',e=>{
+    if(!state.img || state.locked) return;
+    if(!state.pointers.has(e.pointerId)) return;
+    state.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(state.pointers.size===1){
+      const pt=state.pointers.get(e.pointerId);
+      state.x=pt.x-startX;
+      state.y=pt.y-startY;
+      draw();
+    }else if(state.pointers.size===2){
+      const pts=[...state.pointers.values()];
+      const dist=Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+      const delta=dist/state.lastPinchDist;
+      state.lastPinchDist=dist;
+      const cx=(pts[0].x+pts[1].x)/2 - stage.getBoundingClientRect().left;
+      const cy=(pts[0].y+pts[1].y)/2 - stage.getBoundingClientRect().top;
+      zoomAt(cx,cy,delta);
+    }
+  });
+  stage.addEventListener('pointerup',e=>{
+    state.pointers.delete(e.pointerId);
+    if(state.pointers.size===0){ setEditing(false); }
+  });
+  stage.addEventListener('pointercancel',e=>{ state.pointers.delete(e.pointerId); setEditing(false); });
+
+  function zoomAt(cx,cy,factor){
+    const prevS=state.s;
+    state.s=Math.min(Math.max(state.s*factor,0.2),10);
+    const dx=cx-state.x, dy=cy-state.y;
+    state.x -= (state.s/prevS-1)*dx;
+    state.y -= (state.s/prevS-1)*dy;
+    draw();
+  }
+
+  stage.addEventListener('wheel',e=>{
+    if(!state.img || state.locked) return;
+    e.preventDefault();
+    const rect=canvas.getBoundingClientRect();
+    const cx=(e.clientX-rect.left)*(canvas.width/rect.width);
+    const cy=(e.clientY-rect.top)*(canvas.height/rect.height);
+    const factor=Math.exp(-e.deltaY*0.001);
+    setEditing(true);
+    zoomAt(cx,cy,factor);
+    clearTimeout(stage._t);
+    stage._t=setTimeout(()=>setEditing(false),200);
+  },{passive:false});
+
+  // ====== UNDUH ======
   downloadBtn.addEventListener('click',()=>{
     state.locked=true;
     downloadBtn.disabled=true;
@@ -184,7 +244,7 @@
     },1000);
   });
 
-  // Bagikan
+  // ====== BAGIKAN ======
   shareBtn.addEventListener('click',async()=>{
     canvas.toBlob(async blob=>{
       const file=new File([blob],'twibbon.png',{type:'image/png'});
@@ -200,14 +260,14 @@
     });
   });
 
-  // Reset
+  // ====== RESET ======
   resetBtn.addEventListener('click',()=>{
     state.locked=false;
     state.img=null;
     state.imgW=state.imgH=0;
     state.showTwibbon=false;
     hint.classList.remove('hidden');
-    downloadBtn.classList.add('hidden'); // sembunyikan lagi
+    downloadBtn.classList.add('hidden');
     shareBtn.classList.add('hidden');
     resetBtn.classList.add('hidden');
     draw();
