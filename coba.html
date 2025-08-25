@@ -2,179 +2,160 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Generator Twibbon</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
     #drop-area {
-      border: 2px dashed #999; padding: 20px; width: 300px; margin: auto;
+      border: 2px dashed #999; padding: 20px; width: 320px; margin: auto;
       cursor: pointer; background: #fafafa;
     }
-    canvas { border: 1px solid #ccc; margin-top: 20px; width: 100%; }
+    canvas { border: 1px solid #ccc; margin-top: 20px; }
     button { margin: 10px; padding: 10px 20px; cursor: pointer; }
     #spinner { display: none; margin-left: 10px; }
     .hidden { display: none; }
-    .twibbon { position: absolute; top: 0; left: 0; pointer-events: none; }
-    #canvas-wrapper { position: relative; display: inline-block; }
   </style>
 </head>
 <body>
-
   <h2>Generator Twibbon</h2>
   <div id="drop-area">Drop Gambar atau Klik untuk Unggah</div>
 
-  <div id="canvas-wrapper">
-    <canvas id="canvas" width="400" height="400"></canvas>
-    <img id="twibbon" class="twibbon" src="twibbon.png" width="400" height="400" style="opacity:1;">
-  </div>
+  <canvas id="canvas" width="400" height="400"></canvas>
 
   <br>
   <button id="downloadBtn" disabled>Unduh</button>
-  <span id="spinner">⏳</span>
+  <span id="spinner">⏳ Tunggu 15 detik...</span>
   <button id="shareBtn" class="hidden">Bagikan</button>
 
-  <script>
-    const dropArea = document.getElementById("drop-area");
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    const twibbon = document.getElementById("twibbon");
-    const downloadBtn = document.getElementById("downloadBtn");
-    const spinner = document.getElementById("spinner");
-    const shareBtn = document.getElementById("shareBtn");
+<script>
+const dropArea = document.getElementById("drop-area");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const downloadBtn = document.getElementById("downloadBtn");
+const spinner = document.getElementById("spinner");
+const shareBtn = document.getElementById("shareBtn");
 
-    let img = new Image();
-    let dragging = false;
-    let imgX = 0, imgY = 0, scale = 1;
-    let startX, startY;
-    let uploading = false;
+let img = new Image();
+let twibbon = new Image();
+twibbon.src = "https://i.ibb.co/Sf6kh9s/twibbon.png"; // ganti dengan twibbon PNG transparan
 
-    // Unggah gambar
-    dropArea.addEventListener("click", () => {
-      if (!uploading) {
-        let input = document.createElement("input");
-        input.type = "file";
-        input.accept = "image/*";
-        input.onchange = e => loadImage(e.target.files[0]);
-        input.click();
-      }
-    });
+let dragging = false;
+let imgX = 0, imgY = 0, scale = 1;
+let startX, startY;
+let editing = false;
 
-    dropArea.addEventListener("dragover", e => { e.preventDefault(); dropArea.style.background = "#eee"; });
-    dropArea.addEventListener("dragleave", () => dropArea.style.background = "#fafafa");
-    dropArea.addEventListener("drop", e => {
-      e.preventDefault();
-      dropArea.style.background = "#fafafa";
-      if (!uploading) loadImage(e.dataTransfer.files[0]);
-    });
+function draw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if (img.src) {
+    ctx.drawImage(img, imgX, imgY, img.width*scale, img.height*scale);
+  }
+  if (twibbon.complete) {
+    ctx.globalAlpha = editing ? 0.5 : 1; // transparan saat edit
+    ctx.drawImage(twibbon, 0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
+  }
+}
 
-    function loadImage(file) {
-      const reader = new FileReader();
-      reader.onload = e => {
-        img.onload = () => {
-          imgX = canvas.width/2 - img.width/2;
-          imgY = canvas.height/2 - img.height/2;
-          scale = 1;
-          draw();
-          downloadBtn.disabled = false;
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
+// unggah gambar
+dropArea.addEventListener("click", () => {
+  if (editing) return; // disable saat edit
+  let input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = e => loadImage(e.target.files[0]);
+  input.click();
+});
+dropArea.addEventListener("dragover", e => { e.preventDefault(); dropArea.style.background="#eee"; });
+dropArea.addEventListener("dragleave", () => dropArea.style.background="#fafafa";);
+dropArea.addEventListener("drop", e => {
+  e.preventDefault();
+  dropArea.style.background="#fafafa";
+  if (!editing) loadImage(e.dataTransfer.files[0]);
+});
 
-    // Geser gambar
-    canvas.addEventListener("mousedown", e => {
-      dragging = true;
-      uploading = true; // disable upload
-      twibbon.style.opacity = 0.5;
-      startX = e.offsetX - imgX;
-      startY = e.offsetY - imgY;
-    });
-    canvas.addEventListener("mousemove", e => {
-      if (dragging) {
-        imgX = e.offsetX - startX;
-        imgY = e.offsetY - startY;
-        draw();
-      }
-    });
-    canvas.addEventListener("mouseup", () => { 
-      dragging = false; 
-      twibbon.style.opacity = 1; 
-      setTimeout(() => uploading = false, 200); 
-    });
-
-    // Zoom gambar
-    canvas.addEventListener("wheel", e => {
-      uploading = true; 
-      twibbon.style.opacity = 0.5;
-      e.preventDefault();
-      scale += e.deltaY * -0.001;
-      scale = Math.min(Math.max(0.5, scale), 3);
+function loadImage(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    img.onload = () => {
+      imgX = canvas.width/2 - img.width/2;
+      imgY = canvas.height/2 - img.height/2;
+      scale = 1;
       draw();
-      clearTimeout(window.zoomTimer);
-      window.zoomTimer = setTimeout(() => { 
-        twibbon.style.opacity = 1; 
-        uploading = false;
-      }, 200);
-    });
+      downloadBtn.disabled = false;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
 
-    function draw() {
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      ctx.drawImage(img, imgX, imgY, img.width*scale, img.height*scale);
-    }
+// geser gambar
+canvas.addEventListener("mousedown", e => {
+  if (!img.src) return;
+  dragging = true;
+  editing = true;
+  startX = e.offsetX - imgX;
+  startY = e.offsetY - imgY;
+  draw();
+});
+canvas.addEventListener("mousemove", e => {
+  if (dragging) {
+    imgX = e.offsetX - startX;
+    imgY = e.offsetY - startY;
+    draw();
+  }
+});
+canvas.addEventListener("mouseup", () => {
+  dragging = false;
+  editing = false;
+  draw();
+});
 
-    // Unduh
-    downloadBtn.addEventListener("click", () => {
-      spinner.style.display = "inline";
-      downloadBtn.disabled = true;
+// zoom
+canvas.addEventListener("wheel", e => {
+  if (!img.src) return;
+  editing = true;
+  e.preventDefault();
+  scale += e.deltaY * -0.001;
+  scale = Math.min(Math.max(0.5, scale), 3);
+  draw();
+  clearTimeout(window.zoomTimer);
+  window.zoomTimer = setTimeout(()=>{ editing=false; draw(); },300);
+});
 
-      setTimeout(() => {
-        spinner.style.display = "none";
-        const link = document.createElement("a");
-        const mergedCanvas = document.createElement("canvas");
-        mergedCanvas.width = canvas.width;
-        mergedCanvas.height = canvas.height;
-        const mctx = mergedCanvas.getContext("2d");
+// unduh
+downloadBtn.addEventListener("click", () => {
+  spinner.style.display="inline";
+  downloadBtn.disabled=true;
 
-        mctx.drawImage(canvas, 0, 0);
-        mctx.drawImage(twibbon, 0, 0, canvas.width, canvas.height);
+  setTimeout(() => {
+    spinner.style.display="none";
 
-        link.download = "twibbon.png";
-        link.href = mergedCanvas.toDataURL();
-        link.click();
+    const link = document.createElement("a");
+    link.download = "twibbon.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
 
-        downloadBtn.classList.add("hidden");
-        shareBtn.classList.remove("hidden");
-      }, 15000); // delay 15 detik
-    });
+    downloadBtn.classList.add("hidden");
+    shareBtn.classList.remove("hidden");
+  },15000);
+});
 
-    // Bagikan
-    shareBtn.addEventListener("click", async () => {
-      if (navigator.share) {
-        const mergedCanvas = document.createElement("canvas");
-        mergedCanvas.width = canvas.width;
-        mergedCanvas.height = canvas.height;
-        const mctx = mergedCanvas.getContext("2d");
-
-        mctx.drawImage(canvas, 0, 0);
-        mctx.drawImage(twibbon, 0, 0, canvas.width, canvas.height);
-
-        mergedCanvas.toBlob(async blob => {
-          const file = new File([blob], "twibbon.png", { type: "image/png" });
-          try {
-            await navigator.share({
-              files: [file],
-              title: "Twibbon Saya",
-              text: "Twibbon saya siap dibagikan!"
-            });
-          } catch (err) {
-            alert("Gagal membagikan: " + err);
-          }
+// bagikan
+shareBtn.addEventListener("click", async () => {
+  if (navigator.share) {
+    canvas.toBlob(async blob => {
+      const file = new File([blob], "twibbon.png",{type:"image/png"});
+      try {
+        await navigator.share({
+          files:[file],
+          title:"Twibbon Saya",
+          text:"Lihat hasil twibbon saya!"
         });
-      } else {
-        alert("Browser tidak mendukung Web Share API.");
-      }
+      } catch(err){ alert("Gagal membagikan: "+err); }
     });
-  </script>
+  } else {
+    alert("Browser tidak mendukung Web Share API");
+  }
+});
+</script>
 </body>
 </html>
