@@ -69,7 +69,7 @@
   const secEl = document.getElementById('sec');
   const toast = document.getElementById('toast');
 
-  // === Twibbon custom
+  // === Twibbon custom (akan ditampilkan hanya setelah user upload gambar)
   const twibbonImg = new Image();
   twibbonImg.src = "twibbon.png"; // ganti dengan twibbon kamu
 
@@ -79,7 +79,8 @@
     editing:false,
     locked:false,
     pointers:new Map(),
-    lastPinchDist:0
+    lastPinchDist:0,
+    showTwibbon:false
   };
 
   function draw(){
@@ -94,7 +95,7 @@
       ctx.drawImage(state.img, state.x, state.y, dw, dh);
     }
 
-    if(twibbonImg.complete){
+    if(state.showTwibbon && twibbonImg.complete){
       ctx.globalAlpha = state.editing ? 0.5 : 1;
       ctx.drawImage(twibbonImg,0,0,canvas.width,canvas.height);
       ctx.globalAlpha = 1;
@@ -116,6 +117,7 @@
         state.s=s0;
         state.x=(canvas.width-state.imgW*state.s)/2;
         state.y=(canvas.height-state.imgH*state.s)/2;
+        state.showTwibbon=true; // baru tampilkan twibbon setelah upload
         hint.classList.add('hidden');
         downloadBtn.disabled=false;
         draw();
@@ -272,6 +274,7 @@
     state.locked=false;
     state.img=null;
     state.imgW=state.imgH=0;
+    state.showTwibbon=false;
     hint.classList.remove('hidden');
     downloadBtn.classList.remove('hidden');
     downloadBtn.disabled=true;
@@ -280,7 +283,6 @@
     draw();
   });
 
-  twibbonImg.onload=draw;
   draw();
 })();
 </script>
