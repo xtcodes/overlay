@@ -95,6 +95,12 @@
     showTwibbon:false
   };
 
+  // --- CLICK GUARD untuk mencegah klik upload pasca drag/zoom ---
+  let suppressNextClick = false;
+  let lastMoveTime = 0;
+  const MOVE_THRESH_SQ = 9; // 3px^2
+  let downPos = null;
+
   function draw(){
     ctx.fillStyle="#fff";
     ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -125,7 +131,7 @@
         state.showTwibbon=true;
         hint.classList.add('hidden');
         downloadBtn.classList.remove('hidden');
-        uploadTwibbonBtn.classList.remove('hidden'); // tombol muncul setelah user unggah foto
+        uploadTwibbonBtn.classList.remove('hidden'); // muncul setelah foto ada
         draw();
       };
       img.src=e.target.result;
@@ -133,10 +139,40 @@
     reader.readAsDataURL(file);
   }
 
-  function openPicker(){ if(!state.editing && !state.locked) fileInput.click(); else showToast(); }
-  stage.addEventListener('click',openPicker);
+  function showToast(){
+    toast.classList.remove('hidden');
+    clearTimeout(toast._t);
+    toast._t=setTimeout(()=>toast.classList.add('hidden'),1200);
+  }
+  function setEditing(on){
+    if(state.locked) return;
+    state.editing=on;
+    // Disable tombol unggah selama editing
+    fileInput.disabled = on;
+    uploadTwibbonBtn.disabled = on;
+    draw();
+  }
+
+  // === Open picker (klik area kosong) dengan click-guard ===
+  stage.addEventListener('click', (e)=>{
+    // Abaikan klik jika terkunci / sedang editing / baru saja drag/zoom
+    const recentlyMoved = (performance.now() - lastMoveTime) < 300;
+    if(state.locked || state.editing || suppressNextClick || recentlyMoved){
+      e.preventDefault(); e.stopPropagation();
+      suppressNextClick = false; // reset guard
+      return;
+    }
+    // Kalau belum ada gambar, baru boleh buka picker
+    if(!state.img){
+      fileInput.value = '';
+      fileInput.click();
+    }
+  });
+
+  // File input foto
   fileInput.addEventListener('change',e=>loadFile(e.target.files[0]));
 
+  // Drag & Drop
   stage.addEventListener('dragover',e=>{ e.preventDefault(); stage.classList.add('dragover'); });
   stage.addEventListener('dragleave',()=>stage.classList.remove('dragover'));
   stage.addEventListener('drop',e=>{
@@ -146,19 +182,14 @@
     if(f && f.type.startsWith('image/')) loadFile(f);
   });
 
-  function showToast(){
-    toast.classList.remove('hidden');
-    clearTimeout(toast._t);
-    toast._t=setTimeout(()=>toast.classList.add('hidden'),1200);
-  }
-  function setEditing(on){ if(!state.locked){ state.editing=on; draw(); } }
-
-  // Drag & Zoom
+  // === DRAG & ZOOM ===
   let startX=0,startY=0;
   stage.addEventListener('pointerdown',e=>{
     if(!state.img||state.locked) return;
     stage.setPointerCapture(e.pointerId);
     state.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    downPos = {x:e.clientX, y:e.clientY};
+    suppressNextClick = false; // reset di awal gesture
     if(state.pointers.size===1){
       startX=e.clientX-state.x;
       startY=e.clientY-state.y;
@@ -170,15 +201,25 @@
       setEditing(true);
     }
   });
+
   stage.addEventListener('pointermove',e=>{
     if(!state.img||state.locked||!state.pointers.has(e.pointerId)) return;
-    state.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    state.pointers.set(e.pointerId,{x:e.clientX,y=e.clientY});
+    // tandai jika bergerak cukup jauh -> klik berikutnya diabaikan
+    if(downPos){
+      const dx=e.clientX-downPos.x, dy=e.clientY-downPos.y;
+      if(dx*dx+dy*dy > MOVE_THRESH_SQ){
+        suppressNextClick = true;
+        lastMoveTime = performance.now();
+      }
+    }
     if(state.pointers.size===1){
       const pt=state.pointers.get(e.pointerId);
       state.x=pt.x-startX;
       state.y=pt.y-startY;
       draw();
     }else if(state.pointers.size===2){
+      suppressNextClick = true; // pinch pasti memicu guard
       const pts=[...state.pointers.values()];
       const dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
       const delta=dist/state.lastPinchDist;
@@ -188,8 +229,17 @@
       zoomAt(cx,cy,delta);
     }
   });
-  stage.addEventListener('pointerup',e=>{ state.pointers.delete(e.pointerId); if(state.pointers.size===0) setEditing(false); });
-  stage.addEventListener('pointercancel',e=>{ state.pointers.delete(e.pointerId); setEditing(false); });
+
+  function endPointer(e){
+    if(state.pointers.has(e.pointerId)) state.pointers.delete(e.pointerId);
+    downPos = null;
+    if(state.pointers.size===0){
+      // tetap edit=false, tapi click-guard masih aktif sebentar
+      setEditing(false);
+    }
+  }
+  stage.addEventListener('pointerup',endPointer);
+  stage.addEventListener('pointercancel',endPointer);
 
   function zoomAt(cx,cy,f){
     const prevS=state.s;
@@ -202,15 +252,18 @@
   stage.addEventListener('wheel',e=>{
     if(!state.img||state.locked) return;
     e.preventDefault();
+    suppressNextClick = true; // kalau habis scroll, abaikan klik selanjutnya
     const rect=canvas.getBoundingClientRect();
     const cx=(e.clientX-rect.left)*(canvas.width/rect.width);
     const cy=(e.clientY-rect.top)*(canvas.height/rect.height);
     const factor=Math.exp(-e.deltaY*0.001);
     setEditing(true); zoomAt(cx,cy,factor);
-    clearTimeout(stage._t); stage._t=setTimeout(()=>setEditing(false),200);
+    clearTimeout(stage._t);
+    stage._t=setTimeout(()=>setEditing(false),200);
+    lastMoveTime = performance.now();
   },{passive:false});
 
-  // Unduh
+  // === UNDUH ===
   downloadBtn.addEventListener('click',()=>{
     state.locked=true; downloadBtn.disabled=true; spinner.style.display='inline';
     let remaining=15; secEl.textContent=remaining;
@@ -220,8 +273,7 @@
         clearInterval(t); spinner.style.display='none';
         canvas.toBlob(blob=>{
           const url=URL.createObjectURL(blob);
-          const a=document.createElement('a');
-          a.href=url; a.download='twibbon.png'; a.click();
+          const a=document.createElement('a'); a.href=url; a.download='twibbon.png'; a.click();
           URL.revokeObjectURL(url);
           downloadBtn.classList.add('hidden');
           shareBtn.classList.remove('hidden');
@@ -231,6 +283,7 @@
     },1000);
   });
 
+  // === BAGIKAN ===
   shareBtn.addEventListener('click',async()=>{
     canvas.toBlob(async blob=>{
       const file=new File([blob],'twibbon.png',{type:'image/png'});
@@ -245,16 +298,23 @@
     });
   });
 
+  // === RESET ===
   resetBtn.addEventListener('click',()=>{
     state.locked=false; state.img=null; state.imgW=state.imgH=0; state.showTwibbon=false;
     hint.classList.remove('hidden');
     downloadBtn.classList.add('hidden'); shareBtn.classList.add('hidden'); resetBtn.classList.add('hidden');
     uploadTwibbonBtn.classList.add('hidden');
+    fileInput.disabled = false;
+    uploadTwibbonBtn.disabled = false;
+    suppressNextClick = false; downPos = null;
     draw();
   });
 
-  // Unggah Twibbon dengan validasi transparansi
-  uploadTwibbonBtn.addEventListener('click',()=> twibbonInput.click());
+  // === UNGGAH TWIBBON (muncul setelah foto terunggah) + validasi transparansi ===
+  uploadTwibbonBtn.addEventListener('click',()=>{
+    if(state.editing || state.locked){ showToast(); return; }
+    twibbonInput.click();
+  });
   twibbonInput.addEventListener('change',e=>{
     const file=e.target.files[0]; if(!file) return;
     const reader=new FileReader();
@@ -268,15 +328,9 @@
         tctx.drawImage(newT,0,0);
         const data=tctx.getImageData(0,0,tmp.width,tmp.height).data;
         let hasAlpha=false;
-        for(let i=3;i<data.length;i+=4){
-          if(data[i]<255){ hasAlpha=true; break; }
-        }
-        if(!hasAlpha){
-          alert("Twibbon harus memiliki bidang transparan (PNG transparan).");
-          return;
-        }
-        twibbonImg.src=newT.src;
-        draw();
+        for(let i=3;i<data.length;i+=4){ if(data[i]<255){ hasAlpha=true; break; } }
+        if(!hasAlpha){ alert("Twibbon harus memiliki bidang transparan (PNG dengan alpha)."); return; }
+        twibbonImg.src=newT.src; draw();
       };
       newT.src=ev.target.result;
     };
