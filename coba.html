@@ -59,7 +59,7 @@
 (() => {
   const stage = document.getElementById('stage');
   const canvas = document.getElementById('c');
-  const ctx = canvas.getContext('2d', { alpha: false }); // solid background
+  const ctx = canvas.getContext('2d', { alpha: false });
   const fileInput = document.getElementById('file');
   const hint = document.getElementById('hint');
   const downloadBtn = document.getElementById('downloadBtn');
@@ -68,11 +68,9 @@
   const secEl = document.getElementById('sec');
   const toast = document.getElementById('toast');
 
-  // === Twibbon default (SVG inline jadi img)
-  const twibbonImg = new Image();
   // === Twibbon custom (PNG transparan milikmu)
-const twibbonImg = new Image();
-twibbonImg.src = "twibbon.png"; // ganti dengan path/url twibbon PNG kamu
+  const twibbonImg = new Image();
+  twibbonImg.src = "twibbon.png"; // ganti dengan twibbon kamu
 
   // === State
   const state = {
@@ -86,14 +84,8 @@ twibbonImg.src = "twibbon.png"; // ganti dengan path/url twibbon PNG kamu
   };
 
   function draw(){
-    // background kotak-kotak halus
-    const sz = 24;
-    for (let y=0; y<canvas.height; y+=sz){
-      for (let x=0; x<canvas.width; x+=sz){
-        ctx.fillStyle = ((x+y)/sz)%2===0 ? '#f5f5f5' : '#eeeeee';
-        ctx.fillRect(x,y,sz,sz);
-      }
-    }
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
 
     if(state.img){
       ctx.imageSmoothingEnabled = true;
@@ -103,7 +95,7 @@ twibbonImg.src = "twibbon.png"; // ganti dengan path/url twibbon PNG kamu
       ctx.drawImage(state.img, state.x, state.y, dw, dh);
     }
 
-    // overlay twibbon (selalu ada)
+    // overlay twibbon
     if (twibbonImg.complete) {
       ctx.globalAlpha = state.editing ? 0.5 : 1;
       ctx.drawImage(twibbonImg, 0, 0, canvas.width, canvas.height);
@@ -137,7 +129,7 @@ twibbonImg.src = "twibbon.png"; // ganti dengan path/url twibbon PNG kamu
     reader.readAsDataURL(file);
   }
 
-  // === Drop & klik upload (menyatu)
+  // === Upload handling
   function openPicker(){
     if(state.editing){ showToast(); return; }
     fileInput.value = '';
@@ -156,13 +148,12 @@ twibbonImg.src = "twibbon.png"; // ganti dengan path/url twibbon PNG kamu
     if(f && f.type.startsWith('image/')) loadFile(f);
   });
 
-  // === Gestur di CANVAS (fix utama)
+  // === Gestur (pan & zoom)
   function setEditing(on){
     state.editing = on;
     draw();
   }
 
-  // Pointer events di canvas, bukan parent → agar setPointerCapture valid
   canvas.addEventListener('pointerdown', (e)=>{
     if(!state.img) return;
     canvas.setPointerCapture(e.pointerId);
@@ -183,14 +174,12 @@ twibbonImg.src = "twibbon.png"; // ganti dengan path/url twibbon PNG kamu
     state.pointers.set(e.pointerId, p);
 
     if(state.pointers.size === 1){
-      // PAN
       const dx = (p.x - prev.x) * scaleX;
       const dy = (p.y - prev.y) * scaleY;
       state.x += dx;
       state.y += dy;
       draw();
     } else if (state.pointers.size === 2){
-      // PINCH-ZOOM
       const [p1, p2] = [...state.pointers.values()];
       const distNow = Math.hypot(p2.x - p1.x, p2.y - p1.y);
       if(!state.lastPinchDist) state.lastPinchDist = distNow;
@@ -215,7 +204,6 @@ twibbonImg.src = "twibbon.png"; // ganti dengan path/url twibbon PNG kamu
   canvas.addEventListener('pointercancel', endPointer);
   canvas.addEventListener('pointerleave', endPointer);
 
-  // Wheel zoom
   canvas.addEventListener('wheel', (e)=>{
     if(!state.img) return;
     e.preventDefault();
@@ -224,7 +212,7 @@ twibbonImg.src = "twibbon.png"; // ganti dengan path/url twibbon PNG kamu
     const scaleY = canvas.height / rect.height;
     const cx = (e.clientX - rect.left) * scaleX;
     const cy = (e.clientY - rect.top ) * scaleY;
-    const ds = Math.exp(-e.deltaY * 0.0015); // halus
+    const ds = Math.exp(-e.deltaY * 0.0015);
     setEditing(true);
     zoomAt(cx, cy, ds);
     clearTimeout(canvas._wheelTimer);
@@ -234,7 +222,7 @@ twibbonImg.src = "twibbon.png"; // ganti dengan path/url twibbon PNG kamu
   function zoomAt(cx, cy, ds){
     const oldS = state.s;
     let newS = oldS * ds;
-    newS = Math.max(0.3, Math.min(8, newS)); // clamp
+    newS = Math.max(0.3, Math.min(8, newS));
     const k = newS / oldS;
     state.x = cx - (cx - state.x) * k;
     state.y = cy - (cy - state.y) * k;
@@ -242,7 +230,7 @@ twibbonImg.src = "twibbon.png"; // ganti dengan path/url twibbon PNG kamu
     draw();
   }
 
-  // Upload disabled saat editing → toast
+  // === Toast
   let toastTimer;
   function showToast(){
     clearTimeout(toastTimer);
@@ -250,7 +238,7 @@ twibbonImg.src = "twibbon.png"; // ganti dengan path/url twibbon PNG kamu
     toastTimer = setTimeout(()=> toast.classList.add('hidden'), 1200);
   }
 
-  // Unduh → spinner 15s → ganti ke Bagikan
+  // === Unduh
   downloadBtn.addEventListener('click', ()=>{
     downloadBtn.disabled = true;
     spinner.style.display = 'inline';
@@ -275,7 +263,7 @@ twibbonImg.src = "twibbon.png"; // ganti dengan path/url twibbon PNG kamu
     }, 1000);
   });
 
-  // Bagikan
+  // === Bagikan
   shareBtn.addEventListener('click', async ()=>{
     if(!('share' in navigator) || !('canShare' in navigator)){
       alert('Browser tidak mendukung Web Share API. File akan diunduh.');
@@ -296,7 +284,7 @@ twibbonImg.src = "twibbon.png"; // ganti dengan path/url twibbon PNG kamu
     });
   });
 
-  // Render awal (twibbon default terlihat)
+  // Render awal
   twibbonImg.onload = draw;
   draw();
 })();
