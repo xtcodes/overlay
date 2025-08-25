@@ -38,7 +38,8 @@
     z-index:10;
   }
   #uploadTwibbonBtn:hover{ background:rgba(0,0,0,0.8); }
-  #file, #twibbonInput{ display:none; } /* FIX: twibbonInput disembunyikan */
+  /* Sembunyikan input-file agar tidak mengganggu layout */
+  #file, #twibbonInput{ display:none; }
 </style>
 </head>
 <body>
@@ -83,9 +84,10 @@
   const uploadTwibbonBtn = document.getElementById('uploadTwibbonBtn');
   const twibbonInput = document.getElementById('twibbonInput');
 
-  // Twibbon default
+  // DEFAULT TWIBBON (gunakan file lokal / path yang valid)
+  const DEFAULT_TWIBBON = "twibbon.png";
   const twibbonImg = new Image();
-  twibbonImg.src = "twibbon.png";
+  twibbonImg.src = DEFAULT_TWIBBON;
 
   const state = {
     img:null, imgW:0, imgH:0,
@@ -296,12 +298,22 @@
 
   // === RESET ===
   resetBtn.addEventListener('click',()=>{
-    state.locked=false; state.img=null; state.imgW=state.imgH=0; state.showTwibbon=false;
+    state.locked=false;
+    state.img=null; state.imgW=state.imgH=0;
+    state.showTwibbon=false;
+
+    // kembalikan UI
     hint.classList.remove('hidden');
     downloadBtn.classList.add('hidden'); shareBtn.classList.add('hidden'); resetBtn.classList.add('hidden');
     uploadTwibbonBtn.classList.add('hidden');
     fileInput.disabled = false;
     uploadTwibbonBtn.disabled = false;
+
+    // FIX: reset twibbon ke default dan kosongkan input-file
+    twibbonImg.src = DEFAULT_TWIBBON;
+    twibbonInput.value = "";
+    fileInput.value = "";
+
     suppressNextClick = false; downPos = null;
     draw();
   });
@@ -309,7 +321,7 @@
   // === UNGGAH TWIBBON ===
   uploadTwibbonBtn.addEventListener('click',()=>{
     if(state.editing || state.locked){ showToast(); return; }
-    twibbonInput.value = ""; // FIX: reset biar bisa pilih file yang sama
+    twibbonInput.value = ""; // reset agar bisa pilih file yang sama
     twibbonInput.click();
   });
   twibbonInput.addEventListener('change',e=>{
@@ -318,6 +330,7 @@
     reader.onload=ev=>{
       const newT=new Image();
       newT.onload=()=>{
+        // Validasi transparansi
         const tmp=document.createElement('canvas');
         tmp.width=newT.width; tmp.height=newT.height;
         const tctx=tmp.getContext('2d');
