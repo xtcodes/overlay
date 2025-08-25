@@ -38,7 +38,7 @@
     z-index:10;
   }
   #uploadTwibbonBtn:hover{ background:rgba(0,0,0,0.8); }
-  #twibbonInput{ display:none; } /* FIX: disembunyikan */
+  #file, #twibbonInput { display:none; }
 </style>
 </head>
 <body>
@@ -53,7 +53,7 @@
         <span class="tiny">(geser untuk pindah, scroll/pinch untuk zoom)</span>
       </div>
     </div>
-    <input id="file" type="file" accept="image/*" class="hidden" />
+    <input id="file" type="file" accept="image/*" />
     <button id="uploadTwibbonBtn" class="hidden">Unggah Twibbon</button>
     <input id="twibbonInput" type="file" accept="image/*" />
   </div>
@@ -84,7 +84,7 @@
   const twibbonInput = document.getElementById('twibbonInput');
 
   // Twibbon default
-  const twibbonImg = new Image();
+  let twibbonImg = new Image();
   twibbonImg.src = "twibbon.png";
 
   const state = {
@@ -95,7 +95,6 @@
     showTwibbon:false
   };
 
-  // --- CLICK GUARD ---
   let suppressNextClick = false;
   let lastMoveTime = 0;
   const MOVE_THRESH_SQ = 9;
@@ -131,7 +130,6 @@
         state.showTwibbon=true;
         hint.classList.add('hidden');
         downloadBtn.classList.remove('hidden');
-        downloadBtn.disabled=false;
         uploadTwibbonBtn.classList.remove('hidden');
         draw();
       };
@@ -153,7 +151,6 @@
     draw();
   }
 
-  // === CLICK AREA ===
   stage.addEventListener('click', (e)=>{
     const recentlyMoved = (performance.now() - lastMoveTime) < 300;
     if(state.locked || state.editing || suppressNextClick || recentlyMoved){
@@ -169,7 +166,6 @@
 
   fileInput.addEventListener('change',e=>loadFile(e.target.files[0]));
 
-  // === DRAG & DROP ===
   stage.addEventListener('dragover',e=>{ e.preventDefault(); stage.classList.add('dragover'); });
   stage.addEventListener('dragleave',()=>stage.classList.remove('dragover'));
   stage.addEventListener('drop',e=>{
@@ -179,7 +175,6 @@
     if(f && f.type.startsWith('image/')) loadFile(f);
   });
 
-  // === DRAG & ZOOM ===
   let startX=0,startY=0;
   stage.addEventListener('pointerdown',e=>{
     if(!state.img||state.locked) return;
@@ -258,7 +253,6 @@
     lastMoveTime = performance.now();
   },{passive:false});
 
-  // === UNDUH ===
   downloadBtn.addEventListener('click',()=>{
     state.locked=true; downloadBtn.disabled=true; spinner.style.display='inline';
     let remaining=15; secEl.textContent=remaining;
@@ -278,7 +272,6 @@
     },1000);
   });
 
-  // === BAGIKAN ===
   shareBtn.addEventListener('click',async()=>{
     canvas.toBlob(async blob=>{
       const file=new File([blob],'twibbon.png',{type:'image/png'});
@@ -293,23 +286,35 @@
     });
   });
 
-  // === RESET ===
+  // === RESET FIX ===
   resetBtn.addEventListener('click',()=>{
-    state.locked=false; state.img=null; state.imgW=state.imgH=0; state.showTwibbon=false;
+    state.locked=false; 
+    state.img=null; state.imgW=state.imgH=0; 
+    state.showTwibbon=false;
+
     hint.classList.remove('hidden');
-    downloadBtn.classList.add('hidden'); shareBtn.classList.add('hidden'); resetBtn.classList.add('hidden');
+    downloadBtn.classList.add('hidden'); 
+    shareBtn.classList.add('hidden'); 
+    resetBtn.classList.add('hidden');
     uploadTwibbonBtn.classList.add('hidden');
+
     fileInput.disabled = false;
     uploadTwibbonBtn.disabled = false;
+
     suppressNextClick = false; downPos = null;
-    twibbonImg.src = "twibbon-saya.png"; // kembalikan twibbon default
-    draw();
+
+    // ✅ Buat ulang twibbon default agar muncul lagi
+    const defaultT = new Image();
+    defaultT.onload = () => {
+      twibbonImg = defaultT;
+      draw();
+    };
+    defaultT.src = "twibbon-saya.png";
   });
 
-  // === UNGGAH TWIBBON ===
   uploadTwibbonBtn.addEventListener('click',()=>{
     if(state.editing || state.locked){ showToast(); return; }
-    twibbonInput.value=""; 
+    twibbonInput.value = ""; 
     twibbonInput.click();
   });
   twibbonInput.addEventListener('change',e=>{
@@ -326,12 +331,7 @@
         let hasAlpha=false;
         for(let i=3;i<data.length;i+=4){ if(data[i]<255){ hasAlpha=true; break; } }
         if(!hasAlpha){ alert("Twibbon harus memiliki bidang transparan (PNG dengan alpha)."); return; }
-        twibbonImg.src=newT.src; 
-        draw();
-        // ✅ aktifkan lagi tombol unduh
-        downloadBtn.classList.remove('hidden');
-        downloadBtn.disabled=false;
-        shareBtn.classList.add('hidden');
+        twibbonImg = newT; draw();
       };
       newT.src=ev.target.result;
     };
