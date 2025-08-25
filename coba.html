@@ -70,18 +70,9 @@
 
   // === Twibbon default (SVG inline jadi img)
   const twibbonImg = new Image();
-  const svg = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000">
-    <rect x="25" y="25" width="950" height="950" fill="none" stroke="#1e88e5" stroke-width="40" rx="40"/>
-    <g stroke="#43a047" stroke-width="14" fill="none" stroke-linecap="round">
-      <path d="M80 160 V80 H160"/>
-      <path d="M920 160 V80 H840"/>
-      <path d="M80 840 V920 H160"/>
-      <path d="M920 840 V920 H840"/>
-    </g>
-    <text x="500" y="960" text-anchor="middle" font-size="90" font-family="Arial, Helvetica, sans-serif" font-weight="700" fill="#1e88e5">TWIBBON</text>
-  </svg>`;
-  twibbonImg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  // === Twibbon custom (PNG transparan milikmu)
+const twibbonImg = new Image();
+twibbonImg.src = "twibbon.png"; // ganti dengan path/url twibbon PNG kamu
 
   // === State
   const state = {
