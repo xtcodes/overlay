@@ -38,7 +38,7 @@
     z-index:10;
   }
   #uploadTwibbonBtn:hover{ background:rgba(0,0,0,0.8); }
-  #twibbonInput{ display:none; }
+  #file, #twibbonInput{ display:none; } /* FIX: twibbonInput disembunyikan */
 </style>
 </head>
 <body>
@@ -55,7 +55,7 @@
     </div>
     <input id="file" type="file" accept="image/*" class="hidden" />
     <button id="uploadTwibbonBtn" class="hidden">Unggah Twibbon</button>
-    <input id="twibbonInput" type="file" accept="image/*" />
+    <input id="twibbonInput" type="file" accept="image/*" class="hidden" />
   </div>
 
   <div class="controls">
@@ -85,7 +85,7 @@
 
   // Twibbon default
   const twibbonImg = new Image();
-  twibbonImg.src = "twibbon.png";
+  twibbonImg.src = "twibbon-saya.png";
 
   const state = {
     img:null, imgW:0, imgH:0,
@@ -155,14 +155,12 @@
 
   // === Open picker (klik area kosong) dengan click-guard ===
   stage.addEventListener('click', (e)=>{
-    // Abaikan klik jika terkunci / sedang editing / baru saja drag/zoom
     const recentlyMoved = (performance.now() - lastMoveTime) < 300;
     if(state.locked || state.editing || suppressNextClick || recentlyMoved){
       e.preventDefault(); e.stopPropagation();
-      suppressNextClick = false; // reset guard
+      suppressNextClick = false; 
       return;
     }
-    // Kalau belum ada gambar, baru boleh buka picker
     if(!state.img){
       fileInput.value = '';
       fileInput.click();
@@ -189,7 +187,7 @@
     stage.setPointerCapture(e.pointerId);
     state.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
     downPos = {x:e.clientX, y:e.clientY};
-    suppressNextClick = false; // reset di awal gesture
+    suppressNextClick = false;
     if(state.pointers.size===1){
       startX=e.clientX-state.x;
       startY=e.clientY-state.y;
@@ -204,8 +202,7 @@
 
   stage.addEventListener('pointermove',e=>{
     if(!state.img||state.locked||!state.pointers.has(e.pointerId)) return;
-    state.pointers.set(e.pointerId,{x:e.clientX,y=e.clientY});
-    // tandai jika bergerak cukup jauh -> klik berikutnya diabaikan
+    state.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(downPos){
       const dx=e.clientX-downPos.x, dy=e.clientY-downPos.y;
       if(dx*dx+dy*dy > MOVE_THRESH_SQ){
@@ -219,7 +216,7 @@
       state.y=pt.y-startY;
       draw();
     }else if(state.pointers.size===2){
-      suppressNextClick = true; // pinch pasti memicu guard
+      suppressNextClick = true;
       const pts=[...state.pointers.values()];
       const dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
       const delta=dist/state.lastPinchDist;
@@ -234,7 +231,6 @@
     if(state.pointers.has(e.pointerId)) state.pointers.delete(e.pointerId);
     downPos = null;
     if(state.pointers.size===0){
-      // tetap edit=false, tapi click-guard masih aktif sebentar
       setEditing(false);
     }
   }
@@ -252,7 +248,7 @@
   stage.addEventListener('wheel',e=>{
     if(!state.img||state.locked) return;
     e.preventDefault();
-    suppressNextClick = true; // kalau habis scroll, abaikan klik selanjutnya
+    suppressNextClick = true;
     const rect=canvas.getBoundingClientRect();
     const cx=(e.clientX-rect.left)*(canvas.width/rect.width);
     const cy=(e.clientY-rect.top)*(canvas.height/rect.height);
@@ -310,9 +306,10 @@
     draw();
   });
 
-  // === UNGGAH TWIBBON (muncul setelah foto terunggah) + validasi transparansi ===
+  // === UNGGAH TWIBBON ===
   uploadTwibbonBtn.addEventListener('click',()=>{
     if(state.editing || state.locked){ showToast(); return; }
+    twibbonInput.value = ""; // FIX: reset biar bisa pilih file yang sama
     twibbonInput.click();
   });
   twibbonInput.addEventListener('change',e=>{
@@ -321,7 +318,6 @@
     reader.onload=ev=>{
       const newT=new Image();
       newT.onload=()=>{
-        // Validasi transparansi
         const tmp=document.createElement('canvas');
         tmp.width=newT.width; tmp.height=newT.height;
         const tctx=tmp.getContext('2d');
