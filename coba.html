@@ -50,6 +50,7 @@
     <button id="downloadBtn" disabled>Unduh</button>
     <span id="spinner">⏳ menunggu <span id="sec">15</span>d</span>
     <button id="shareBtn" class="hidden">Bagikan</button>
+    <button id="resetBtn" class="hidden">Reset</button>
   </div>
 
   <div id="toast" class="toast hidden">Sedang mengedit — unggah dinonaktifkan sementara</div>
@@ -63,6 +64,7 @@
   const hint = document.getElementById('hint');
   const downloadBtn = document.getElementById('downloadBtn');
   const shareBtn = document.getElementById('shareBtn');
+  const resetBtn = document.getElementById('resetBtn');
   const spinner = document.getElementById('spinner');
   const secEl = document.getElementById('sec');
   const toast = document.getElementById('toast');
@@ -75,7 +77,7 @@
     img: null, imgW:0, imgH:0,
     x:0, y:0, s:1,
     editing:false,
-    locked:false,   // <<< tambahan: kunci edit
+    locked:false,
     pointers:new Map(),
     lastPinchDist:0
   };
@@ -123,10 +125,9 @@
     reader.readAsDataURL(file);
   }
 
-  // Upload
   function openPicker(){
     if(state.editing){ showToast(); return; }
-    if(state.locked){ return; } // kalau sudah terkunci, abaikan
+    if(state.locked){ return; }
     fileInput.value='';
     fileInput.click();
   }
@@ -143,9 +144,8 @@
     if(f && f.type.startsWith('image/')) loadFile(f);
   });
 
-  // Gestur
   function setEditing(on){
-    if(state.locked) return; // tidak bisa edit kalau terkunci
+    if(state.locked) return;
     state.editing=on; draw();
   }
 
@@ -226,7 +226,7 @@
 
   // Unduh
   downloadBtn.addEventListener('click',()=>{
-    state.locked=true; // <<< kunci edit setelah klik unduh
+    state.locked=true;
     downloadBtn.disabled=true;
     spinner.style.display='inline';
     let remaining=15;
@@ -245,6 +245,7 @@
           URL.revokeObjectURL(url);
           downloadBtn.classList.add('hidden');
           shareBtn.classList.remove('hidden');
+          resetBtn.classList.remove('hidden');
         });
       }
     },1000);
@@ -264,6 +265,19 @@
         URL.revokeObjectURL(url);
       }
     });
+  });
+
+  // Reset
+  resetBtn.addEventListener('click',()=>{
+    state.locked=false;
+    state.img=null;
+    state.imgW=state.imgH=0;
+    hint.classList.remove('hidden');
+    downloadBtn.classList.remove('hidden');
+    downloadBtn.disabled=true;
+    shareBtn.classList.add('hidden');
+    resetBtn.classList.add('hidden');
+    draw();
   });
 
   twibbonImg.onload=draw;
