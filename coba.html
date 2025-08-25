@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Generator Twibbon — Fix Final</title>
+<title>Generator Twibbon — Fix Transparansi</title>
 <style>
   :root{ --w:420px; }
   body{ font-family: system-ui, Arial, sans-serif; margin:24px; display:flex; flex-direction:column; align-items:center; gap:16px; }
@@ -30,7 +30,6 @@
   }
   .tiny{ font-size:12px; opacity:.7 }
 
-  /* tombol unggah twibbon */
   #uploadTwibbonBtn {
     position:absolute; bottom:8px; right:8px;
     background:rgba(0,0,0,0.6); color:#fff; font-size:12px;
@@ -86,25 +85,21 @@
   const uploadTwibbonBtn = document.getElementById('uploadTwibbonBtn');
   const twibbonInput = document.getElementById('twibbonInput');
 
-  // PATH ke twibbon default — ubah kalau perlu
   const DEFAULT_TWIBBON_PATH = "twibbon.png";
 
-  // Preload default twibbon (tetap ada terpisah)
+  // preload default twibbon (terpisah)
   const defaultTwibbonImg = new Image();
   defaultTwibbonImg.crossOrigin = "anonymous";
   let defaultTwibbonLoaded = false;
-  defaultTwibbonImg.onload = () => { defaultTwibbonLoaded = true; /* no immediate draw here */ };
-  defaultTwibbonImg.onerror = () => {
-    defaultTwibbonLoaded = false;
-    console.warn("Gagal muat twibbon default:", DEFAULT_TWIBBON_PATH);
-  };
+  defaultTwibbonImg.onload = () => { defaultTwibbonLoaded = true; };
+  defaultTwibbonImg.onerror = () => { defaultTwibbonLoaded = false; console.warn("Gagal muat twibbon default"); };
   defaultTwibbonImg.src = DEFAULT_TWIBBON_PATH;
 
-  // Image untuk twibbon yang diunggah user (kosong sampai user unggah)
+  // image untuk twibbon custom
   const customTwibbonImg = new Image();
   customTwibbonImg.crossOrigin = "anonymous";
 
-  // yang aktif (dipakai saat draw) — mulai dengan default
+  // aktifkan twibbon (default pada awal)
   let activeTwibbon = defaultTwibbonImg;
 
   const state = {
@@ -115,34 +110,30 @@
     showTwibbon:false
   };
 
-  // click-guard dsb.
   let suppressNextClick = false;
   let lastMoveTime = 0;
   const MOVE_THRESH_SQ = 9;
   let downPos = null;
 
-  function drawFallbackTwibbon(){
-    // simple fallback overlay if default image missing
+  // fallback draw (jika default file tidak tersedia)
+  function drawFallbackTwibbon(alpha = 1){
     ctx.save();
-    ctx.globalAlpha = 0.85;
-    ctx.fillStyle = "#000000";
+    ctx.globalAlpha = alpha;
+    // semi-transparent overlay box + label
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.globalAlpha = 0.12;
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = "#ff6b6b";
+    ctx.strokeStyle = "rgba(255,107,107,0.9)";
     ctx.lineWidth = Math.max(6, canvas.width * 0.01);
     ctx.strokeRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle = "#333";
-    ctx.font = `${Math.round(canvas.width*0.06)}px Arial`;
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.font = `${Math.round(canvas.width*0.05)}px Arial`;
     ctx.textAlign = "center";
     ctx.fillText("TWIBBON (default tidak tersedia)", canvas.width/2, canvas.height/2);
     ctx.restore();
   }
 
   function draw(){
-    // clear
+    // clear + white bg
     ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle = "#fff";
     ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -154,17 +145,22 @@
       ctx.drawImage(state.img, state.x, state.y, dw, dh);
     }
 
-    // draw active twibbon if requested
+    // if we should show twibbon: draw with alpha depending on editing
     if(state.showTwibbon){
+      const alpha = state.editing ? 0.5 : 1;
+      // draw image twibbon if ready, else fallback
       if(activeTwibbon && activeTwibbon.complete && activeTwibbon.naturalWidth){
-        // draw scaled to canvas
+        ctx.save();
+        ctx.globalAlpha = alpha;
         ctx.drawImage(activeTwibbon, 0, 0, canvas.width, canvas.height);
+        ctx.restore();
       } else {
-        // if active is default and default failed to load -> draw fallback overlay
+        // if active is default but default failed -> show fallback with same alpha
         if(activeTwibbon === defaultTwibbonImg && !defaultTwibbonLoaded){
-          drawFallbackTwibbon();
+          drawFallbackTwibbon(alpha);
         } else {
-          // not ready yet — nothing (we attach onload listeners where needed)
+          // not ready yet: ensure draw when ready
+          activeTwibbon.addEventListener('load', draw, { once: true });
         }
       }
     }
@@ -186,7 +182,7 @@
         state.showTwibbon = true;
         hint.classList.add('hidden');
 
-        // Tombol-tombol: pastikan download aktif
+        // Tombol
         downloadBtn.classList.remove('hidden');
         downloadBtn.disabled = false;
         shareBtn.classList.add('hidden');
@@ -194,15 +190,13 @@
         uploadTwibbonBtn.classList.remove('hidden');
         uploadTwibbonBtn.disabled = false;
 
-        // Jika activeTwibbon sudah siap => draw sekarang, kalau belum, gambar akan di-update onload
+        // gambar sekarang atau tunggu twibbon onload
         if(activeTwibbon && activeTwibbon.complete && activeTwibbon.naturalWidth){
           draw();
         } else {
-          // pastikan kita akan menggambar saat twibbon siap
           activeTwibbon.addEventListener('load', draw, { once: true });
-          // if default failed to load, still call draw to show fallback
           if(activeTwibbon === defaultTwibbonImg && !defaultTwibbonLoaded){
-            draw();
+            draw(); // fallback
           }
         }
       };
@@ -211,11 +205,7 @@
     reader.readAsDataURL(file);
   }
 
-  function showToast(){
-    toast.classList.remove('hidden');
-    clearTimeout(toast._t);
-    toast._t = setTimeout(()=>toast.classList.add('hidden'), 1200);
-  }
+  function showToast(){ toast.classList.remove('hidden'); clearTimeout(toast._t); toast._t = setTimeout(()=>toast.classList.add('hidden'),1200); }
 
   function setEditing(on){
     if(state.locked) return;
@@ -229,9 +219,7 @@
   stage.addEventListener('click', (e) => {
     const recentlyMoved = (performance.now() - lastMoveTime) < 300;
     if(state.locked || state.editing || suppressNextClick || recentlyMoved){
-      e.preventDefault(); e.stopPropagation();
-      suppressNextClick = false;
-      return;
+      e.preventDefault(); e.stopPropagation(); suppressNextClick = false; return;
     }
     if(!state.img){
       fileInput.value = "";
@@ -251,7 +239,7 @@
     if(f && f.type.startsWith('image/')) loadFile(f);
   });
 
-  // drag & zoom gestures
+  // gestures: drag & pinch
   let startX = 0, startY = 0;
   stage.addEventListener('pointerdown', e => {
     if(!state.img || state.locked) return;
@@ -366,19 +354,17 @@
     });
   });
 
-  // RESET: reset state & gunakan kembali defaultTwibbon (langsung)
+  // RESET
   resetBtn.addEventListener('click', () => {
-    state.locked = false;
-    state.editing = false;
+    state.locked = false; state.editing = false;
     state.img = null; state.imgW = state.imgH = 0;
     state.x = 0; state.y = 0; state.s = 1;
     state.showTwibbon = false;
-    state.pointers.clear();
-    state.lastPinchDist = 0;
+    state.pointers.clear(); state.lastPinchDist = 0;
 
     hint.classList.remove('hidden');
     downloadBtn.classList.add('hidden');
-    downloadBtn.disabled = false; // pastikan tidak tetap disabled
+    downloadBtn.disabled = false;
     shareBtn.classList.add('hidden');
     resetBtn.classList.add('hidden');
     uploadTwibbonBtn.classList.add('hidden');
@@ -387,13 +373,12 @@
 
     suppressNextClick = false; downPos = null;
 
-    // gunakan kembali default twibbon (tidak membuat Image baru)
+    // kembali ke default twibbon (tidak membuat Image baru)
     activeTwibbon = defaultTwibbonImg;
-    // jika default siap, langsung gambar (meski state.showTwibbon==false saat reset);
     draw();
   });
 
-  // unggah twibbon custom (validasi alpha)
+  // upload twibbon custom (validasi alpha)
   uploadTwibbonBtn.addEventListener('click', () => {
     if(state.editing || state.locked){ showToast(); return; }
     twibbonInput.value = "";
@@ -421,18 +406,16 @@
           alert("Twibbon harus memiliki bidang transparan (PNG dengan alpha).");
           return;
         }
-        // pakai custom twibbon (tidak menimpa default)
+        // set custom twibbon dan aktifkan
         customTwibbonImg.src = tmpImg.src;
-        // aktifkan sebagai yang dipakai
         activeTwibbon = customTwibbonImg;
-        // pastikan akan digambar saat sudah siap
         if(customTwibbonImg.complete && customTwibbonImg.naturalWidth){
           draw();
         } else {
           customTwibbonImg.addEventListener('load', draw, { once: true });
         }
 
-        // aktifkan kembali tombol unduh (kalau sempat hilang)
+        // pastikan unduh aktif
         downloadBtn.classList.remove('hidden');
         downloadBtn.disabled = false;
         shareBtn.classList.add('hidden');
@@ -442,10 +425,10 @@
     reader.readAsDataURL(file);
   });
 
-  // initial draw (blank canvas)
+  // initial draw
   draw();
 
-  // accessibility: keyboard Enter on stage opens file picker if empty
+  // keyboard accessibility: Enter untuk buka file picker jika kosong
   stage.addEventListener('keydown', e => {
     if(e.key === 'Enter' && !state.img){
       fileInput.click();
