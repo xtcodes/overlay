@@ -5,17 +5,15 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Generator Twibbon</title>
 <style>
-  :root{
-    --w: 420px;
-  }
+  :root{ --w: 420px; }
   body{font-family: system-ui, Arial, sans-serif; margin:24px; display:flex; flex-direction:column; align-items:center; gap:16px}
   h1{font-size:20px; margin:0 0 8px}
   .stage{
     position:relative; width:var(--w); max-width:95vw; aspect-ratio:1/1;
     border:2px dashed #b5b5b5; border-radius:12px; background:#fafafa; overflow:hidden;
-    display:grid; place-items:center; cursor:pointer;
+    display:grid; place-items:center; cursor:pointer; user-select:none; -webkit-user-select:none; touch-action:none;
   }
-  canvas{ width:100%; height:100%; display:block; }
+  canvas{ width:100%; height:100%; display:block; touch-action:none; user-select:none; -webkit-user-select:none; }
   .hint{
     position:absolute; inset:0; display:grid; place-items:center; color:#666; pointer-events:none;
     text-align:center; line-height:1.4; padding:12px;
@@ -36,7 +34,7 @@
 <body>
   <h1>Generator Twibbon</h1>
 
-  <!-- STAGE: drop-zone + canvas menyatu -->
+  <!-- Drop-zone & canvas menyatu -->
   <div id="stage" class="stage" aria-label="Drop gambar atau klik untuk unggah">
     <canvas id="c" width="1000" height="1000" aria-hidden="true"></canvas>
     <div id="hint" class="hint">
@@ -59,10 +57,9 @@
 
 <script>
 (() => {
-  // ==== Elemen
   const stage = document.getElementById('stage');
   const canvas = document.getElementById('c');
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { alpha: false }); // solid background
   const fileInput = document.getElementById('file');
   const hint = document.getElementById('hint');
   const downloadBtn = document.getElementById('downloadBtn');
@@ -71,86 +68,62 @@
   const secEl = document.getElementById('sec');
   const toast = document.getElementById('toast');
 
-  // ==== State
+  // === Twibbon default (SVG inline jadi img)
+  const twibbonImg = new Image();
+  const svg = `
+  <svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000">
+    <rect x="25" y="25" width="950" height="950" fill="none" stroke="#1e88e5" stroke-width="40" rx="40"/>
+    <g stroke="#43a047" stroke-width="14" fill="none" stroke-linecap="round">
+      <path d="M80 160 V80 H160"/>
+      <path d="M920 160 V80 H840"/>
+      <path d="M80 840 V920 H160"/>
+      <path d="M920 840 V920 H840"/>
+    </g>
+    <text x="500" y="960" text-anchor="middle" font-size="90" font-family="Arial, Helvetica, sans-serif" font-weight="700" fill="#1e88e5">TWIBBON</text>
+  </svg>`;
+  twibbonImg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+
+  // === State
   const state = {
     img: null,
     imgW: 0, imgH: 0,
-    x: 0, y: 0,   // posisi gambar
-    s: 1,         // skala
+    x: 0, y: 0,
+    s: 1,
     editing: false,
     pointers: new Map(),
-    lastPinchDist: 0,
-    overlayAlpha: 1,
+    lastPinchDist: 0
   };
 
-  // ==== Helper: fit "cover"
-  function coverScale(imgW, imgH, boxW, boxH){
-    return Math.max(boxW/imgW, boxH/imgH);
-  }
-
-  // ==== Gambar twibbon (tanpa file eksternal) – bingkai sederhana + teks
-  function drawTwibbon(alpha=1){
-    ctx.save();
-    ctx.globalAlpha = alpha;
-
-    // Frame tebal
-    const pad = 18;
-    ctx.lineWidth = 30;
-    ctx.strokeStyle = '#1e88e5';
-    ctx.strokeRect(pad, pad, canvas.width - pad*2, canvas.height - pad*2);
-
-    // Sudut aksen
-    ctx.lineWidth = 8;
-    ctx.strokeStyle = '#43a047';
-    ctx.beginPath();
-    ctx.moveTo(pad+20, pad+80); ctx.lineTo(pad+20, pad+20); ctx.lineTo(pad+80, pad+20); // kiri-atas
-    ctx.moveTo(canvas.width-pad-20, pad+80); ctx.lineTo(canvas.width-pad-20, pad+20); ctx.lineTo(canvas.width-pad-80, pad+20); // kanan-atas
-    ctx.moveTo(pad+20, canvas.height-pad-80); ctx.lineTo(pad+20, canvas.height-pad-20); ctx.lineTo(pad+80, canvas.height-pad-20); // kiri-bawah
-    ctx.moveTo(canvas.width-pad-20, canvas.height-pad-80);
-    ctx.lineTo(canvas.width-pad-20, canvas.height-pad-20);
-    ctx.lineTo(canvas.width-pad-80, canvas.height-pad-20);
-    ctx.stroke();
-
-    // Label
-    ctx.fillStyle = '#1e88e5';
-    ctx.font = 'bold 72px system-ui, Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('TWIBBON', canvas.width/2, canvas.height - 42);
-
-    ctx.restore();
-  }
-
-  // ==== Render
   function draw(){
-    ctx.clearRect(0,0,canvas.width, canvas.height);
-
-    // Background netral
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0,0,canvas.width, canvas.height);
+    // background kotak-kotak halus
+    const sz = 24;
+    for (let y=0; y<canvas.height; y+=sz){
+      for (let x=0; x<canvas.width; x+=sz){
+        ctx.fillStyle = ((x+y)/sz)%2===0 ? '#f5f5f5' : '#eeeeee';
+        ctx.fillRect(x,y,sz,sz);
+      }
+    }
 
     if(state.img){
-      // gambar foto
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
       const dw = state.imgW * state.s;
       const dh = state.imgH * state.s;
       ctx.drawImage(state.img, state.x, state.y, dw, dh);
-    } else {
-      // placeholder pattern
-      const size=20;
-      for(let y=0;y<canvas.height;y+=size){
-        for(let x=0;x<canvas.width;x+=size){
-          ctx.fillStyle = ((x+y)/size)%2===0 ? '#f5f5f5' : '#eeeeee';
-          ctx.fillRect(x,y,size,size);
-        }
-      }
     }
 
-    // overlay twibbon (transparan saat editing)
-    drawTwibbon(state.editing?0.5:1);
+    // overlay twibbon (selalu ada)
+    if (twibbonImg.complete) {
+      ctx.globalAlpha = state.editing ? 0.5 : 1;
+      ctx.drawImage(twibbonImg, 0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 1;
+    }
   }
 
-  // ==== Load image
+  function coverScale(iw, ih, bw, bh){
+    return Math.max(bw/iw, bh/ih);
+  }
+
   function loadFile(file){
     if(!file) return;
     const reader = new FileReader();
@@ -160,13 +133,10 @@
         state.img = img;
         state.imgW = img.naturalWidth;
         state.imgH = img.naturalHeight;
-
-        // Inisialisasi posisi dan skala (cover ke canvas)
         const s0 = coverScale(state.imgW, state.imgH, canvas.width, canvas.height);
         state.s = s0;
         state.x = (canvas.width - state.imgW*state.s)/2;
         state.y = (canvas.height - state.imgH*state.s)/2;
-
         hint.classList.add('hidden');
         downloadBtn.disabled = false;
         draw();
@@ -176,19 +146,18 @@
     reader.readAsDataURL(file);
   }
 
-  // ==== Drop-zone menyatu dengan canvas
+  // === Drop & klik upload (menyatu)
   function openPicker(){
     if(state.editing){ showToast(); return; }
     fileInput.value = '';
     fileInput.click();
   }
   stage.addEventListener('click', openPicker);
+  fileInput.addEventListener('change', (e)=> loadFile(e.target.files[0]));
 
-  fileInput.addEventListener('change', (e) => loadFile(e.target.files[0]));
-
-  stage.addEventListener('dragover', (e) => { e.preventDefault(); stage.classList.add('dragover'); });
-  stage.addEventListener('dragleave', () => stage.classList.remove('dragover'));
-  stage.addEventListener('drop', (e) => {
+  stage.addEventListener('dragover', (e)=>{ e.preventDefault(); stage.classList.add('dragover'); });
+  stage.addEventListener('dragleave', ()=> stage.classList.remove('dragover'));
+  stage.addEventListener('drop', (e)=>{
     e.preventDefault();
     stage.classList.remove('dragover');
     if(state.editing){ showToast(); return; }
@@ -196,132 +165,118 @@
     if(f && f.type.startsWith('image/')) loadFile(f);
   });
 
-  // ==== Pan & Zoom (pointer + wheel + pinch)
+  // === Gestur di CANVAS (fix utama)
   function setEditing(on){
     state.editing = on;
     draw();
   }
 
-  // pointer utils
-  stage.addEventListener('pointerdown', (e) => {
+  // Pointer events di canvas, bukan parent → agar setPointerCapture valid
+  canvas.addEventListener('pointerdown', (e)=>{
     if(!state.img) return;
-    stage.setPointerCapture(e.pointerId);
+    canvas.setPointerCapture(e.pointerId);
     state.pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
     setEditing(true);
   });
-  stage.addEventListener('pointermove', (e) => {
-    if(!state.img) return;
-    const p = state.pointers.get(e.pointerId);
-    if(!p) return;
 
-    // update pointer
-    const prev = {...p};
+  canvas.addEventListener('pointermove', (e)=>{
+    const p = state.pointers.get(e.pointerId);
+    if(!p || !state.img) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    const prev = {x:p.x, y:p.y};
     p.x = e.clientX; p.y = e.clientY;
     state.pointers.set(e.pointerId, p);
 
-    if(state.pointers.size===1){
+    if(state.pointers.size === 1){
       // PAN
-      const dx = p.x - prev.x;
-      const dy = p.y - prev.y;
+      const dx = (p.x - prev.x) * scaleX;
+      const dy = (p.y - prev.y) * scaleY;
       state.x += dx;
       state.y += dy;
       draw();
-    } else if(state.pointers.size===2){
+    } else if (state.pointers.size === 2){
       // PINCH-ZOOM
       const [p1, p2] = [...state.pointers.values()];
       const distNow = Math.hypot(p2.x - p1.x, p2.y - p1.y);
       if(!state.lastPinchDist) state.lastPinchDist = distNow;
-
       const ds = distNow / state.lastPinchDist;
       state.lastPinchDist = distNow;
 
-      // titik pusat pinch di koordinat canvas
-      const rect = canvas.getBoundingClientRect();
-      const cx = ((p1.x + p2.x)/2 - rect.left) * (canvas.width/rect.width);
-      const cy = ((p1.y + p2.y)/2 - rect.top ) * (canvas.height/rect.height);
-
+      const cxClient = (p1.x + p2.x)/2, cyClient = (p1.y + p2.y)/2;
+      const cx = (cxClient - rect.left) * scaleX;
+      const cy = (cyClient - rect.top ) * scaleY;
       zoomAt(cx, cy, ds);
     }
   });
-  stage.addEventListener('pointerup', endPointer);
-  stage.addEventListener('pointercancel', endPointer);
+
   function endPointer(e){
-    if(state.pointers.has(e.pointerId)){
-      state.pointers.delete(e.pointerId);
-    }
-    if(state.pointers.size<2) state.lastPinchDist = 0;
-    if(state.pointers.size===0){
-      // selesai edit (beri sedikit jeda agar terasa halus)
-      setTimeout(()=>setEditing(false), 120);
+    if(state.pointers.has(e.pointerId)) state.pointers.delete(e.pointerId);
+    if(state.pointers.size < 2) state.lastPinchDist = 0;
+    if(state.pointers.size === 0){
+      setTimeout(()=> setEditing(false), 120);
     }
   }
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+  canvas.addEventListener('pointerleave', endPointer);
 
-  // wheel zoom (mouse)
-  stage.addEventListener('wheel', (e) => {
+  // Wheel zoom
+  canvas.addEventListener('wheel', (e)=>{
     if(!state.img) return;
     e.preventDefault();
-    setEditing(true);
-
-    // lokasi mouse di koordinat canvas
     const rect = canvas.getBoundingClientRect();
-    const cx = (e.clientX - rect.left) * (canvas.width/rect.width);
-    const cy = (e.clientY - rect.top ) * (canvas.height/rect.height);
-
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const cx = (e.clientX - rect.left) * scaleX;
+    const cy = (e.clientY - rect.top ) * scaleY;
     const ds = Math.exp(-e.deltaY * 0.0015); // halus
+    setEditing(true);
     zoomAt(cx, cy, ds);
-
-    clearTimeout(stage._wheelTimer);
-    stage._wheelTimer = setTimeout(()=>setEditing(false), 200);
+    clearTimeout(canvas._wheelTimer);
+    canvas._wheelTimer = setTimeout(()=> setEditing(false), 200);
   }, {passive:false});
 
   function zoomAt(cx, cy, ds){
     const oldS = state.s;
     let newS = oldS * ds;
     newS = Math.max(0.3, Math.min(8, newS)); // clamp
-
-    // sesuaikan offset agar zoom mengunci di titik (cx, cy)
-    const k = newS/oldS;
+    const k = newS / oldS;
     state.x = cx - (cx - state.x) * k;
     state.y = cy - (cy - state.y) * k;
     state.s = newS;
     draw();
   }
 
-  // ==== Upload disabled saat editing → beri notifikasi kecil
+  // Upload disabled saat editing → toast
   let toastTimer;
   function showToast(){
     clearTimeout(toastTimer);
     toast.classList.remove('hidden');
-    toastTimer = setTimeout(()=>toast.classList.add('hidden'), 1200);
+    toastTimer = setTimeout(()=> toast.classList.add('hidden'), 1200);
   }
 
-  // ==== UNDuh → spinner 15 detik → ganti jadi Bagikan
-  downloadBtn.addEventListener('click', () => {
-    // tampilkan spinner + hitung mundur
+  // Unduh → spinner 15s → ganti ke Bagikan
+  downloadBtn.addEventListener('click', ()=>{
     downloadBtn.disabled = true;
     spinner.style.display = 'inline';
     let remaining = 15;
     secEl.textContent = remaining;
-
     const t = setInterval(()=>{
       remaining--;
       secEl.textContent = remaining;
-      if(remaining<=0){
+      if(remaining <= 0){
         clearInterval(t);
         spinner.style.display = 'none';
-
-        // unduh hasil (canvas sudah termasuk twibbon)
-        canvas.toBlob(blob => {
+        canvas.toBlob((blob)=>{
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
-          a.href = url;
-          a.download = 'twibbon.png';
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
+          a.href = url; a.download = 'twibbon.png';
+          document.body.appendChild(a); a.click(); a.remove();
           URL.revokeObjectURL(url);
-
-          // sembunyikan tombol unduh, tampilkan bagikan
           downloadBtn.classList.add('hidden');
           shareBtn.classList.remove('hidden');
         });
@@ -329,40 +284,29 @@
     }, 1000);
   });
 
-  // ==== Bagikan
-  shareBtn.addEventListener('click', async () => {
+  // Bagikan
+  shareBtn.addEventListener('click', async ()=>{
     if(!('share' in navigator) || !('canShare' in navigator)){
-      alert('Browser tidak mendukung Web Share API. File akan diunduh saja.');
-      // fallback: unduh lagi
-      canvas.toBlob(blob => {
+      alert('Browser tidak mendukung Web Share API. File akan diunduh.');
+      canvas.toBlob((blob)=>{
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = 'twibbon.png';
-        a.click();
+        a.href = url; a.download = 'twibbon.png'; a.click();
         URL.revokeObjectURL(url);
       });
       return;
     }
-    canvas.toBlob(async (blob) => {
+    canvas.toBlob(async (blob)=>{
       const file = new File([blob], 'twibbon.png', {type:'image/png'});
       try{
-        if(navigator.canShare && !navigator.canShare({files:[file]})){
-          throw new Error('Tidak bisa membagikan file.');
-        }
-        await navigator.share({
-          title: 'Twibbon Saya',
-          text: 'Hasil twibbon siap dibagikan!',
-          files: [file],
-        });
-      }catch(err){
-        // jika batal/tidak bisa share, tak apa
-        console.log(err);
-      }
+        if(navigator.canShare && !navigator.canShare({files:[file]})) throw new Error('Tidak bisa share file.');
+        await navigator.share({ title:'Twibbon Saya', text:'Hasil twibbon siap dibagikan!', files:[file] });
+      }catch(e){ console.log(e); }
     });
   });
 
-  // ==== Inisialisasi
+  // Render awal (twibbon default terlihat)
+  twibbonImg.onload = draw;
   draw();
 })();
 </script>
