@@ -118,7 +118,6 @@
     let profileImg = null;
     let twibbonImg = null;
 
-    // transform state
     let scale = 1;
     let offsetX = 0;
     let offsetY = 0;
@@ -126,7 +125,6 @@
     let lastX, lastY;
     let lastDistance = null;
 
-    // 🔹 fungsi cek aktifkan tombol
     function updateButtons() {
       if (profileImg && twibbonImg) {
         downloadBtn.disabled = false;
@@ -153,23 +151,6 @@
       }
     }
 
-    function handleDrop(dropZone, callback) {
-      dropZone.addEventListener('click', () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = "image/*";
-        input.onchange = e => {
-          loadImage(e.target.files[0], img => {
-            callback(img);
-            dropZone.classList.add("fade-out");
-            setTimeout(() => dropZone.style.display = "none", 500);
-            updateButtons(); 
-          });
-        };
-        input.click();
-      });
-    }
-
     function loadImage(file, callback) {
       if (!file) return;
       const reader = new FileReader();
@@ -182,41 +163,65 @@
     }
 
     // Foto profil
-    handleDrop(profileDrop, img => {
-      profileImg = img;
-      scale = canvas.width / img.width;
-      offsetX = 0;
-      offsetY = 0;
-      drawCanvas();
+    profileDrop.addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = "image/*";
+      input.onchange = e => {
+        loadImage(e.target.files[0], img => {
+          profileImg = img;
+          scale = canvas.width / img.width;
+          offsetX = 0;
+          offsetY = 0;
+          drawCanvas();
+          profileDrop.classList.add("fade-out");
+          setTimeout(() => profileDrop.style.display = "none", 500);
+          updateButtons();
+        });
+      };
+      input.click();
     });
 
     // Twibbon dengan validasi transparansi
-    handleDrop(twibbonDrop, img => {
-      const tempCanvas = document.createElement("canvas");
-      const tempCtx = tempCanvas.getContext("2d");
-      tempCanvas.width = img.width;
-      tempCanvas.height = img.height;
-      tempCtx.drawImage(img, 0, 0);
+    twibbonDrop.addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = "image/png";
+      input.onchange = e => {
+        loadImage(e.target.files[0], img => {
+          // cek transparansi dulu
+          const tempCanvas = document.createElement("canvas");
+          const tempCtx = tempCanvas.getContext("2d");
+          tempCanvas.width = img.width;
+          tempCanvas.height = img.height;
+          tempCtx.drawImage(img, 0, 0);
 
-      const imageData = tempCtx.getImageData(0, 0, img.width, img.height).data;
-      let hasTransparent = false;
-      for (let i = 3; i < imageData.length; i += 4) {
-        if (imageData[i] < 255) { 
-          hasTransparent = true;
-          break;
-        }
-      }
+          const imageData = tempCtx.getImageData(0, 0, img.width, img.height).data;
+          let hasTransparent = false;
+          for (let i = 3; i < imageData.length; i += 4) {
+            if (imageData[i] < 255) { 
+              hasTransparent = true;
+              break;
+            }
+          }
 
-      if (!hasTransparent) {
-        alert("⚠️ Twibbon harus memiliki bidang transparan (PNG dengan background transparan).");
-        return;
-      }
+          if (!hasTransparent) {
+            alert("⚠️ Twibbon harus memiliki bidang transparan (PNG dengan background transparan).");
+            return; // ❌ jangan lanjut, drop-zone tetap ada
+          }
 
-      twibbonImg = img;
-      drawCanvas();
+          // ✅ hanya lanjut kalau valid
+          twibbonImg = img;
+          drawCanvas();
+          twibbonDrop.classList.add("fade-out");
+          setTimeout(() => twibbonDrop.style.display = "none", 500);
+          updateButtons();
+        });
+      };
+      input.click();
     });
 
-    // Mouse drag
+    // --- Gestur drag & zoom ---
     canvas.addEventListener('mousedown', e => {
       isDragging = true;
       lastX = e.offsetX;
@@ -235,8 +240,6 @@
       isDragging = false;
       drawCanvas();
     });
-
-    // Wheel zoom
     canvas.addEventListener('wheel', e => {
       e.preventDefault();
       const scaleAmount = e.deltaY < 0 ? 1.05 : 0.95;
@@ -245,8 +248,6 @@
       clearTimeout(canvas._zoomTimeout);
       canvas._zoomTimeout = setTimeout(() => drawCanvas(), 200);
     });
-
-    // Touch gestures
     canvas.addEventListener('touchstart', e => {
       if (e.touches.length === 1) {
         isDragging = true;
@@ -296,12 +297,10 @@
         alert("⚠️ Silakan unggah foto dan twibbon terlebih dahulu sebelum mengunduh.");
         return;
       }
-
       const link = document.createElement('a');
       link.download = "twibbon.png";
       link.href = canvas.toDataURL("image/png");
       link.click();
-
       downloadBtn.style.display = "none";
       resetBtn.style.display = "block";
     });
@@ -312,24 +311,14 @@
         alert("⚠️ Silakan unggah foto dan twibbon terlebih dahulu sebelum membagikan.");
         return;
       }
-
       canvas.toBlob(async blob => {
         if (!blob) return alert("Gagal membuat gambar untuk dibagikan.");
         const file = new File([blob], "twibbon.png", { type: "image/png" });
-
         try {
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: "Twibbon Saya",
-              text: "Hasil twibbon saya"
-            });
+            await navigator.share({ files: [file], title: "Twibbon Saya", text: "Hasil twibbon saya" });
           } else if (navigator.share) {
-            await navigator.share({
-              title: "Twibbon Saya",
-              text: "Hasil twibbon saya",
-              url: canvas.toDataURL("image/png")
-            });
+            await navigator.share({ title: "Twibbon Saya", text: "Hasil twibbon saya", url: canvas.toDataURL("image/png") });
           } else {
             alert("Fitur share tidak didukung di browser ini.");
           }
@@ -351,14 +340,11 @@
       twibbonDrop.classList.remove("fade-out");
       profileDrop.style.display = "flex";
       twibbonDrop.style.display = "flex";
-
       downloadBtn.style.display = "block";
       resetBtn.style.display = "none";
-
-      updateButtons(); // reset tombol
+      updateButtons();
     });
 
-    // 🔹 awalnya tombol dinonaktifkan
     updateButtons();
   </script>
 </body>
