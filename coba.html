@@ -263,6 +263,38 @@
       resetBtn.style.display = "block";
     });
 
+
+    // Share
+document.getElementById('shareBtn').addEventListener('click', () => {
+  canvas.toBlob(async blob => {
+    if (!blob) return alert("Gagal membuat gambar untuk dibagikan.");
+
+    const file = new File([blob], "twibbon.png", { type: "image/png" });
+
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        // Share dengan file (mobile modern)
+        await navigator.share({
+          files: [file],
+          title: "Twibbon Saya",
+          text: "Hasil twibbon saya"
+        });
+      } else if (navigator.share) {
+        // Fallback: share sebagai URL (atau base64)
+        await navigator.share({
+          title: "Twibbon Saya",
+          text: "Hasil twibbon saya",
+          url: canvas.toDataURL("image/png")
+        });
+      } else {
+        alert("Fitur share tidak didukung di browser ini.");
+      }
+    } catch (err) {
+      console.error("Gagal share:", err);
+    }
+  }, "image/png");
+});
+
     // Reset
     resetBtn.addEventListener('click', () => {
       profileImg = null;
