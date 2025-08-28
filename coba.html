@@ -92,6 +92,7 @@
   <div class="controls">
     <button id="downloadBtn">Unduh</button>
     <button id="shareBtn">Bagikan</button>
+    <button id="resetBtn">Reset</button>
   </div>
 
   <script>
@@ -142,7 +143,7 @@
         const file = e.dataTransfer.files[0];
         loadImage(file, img => {
           callback(img);
-          dropZone.classList.add("hidden"); // hilangkan dropzone
+          dropZone.classList.add("hidden");
         });
       });
       dropZone.addEventListener('click', () => {
@@ -153,7 +154,7 @@
         input.onchange = e => {
           loadImage(e.target.files[0], img => {
             callback(img);
-            dropZone.classList.add("hidden"); // hilangkan dropzone
+            dropZone.classList.add("hidden");
           });
         };
         input.click();
@@ -276,6 +277,18 @@
           alert("Fitur share tidak didukung di browser ini.");
         }
       });
+    });
+
+    // Reset
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      profileImg = null;
+      twibbonImg = null;
+      scale = 1;
+      offsetX = 0;
+      offsetY = 0;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      profileDrop.classList.remove("hidden");
+      twibbonDrop.classList.remove("hidden");
     });
   </script>
 </body>
