@@ -117,6 +117,11 @@
     </div>
   </div>
 
+  <!-- Link alternatif unduh -->
+<p id="altDownload" style="display:none; margin-top:10px;">
+  Jika unduhan tidak dimulai otomatis, <a id="altDownloadLink" href="#" download="twibbon.png">klik disini</a>
+</p>
+
   <div class="controls">
     <button id="downloadBtn" disabled>Unduh</button>
     <button id="shareBtn" disabled>Bagikan</button>
@@ -327,6 +332,12 @@
         link.download = "twibbon.png";
         link.href = canvas.toDataURL("image/png");
         link.click();
+
+        // ⭐ tampilkan link alternatif
+        const altLink = document.getElementById("altDownloadLink");
+        altLink.href = dataURL;
+        document.getElementById("altDownload").style.display = "block";
+        
         downloadBtn.style.display = "none";
         resetBtn.style.display = "block";
       }, 15000);
