@@ -117,16 +117,16 @@
     </div>
   </div>
 
-  <!-- Link alternatif unduh -->
-<p id="altDownload" style="display:none; margin-top:10px;">
-  Jika unduhan tidak dimulai otomatis, <a id="altDownloadLink" href="#" download="twibbon.png">klik disini</a>
-</p>
-
   <div class="controls">
     <button id="downloadBtn" disabled>Unduh</button>
     <button id="shareBtn" disabled>Bagikan</button>
     <button id="resetBtn" style="display:none;">Reset</button>
   </div>
+
+  <!-- Link alternatif unduh -->
+  <p id="altDownload" style="display:none; margin-top:10px;">
+    <a id="altDownloadLink" href="#" download="twibbon.png">klik disini</a>
+  </p>
 
   <script>
     const canvas = document.getElementById('canvas');
@@ -150,7 +150,7 @@
     let lastX, lastY;
     let lastDistance = null;
 
-    let gesturesEnabled = true; // ⭐ kontrol aktif/nonaktif gestur
+    let gesturesEnabled = true;
 
     function updateButtons() {
       const ready = profileImg && twibbonImg;
@@ -324,20 +324,23 @@
         alert("⚠️ Silakan unggah foto dan twibbon terlebih dahulu sebelum mengunduh.");
         return;
       }
-      gesturesEnabled = false; // ⭐ nonaktifkan gesture
+      gesturesEnabled = false;
       overlay.style.display = "flex";
       setTimeout(() => {
         overlay.style.display = "none";
+        const dataURL = canvas.toDataURL("image/png");
+
+        // unduh otomatis
         const link = document.createElement('a');
         link.download = "twibbon.png";
-        link.href = canvas.toDataURL("image/png");
+        link.href = dataURL;
         link.click();
 
-        // ⭐ tampilkan link alternatif
+        // tampilkan link alternatif "klik disini"
         const altLink = document.getElementById("altDownloadLink");
         altLink.href = dataURL;
         document.getElementById("altDownload").style.display = "block";
-        
+
         downloadBtn.style.display = "none";
         resetBtn.style.display = "block";
       }, 15000);
@@ -382,7 +385,8 @@
 
       downloadBtn.style.display = "block";
       resetBtn.style.display = "none";
-      gesturesEnabled = true; // ⭐ aktifkan kembali gesture
+      gesturesEnabled = true;
+      document.getElementById("altDownload").style.display = "none"; // sembunyikan link alternatif
       updateButtons();
     });
 
