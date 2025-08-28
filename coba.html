@@ -13,38 +13,48 @@
       padding: 20px;
       background: #f5f5f5;
     }
-    .upload-container {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 15px;
+    .canvas-wrapper {
+      position: relative;
+      width: 320px;
+      aspect-ratio: 1 / 1;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      background: #eee;
+      border-radius: 12px;
+      touch-action: none;
     }
     .drop-zone {
-      flex: 1;
-      height: 120px;
-      border: 2px dashed #888;
-      border-radius: 10px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #fff;
-      cursor: pointer;
-      text-align: center;
+      color: #555;
       font-size: 14px;
-      transition: border-color 0.2s;
+      background: rgba(255,255,255,0.7);
+      border: 2px dashed #007bff;
+      border-bottom: none;
+      cursor: pointer;
+      transition: background 0.2s;
+      z-index: 2;
     }
-    canvas {
-      width: 320px;
-      height: 320px;
-      background: #eee;
-      border-radius: 10px;
-      margin: 15px 0;
-      touch-action: none;
+    .drop-zone.twibbon {
+      top: 50%;
+      border-top: 2px dashed #007bff;
+      border-bottom: 2px dashed #007bff;
     }
     .controls {
       display: flex;
       justify-content: center;
       gap: 10px;
-      margin-top: 10px;
+      margin-top: 15px;
       width: 320px;
     }
     button {
@@ -65,12 +75,11 @@
 <body>
   <h2>Twibbon Generator</h2>
 
-  <div class="upload-container">
-    <div id="profileDrop" class="drop-zone">Foto 1x1</div>
-    <div id="twibbonDrop" class="drop-zone">Twibbon PNG</div>
+  <div class="canvas-wrapper">
+    <canvas id="canvas" width="600" height="600"></canvas>
+    <div id="profileDrop" class="drop-zone">Upload Foto 1x1</div>
+    <div id="twibbonDrop" class="drop-zone twibbon">Upload Twibbon PNG</div>
   </div>
-
-  <canvas id="canvas" width="600" height="600"></canvas>
 
   <div class="controls">
     <button id="downloadBtn">Unduh</button>
@@ -90,8 +99,6 @@
     let offsetY = 0;
     let isDragging = false;
     let lastX, lastY;
-
-    // pinch zoom
     let lastDistance = null;
 
     function drawCanvas(isEditing = false) {
@@ -113,19 +120,19 @@
     function handleDrop(dropZone, callback) {
       dropZone.addEventListener('dragover', e => {
         e.preventDefault();
-        dropZone.style.borderColor = "#007bff";
+        dropZone.style.background = "rgba(0,123,255,0.1)";
       });
       dropZone.addEventListener('dragleave', () => {
-        dropZone.style.borderColor = "#888";
+        dropZone.style.background = "rgba(255,255,255,0.7)";
       });
       dropZone.addEventListener('drop', e => {
         e.preventDefault();
-        dropZone.style.borderColor = "#888";
+        dropZone.style.background = "rgba(255,255,255,0.7)";
         const file = e.dataTransfer.files[0];
         loadImage(file, callback);
       });
       dropZone.addEventListener('click', () => {
-        if (isDragging) return; 
+        if (isDragging) return;
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = "image/*";
@@ -160,7 +167,7 @@
       drawCanvas();
     });
 
-    // drag mouse
+    // mouse drag
     canvas.addEventListener('mousedown', e => {
       isDragging = true;
       lastX = e.offsetX;
@@ -180,7 +187,7 @@
       drawCanvas();
     });
 
-    // scroll zoom (desktop)
+    // wheel zoom
     canvas.addEventListener('wheel', e => {
       e.preventDefault();
       const scaleAmount = e.deltaY < 0 ? 1.05 : 0.95;
@@ -190,7 +197,7 @@
       canvas._zoomTimeout = setTimeout(() => drawCanvas(), 200);
     });
 
-    // touch gesture
+    // touch gestures
     canvas.addEventListener('touchstart', e => {
       if (e.touches.length === 1) {
         isDragging = true;
@@ -228,9 +235,9 @@
       }
     });
 
-    function getDistance(touch1, touch2) {
-      let dx = touch1.clientX - touch2.clientX;
-      let dy = touch1.clientY - touch2.clientY;
+    function getDistance(t1, t2) {
+      let dx = t1.clientX - t2.clientX;
+      let dy = t1.clientY - t2.clientY;
       return Math.sqrt(dx*dx + dy*dy);
     }
 
