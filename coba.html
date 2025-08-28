@@ -19,6 +19,8 @@
       aspect-ratio: 1 / 1;
       border-radius: 12px;
       overflow: hidden;
+      border: 2px dashed #007bff; /* border biru rata semua sisi */
+      background: rgba(255,255,255,0.7);
     }
     canvas {
       width: 100%;
@@ -38,22 +40,12 @@
       justify-content: center;
       color: #555;
       font-size: 14px;
-      background: rgba(255,255,255,0.7);
-      border: 2px dashed #007bff;
       cursor: pointer;
       transition: background 0.2s, opacity 0.3s;
       z-index: 2;
     }
-    .drop-zone.profile {
-      top: 0;
-      border-bottom: none;
-      border-radius: 12px 12px 0 0;
-    }
-    .drop-zone.twibbon {
-      top: 50%;
-      border-top: none;
-      border-radius: 0 0 12px 12px;
-    }
+    .drop-zone.profile { top: 0; }
+    .drop-zone.twibbon { top: 50%; }
     .drop-zone.hidden {
       opacity: 0;
       pointer-events: none;
@@ -75,9 +67,7 @@
       background: #007bff;
       color: white;
     }
-    button:hover {
-      background: #0056b3;
-    }
+    button:hover { background: #0056b3; }
   </style>
 </head>
 <body>
@@ -92,7 +82,7 @@
   <div class="controls">
     <button id="downloadBtn">Unduh</button>
     <button id="shareBtn">Bagikan</button>
-    <button id="resetBtn">Reset</button>
+    <button id="resetBtn" style="display:none;">Reset</button>
   </div>
 
   <script>
@@ -102,52 +92,29 @@
     const profileDrop = document.getElementById('profileDrop');
     const twibbonDrop = document.getElementById('twibbonDrop');
 
+    const downloadBtn = document.getElementById('downloadBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
     let profileImg = null;
     let twibbonImg = null;
-
-    // transform
-    let scale = 1;
-    let offsetX = 0;
-    let offsetY = 0;
-    let isDragging = false;
-    let lastX, lastY;
-    let lastDistance = null;
+    let scale = 1, offsetX = 0, offsetY = 0;
 
     function drawCanvas(isEditing = false) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
       if (profileImg) {
         let imgW = profileImg.width * scale;
         let imgH = profileImg.height * scale;
         ctx.drawImage(profileImg, offsetX, offsetY, imgW, imgH);
       }
-
       if (twibbonImg) {
-        ctx.globalAlpha = isEditing ? 0.5 : 1; 
+        ctx.globalAlpha = isEditing ? 0.5 : 1;
         ctx.drawImage(twibbonImg, 0, 0, canvas.width, canvas.height);
         ctx.globalAlpha = 1;
       }
     }
 
     function handleDrop(dropZone, callback) {
-      dropZone.addEventListener('dragover', e => {
-        e.preventDefault();
-        dropZone.style.background = "rgba(0,123,255,0.1)";
-      });
-      dropZone.addEventListener('dragleave', () => {
-        dropZone.style.background = "rgba(255,255,255,0.7)";
-      });
-      dropZone.addEventListener('drop', e => {
-        e.preventDefault();
-        dropZone.style.background = "rgba(255,255,255,0.7)";
-        const file = e.dataTransfer.files[0];
-        loadImage(file, img => {
-          callback(img);
-          dropZone.classList.add("hidden");
-        });
-      });
       dropZone.addEventListener('click', () => {
-        if (isDragging) return;
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = "image/*";
@@ -185,102 +152,20 @@
       drawCanvas();
     });
 
-    // mouse drag
-    canvas.addEventListener('mousedown', e => {
-      isDragging = true;
-      lastX = e.offsetX;
-      lastY = e.offsetY;
-    });
-    canvas.addEventListener('mousemove', e => {
-      if (isDragging) {
-        offsetX += e.offsetX - lastX;
-        offsetY += e.offsetY - lastY;
-        lastX = e.offsetX;
-        lastY = e.offsetY;
-        drawCanvas(true);
-      }
-    });
-    canvas.addEventListener('mouseup', () => {
-      isDragging = false;
-      drawCanvas();
-    });
-
-    // wheel zoom
-    canvas.addEventListener('wheel', e => {
-      e.preventDefault();
-      const scaleAmount = e.deltaY < 0 ? 1.05 : 0.95;
-      scale *= scaleAmount;
-      drawCanvas(true);
-      clearTimeout(canvas._zoomTimeout);
-      canvas._zoomTimeout = setTimeout(() => drawCanvas(), 200);
-    });
-
-    // touch gestures
-    canvas.addEventListener('touchstart', e => {
-      if (e.touches.length === 1) {
-        isDragging = true;
-        lastX = e.touches[0].clientX;
-        lastY = e.touches[0].clientY;
-      } else if (e.touches.length === 2) {
-        lastDistance = getDistance(e.touches[0], e.touches[1]);
-      }
-    });
-    canvas.addEventListener('touchmove', e => {
-      e.preventDefault();
-      if (e.touches.length === 1 && isDragging) {
-        let dx = e.touches[0].clientX - lastX;
-        let dy = e.touches[0].clientY - lastY;
-        offsetX += dx;
-        offsetY += dy;
-        lastX = e.touches[0].clientX;
-        lastY = e.touches[0].clientY;
-        drawCanvas(true);
-      } else if (e.touches.length === 2) {
-        let newDistance = getDistance(e.touches[0], e.touches[1]);
-        if (lastDistance) {
-          let scaleAmount = newDistance / lastDistance;
-          scale *= scaleAmount;
-          lastDistance = newDistance;
-          drawCanvas(true);
-        }
-      }
-    });
-    canvas.addEventListener('touchend', e => {
-      if (e.touches.length === 0) {
-        isDragging = false;
-        lastDistance = null;
-        drawCanvas();
-      }
-    });
-
-    function getDistance(t1, t2) {
-      let dx = t1.clientX - t2.clientX;
-      let dy = t1.clientY - t2.clientY;
-      return Math.sqrt(dx*dx + dy*dy);
-    }
-
     // Download
-    document.getElementById('downloadBtn').addEventListener('click', () => {
+    downloadBtn.addEventListener('click', () => {
       const link = document.createElement('a');
       link.download = "twibbon.png";
       link.href = canvas.toDataURL("image/png");
       link.click();
-    });
 
-    // Share
-    document.getElementById('shareBtn').addEventListener('click', async () => {
-      canvas.toBlob(async blob => {
-        const file = new File([blob], "twibbon.png", { type: "image/png" });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: "Twibbon Saya" });
-        } else {
-          alert("Fitur share tidak didukung di browser ini.");
-        }
-      });
+      // toggle tombol
+      downloadBtn.style.display = "none";
+      resetBtn.style.display = "block";
     });
 
     // Reset
-    document.getElementById('resetBtn').addEventListener('click', () => {
+    resetBtn.addEventListener('click', () => {
       profileImg = null;
       twibbonImg = null;
       scale = 1;
@@ -289,6 +174,10 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       profileDrop.classList.remove("hidden");
       twibbonDrop.classList.remove("hidden");
+
+      // toggle tombol
+      downloadBtn.style.display = "block";
+      resetBtn.style.display = "none";
     });
   </script>
 </body>
