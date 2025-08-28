@@ -27,7 +27,7 @@
       height: 100%;
       background: #eee;
       border-radius: 12px;
-      touch-action: none; /* penting agar gesture custom jalan */
+      touch-action: none;
       display: block;
     }
     .drop-zone {
@@ -76,7 +76,6 @@
       cursor: not-allowed;
     }
 
-    /* Overlay spinner */
     .overlay {
       position: absolute;
       inset: 0;
@@ -112,7 +111,6 @@
     <div id="profileDrop" class="drop-zone profile">Upload Foto 1x1</div>
     <div id="twibbonDrop" class="drop-zone twibbon">Upload Twibbon PNG</div>
 
-    <!-- Overlay proses unduh -->
     <div id="overlay" class="overlay" style="display:none;">
       <div class="spinner"></div>
       <span>Sedang proses...</span>
@@ -140,7 +138,6 @@
     let profileImg = null;
     let twibbonImg = null;
 
-    // Transform/gesture state
     let scale = 1;
     let offsetX = 0;
     let offsetY = 0;
@@ -148,8 +145,7 @@
     let lastX, lastY;
     let lastDistance = null;
 
-      // ⭐ flag untuk kontrol gesture
-    let gesturesEnabled = true;
+    let gesturesEnabled = true; // ⭐ kontrol aktif/nonaktif gestur
 
     function updateButtons() {
       const ready = profileImg && twibbonImg;
@@ -159,13 +155,11 @@
 
     function drawCanvas(isEditing = false) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
       if (profileImg) {
         const imgW = profileImg.width * scale;
         const imgH = profileImg.height * scale;
         ctx.drawImage(profileImg, offsetX, offsetY, imgW, imgH);
       }
-
       if (twibbonImg) {
         ctx.globalAlpha = isEditing ? 0.5 : 1;
         ctx.drawImage(twibbonImg, 0, 0, canvas.width, canvas.height);
@@ -192,7 +186,7 @@
       input.onchange = e => {
         loadImage(e.target.files[0], img => {
           profileImg = img;
-          scale = canvas.width / img.width; // fit awal
+          scale = canvas.width / img.width;
           offsetX = 0;
           offsetY = 0;
           drawCanvas();
@@ -204,14 +198,13 @@
       input.click();
     });
 
-    // Upload Twibbon (harus PNG transparan)
+    // Upload Twibbon
     twibbonDrop.addEventListener('click', () => {
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = "image/png";
       input.onchange = e => {
         loadImage(e.target.files[0], img => {
-          // Cek transparansi
           const tempCanvas = document.createElement("canvas");
           const tempCtx = tempCanvas.getContext("2d");
           tempCanvas.width = img.width;
@@ -223,12 +216,10 @@
           for (let i = 3; i < data.length; i += 4) {
             if (data[i] < 255) { hasTransparent = true; break; }
           }
-
           if (!hasTransparent) {
             alert("⚠️ Twibbon harus memiliki bidang transparan (PNG transparan).");
-            return; // Drop-zone tidak disembunyikan
+            return;
           }
-
           twibbonImg = img;
           drawCanvas();
           twibbonDrop.classList.add("fade-out");
@@ -239,14 +230,15 @@
       input.click();
     });
 
-    // ====== Gestur: drag 1 jari / mouse & pinch zoom 2 jari ======
-    // Mouse drag
+    // ====== Gestur drag & zoom ======
     canvas.addEventListener('mousedown', e => {
+      if (!gesturesEnabled) return;
       isDragging = true;
       lastX = e.offsetX;
       lastY = e.offsetY;
     });
     canvas.addEventListener('mousemove', e => {
+      if (!gesturesEnabled) return;
       if (!isDragging) return;
       offsetX += e.offsetX - lastX;
       offsetY += e.offsetY - lastY;
@@ -255,15 +247,16 @@
       drawCanvas(true);
     });
     canvas.addEventListener('mouseup', () => {
+      if (!gesturesEnabled) return;
       isDragging = false;
       drawCanvas();
     });
     canvas.addEventListener('mouseleave', () => {
+      if (!gesturesEnabled) return;
       isDragging = false;
     });
-
-    // Wheel zoom
     canvas.addEventListener('wheel', e => {
+      if (!gesturesEnabled) return;
       e.preventDefault();
       const scaleAmount = e.deltaY < 0 ? 1.05 : 0.95;
       scale *= scaleAmount;
@@ -272,8 +265,8 @@
       canvas._zoomTimeout = setTimeout(() => drawCanvas(), 200);
     }, { passive: false });
 
-    // Touch gestures
     canvas.addEventListener('touchstart', e => {
+      if (!gesturesEnabled) return;
       if (e.touches.length === 1) {
         isDragging = true;
         lastX = e.touches[0].clientX;
@@ -284,6 +277,7 @@
     }, { passive: false });
 
     canvas.addEventListener('touchmove', e => {
+      if (!gesturesEnabled) return;
       e.preventDefault();
       if (e.touches.length === 1 && isDragging) {
         const dx = e.touches[0].clientX - lastX;
@@ -305,6 +299,7 @@
     }, { passive: false });
 
     canvas.addEventListener('touchend', e => {
+      if (!gesturesEnabled) return;
       if (e.touches.length === 0) {
         isDragging = false;
         lastDistance = null;
@@ -317,14 +312,14 @@
       const dy = t1.clientY - t2.clientY;
       return Math.hypot(dx, dy);
     }
-    // ====== End Gestur ======
 
-    // Download + overlay spinner 15 detik
+    // Download
     downloadBtn.addEventListener('click', () => {
       if (!profileImg || !twibbonImg) {
         alert("⚠️ Silakan unggah foto dan twibbon terlebih dahulu sebelum mengunduh.");
         return;
       }
+      gesturesEnabled = false; // ⭐ nonaktifkan gesture
       overlay.style.display = "flex";
       setTimeout(() => {
         overlay.style.display = "none";
@@ -334,7 +329,7 @@
         link.click();
         downloadBtn.style.display = "none";
         resetBtn.style.display = "block";
-      }, 15000); // 15 detik
+      }, 15000);
     });
 
     // Share
@@ -380,7 +375,6 @@
       updateButtons();
     });
 
-    // init
     updateButtons();
   </script>
 </body>
