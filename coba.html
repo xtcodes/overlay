@@ -148,6 +148,9 @@
     let lastX, lastY;
     let lastDistance = null;
 
+      // ⭐ flag untuk kontrol gesture
+    let gesturesEnabled = true;
+
     function updateButtons() {
       const ready = profileImg && twibbonImg;
       downloadBtn.disabled = !ready;
@@ -373,6 +376,7 @@
 
       downloadBtn.style.display = "block";
       resetBtn.style.display = "none";
+      gesturesEnabled = true; // ⭐ aktifkan kembali gesture
       updateButtons();
     });
 
