@@ -13,23 +13,28 @@
       padding: 20px;
       background: #f5f5f5;
     }
+    .upload-container {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
     .drop-zone {
-      width: 300px;
-      height: 300px;
+      flex: 1;
+      height: 120px;
       border: 2px dashed #888;
       border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 10px;
       background: #fff;
       cursor: pointer;
       text-align: center;
       font-size: 14px;
+      transition: border-color 0.2s;
     }
     canvas {
-      width: 300px;
-      height: 300px;
+      width: 320px;
+      height: 320px;
       background: #eee;
       border-radius: 10px;
       margin: 15px 0;
@@ -39,7 +44,8 @@
       display: flex;
       justify-content: center;
       gap: 10px;
-      margin-top: 15px;
+      margin-top: 10px;
+      width: 320px;
     }
     button {
       flex: 1;
@@ -59,8 +65,10 @@
 <body>
   <h2>Twibbon Generator</h2>
 
-  <div id="profileDrop" class="drop-zone">Drop/Upload Gambar 1x1</div>
-  <div id="twibbonDrop" class="drop-zone">Drop/Upload Twibbon PNG</div>
+  <div class="upload-container">
+    <div id="profileDrop" class="drop-zone">Foto 1x1</div>
+    <div id="twibbonDrop" class="drop-zone">Twibbon PNG</div>
+  </div>
 
   <canvas id="canvas" width="600" height="600"></canvas>
 
@@ -76,12 +84,15 @@
     let profileImg = null;
     let twibbonImg = null;
 
-    // Transform properties
+    // transform
     let scale = 1;
     let offsetX = 0;
     let offsetY = 0;
     let isDragging = false;
-    let startX, startY;
+    let lastX, lastY;
+
+    // pinch zoom
+    let lastDistance = null;
 
     function drawCanvas(isEditing = false) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -93,7 +104,7 @@
       }
 
       if (twibbonImg) {
-        ctx.globalAlpha = isEditing ? 0.5 : 1; // transparan saat edit
+        ctx.globalAlpha = isEditing ? 0.5 : 1; 
         ctx.drawImage(twibbonImg, 0, 0, canvas.width, canvas.height);
         ctx.globalAlpha = 1;
       }
@@ -114,7 +125,7 @@
         loadImage(file, callback);
       });
       dropZone.addEventListener('click', () => {
-        if (isDragging) return; // disable upload saat edit
+        if (isDragging) return; 
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = "image/*";
@@ -149,16 +160,18 @@
       drawCanvas();
     });
 
-    // Drag and zoom
+    // drag mouse
     canvas.addEventListener('mousedown', e => {
       isDragging = true;
-      startX = e.offsetX - offsetX;
-      startY = e.offsetY - offsetY;
+      lastX = e.offsetX;
+      lastY = e.offsetY;
     });
     canvas.addEventListener('mousemove', e => {
       if (isDragging) {
-        offsetX = e.offsetX - startX;
-        offsetY = e.offsetY - startY;
+        offsetX += e.offsetX - lastX;
+        offsetY += e.offsetY - lastY;
+        lastX = e.offsetX;
+        lastY = e.offsetY;
         drawCanvas(true);
       }
     });
@@ -166,12 +179,60 @@
       isDragging = false;
       drawCanvas();
     });
+
+    // scroll zoom (desktop)
     canvas.addEventListener('wheel', e => {
       e.preventDefault();
       const scaleAmount = e.deltaY < 0 ? 1.05 : 0.95;
       scale *= scaleAmount;
       drawCanvas(true);
+      clearTimeout(canvas._zoomTimeout);
+      canvas._zoomTimeout = setTimeout(() => drawCanvas(), 200);
     });
+
+    // touch gesture
+    canvas.addEventListener('touchstart', e => {
+      if (e.touches.length === 1) {
+        isDragging = true;
+        lastX = e.touches[0].clientX;
+        lastY = e.touches[0].clientY;
+      } else if (e.touches.length === 2) {
+        lastDistance = getDistance(e.touches[0], e.touches[1]);
+      }
+    });
+    canvas.addEventListener('touchmove', e => {
+      e.preventDefault();
+      if (e.touches.length === 1 && isDragging) {
+        let dx = e.touches[0].clientX - lastX;
+        let dy = e.touches[0].clientY - lastY;
+        offsetX += dx;
+        offsetY += dy;
+        lastX = e.touches[0].clientX;
+        lastY = e.touches[0].clientY;
+        drawCanvas(true);
+      } else if (e.touches.length === 2) {
+        let newDistance = getDistance(e.touches[0], e.touches[1]);
+        if (lastDistance) {
+          let scaleAmount = newDistance / lastDistance;
+          scale *= scaleAmount;
+          lastDistance = newDistance;
+          drawCanvas(true);
+        }
+      }
+    });
+    canvas.addEventListener('touchend', e => {
+      if (e.touches.length === 0) {
+        isDragging = false;
+        lastDistance = null;
+        drawCanvas();
+      }
+    });
+
+    function getDistance(touch1, touch2) {
+      let dx = touch1.clientX - touch2.clientX;
+      let dy = touch1.clientY - touch2.clientY;
+      return Math.sqrt(dx*dx + dy*dy);
+    }
 
     // Download
     document.getElementById('downloadBtn').addEventListener('click', () => {
