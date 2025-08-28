@@ -19,7 +19,7 @@
       aspect-ratio: 1 / 1;
       border-radius: 12px;
       overflow: hidden;
-      border: 2px dashed #007bff; /* border biru rata */
+      border: 2px dashed #007bff;
       background: #eee;
     }
     canvas {
@@ -42,25 +42,25 @@
       font-weight: bold;
       color: #fff;
       cursor: pointer;
-      transition: background 0.3s, opacity 0.3s;
       z-index: 2;
       text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+      transition: background 0.3s, opacity 0.5s ease;
     }
     .drop-zone.profile {
       top: 0;
-      background: rgba(0,123,255,0.4); /* overlay biru */
+      background: rgba(0,123,255,0.4);
     }
     .drop-zone.profile:hover {
-      background: rgba(0,123,255,0.6); /* lebih gelap saat hover */
+      background: rgba(0,123,255,0.6);
     }
     .drop-zone.twibbon {
       top: 50%;
-      background: rgba(40,167,69,0.4); /* overlay hijau */
+      background: rgba(40,167,69,0.4);
     }
     .drop-zone.twibbon:hover {
-      background: rgba(40,167,69,0.6); /* lebih gelap saat hover */
+      background: rgba(40,167,69,0.6);
     }
-    .drop-zone.hidden {
+    .drop-zone.fade-out {
       opacity: 0;
       pointer-events: none;
     }
@@ -145,7 +145,9 @@
         input.onchange = e => {
           loadImage(e.target.files[0], img => {
             callback(img);
-            dropZone.classList.add("hidden");
+            // animasi fade-out
+            dropZone.classList.add("fade-out");
+            setTimeout(() => dropZone.style.display = "none", 500);
           });
         };
         input.click();
@@ -269,8 +271,10 @@
       offsetX = 0;
       offsetY = 0;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      profileDrop.classList.remove("hidden");
-      twibbonDrop.classList.remove("hidden");
+      profileDrop.classList.remove("fade-out");
+      twibbonDrop.classList.remove("fade-out");
+      profileDrop.style.display = "flex";
+      twibbonDrop.style.display = "flex";
 
       downloadBtn.style.display = "block";
       resetBtn.style.display = "none";
