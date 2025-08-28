@@ -42,7 +42,7 @@
       font-weight: bold;
       color: #fff;
       cursor: pointer;
-      transition: background 0.2s, opacity 0.3s;
+      transition: background 0.3s, opacity 0.3s;
       z-index: 2;
       text-shadow: 0 1px 2px rgba(0,0,0,0.5);
     }
@@ -50,9 +50,15 @@
       top: 0;
       background: rgba(0,123,255,0.4); /* overlay biru */
     }
+    .drop-zone.profile:hover {
+      background: rgba(0,123,255,0.6); /* lebih gelap saat hover */
+    }
     .drop-zone.twibbon {
       top: 50%;
       background: rgba(40,167,69,0.4); /* overlay hijau */
+    }
+    .drop-zone.twibbon:hover {
+      background: rgba(40,167,69,0.6); /* lebih gelap saat hover */
     }
     .drop-zone.hidden {
       opacity: 0;
@@ -74,6 +80,7 @@
       cursor: pointer;
       background: #007bff;
       color: white;
+      transition: background 0.2s;
     }
     button:hover { background: #0056b3; }
   </style>
