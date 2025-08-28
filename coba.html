@@ -163,7 +163,7 @@
             callback(img);
             dropZone.classList.add("fade-out");
             setTimeout(() => dropZone.style.display = "none", 500);
-            updateButtons(); // cek tombol setiap upload
+            updateButtons(); 
           });
         };
         input.click();
@@ -181,6 +181,7 @@
       reader.readAsDataURL(file);
     }
 
+    // Foto profil
     handleDrop(profileDrop, img => {
       profileImg = img;
       scale = canvas.width / img.width;
@@ -189,7 +190,28 @@
       drawCanvas();
     });
 
+    // Twibbon dengan validasi transparansi
     handleDrop(twibbonDrop, img => {
+      const tempCanvas = document.createElement("canvas");
+      const tempCtx = tempCanvas.getContext("2d");
+      tempCanvas.width = img.width;
+      tempCanvas.height = img.height;
+      tempCtx.drawImage(img, 0, 0);
+
+      const imageData = tempCtx.getImageData(0, 0, img.width, img.height).data;
+      let hasTransparent = false;
+      for (let i = 3; i < imageData.length; i += 4) {
+        if (imageData[i] < 255) { 
+          hasTransparent = true;
+          break;
+        }
+      }
+
+      if (!hasTransparent) {
+        alert("⚠️ Twibbon harus memiliki bidang transparan (PNG dengan background transparan).");
+        return;
+      }
+
       twibbonImg = img;
       drawCanvas();
     });
