@@ -206,7 +206,7 @@
 
       const margin = tempCanvas.width * 0.02; 
       const padding = tempCanvas.width * 0.015;
-      const fontSize = tempCanvas.width * 0.035; 
+      const fontSize = tempCanvas.width * 0.025; 
       const text = "Twibbon by Ferry Ayunda";
       tempCtx.font = `${fontSize}px Arial`;
       const textWidth = tempCtx.measureText(text).width;
@@ -275,7 +275,7 @@
             if (data[i] < 255) { hasTransparent = true; break; }
           }
           if (!hasTransparent) {
-            alert("⚠️ Twibbon harus memiliki bidang transparan (PNG transparan).");
+            alert("⚠️ Twibbon harus memiliki bidang transparan.");
             return;
           }
           twibbonImg = img;
