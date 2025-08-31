@@ -209,6 +209,7 @@
       const fontSize = tempCanvas.width * 0.020; 
       const text = "Twibbon by Ferry Ayunda";
       tempCtx.font = `${fontSize}px Arial`;
+      tempCtx.textBaseline = "middle"; 
       const textWidth = tempCtx.measureText(text).width;
       const textHeight = fontSize * 1.2;
       const boxX = tempCanvas.width - textWidth - padding * 2 - margin;
