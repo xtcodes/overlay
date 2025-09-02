@@ -118,6 +118,25 @@
   </style>
 </head>
 <body>
+  <!-- Tutorial Popup -->
+  <div id="tutorial" class="tutorial-overlay" style="display:none;">
+    <div class="tutorial-box">
+      <h3>📌 Cara Menggunakan Twibbon Generator</h3>
+      <p>1️⃣ Klik <b>Upload Foto</b> untuk menambahkan foto profil Anda.</p>
+      <p>2️⃣ Klik <b>Upload Twibbon</b> untuk memilih bingkai twibbon (PNG transparan).</p>
+      <p>3️⃣ Atur posisi & perbesar/kecilkan foto dengan mouse atau jari.</p>
+      <p>4️⃣ Klik <b>Unduh</b> untuk menyimpan hasil twibbon.</p>
+      <p>5️⃣ Klik <b>Bagikan</b> untuk langsung membagikan hasil.</p>
+      
+      <div class="tutorial-footer">
+        <label>
+          <input type="checkbox" id="dontShowAgain"> Jangan tampilkan lagi
+        </label>
+        <button onclick="closeTutorial()">Mengerti 👍</button>
+      </div>
+    </div>
+  </div>
+  
   <main>
   <h2>Twibbon Generator</h2>
   <p>Ini adalah situs web tempat Anda dapat menambahkan foto dalam bingkai.</p>
@@ -436,6 +455,22 @@
     });
 
     updateButtons();
+
+    // Tampilkan tutorial jika belum pernah dicentang "jangan tampilkan lagi"
+    window.addEventListener("DOMContentLoaded", () => {
+      const hideTutorial = localStorage.getItem("hideTutorial");
+      if (!hideTutorial) {
+        document.getElementById("tutorial").style.display = "flex";
+      }
+    });
+
+    function closeTutorial() {
+      const dontShow = document.getElementById("dontShowAgain").checked;
+      if (dontShow) {
+        localStorage.setItem("hideTutorial", "true");
+      }
+      document.getElementById("tutorial").style.display = "none";
+        }
   </script>
 </body>
 </html>
