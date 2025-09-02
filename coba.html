@@ -116,60 +116,83 @@
       }
     }
 
-    .tutorial-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
+  /* === CSS modal tutorial responsif === */
+  .tutorial-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1em;
+    overflow-y: auto; /* biar bisa discroll di layar kecil */
+  }
+  .tutorial-box {
+    background: #fff;
+    padding: 1.5em;
+    width: 100%;
+    max-width: 500px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  .tutorial-box h3 {
+    margin-top: 0;
+    font-size: 1.2em;
+  }
+  .tutorial-box p {
+    text-align: left;
+    font-size: 0.9em;
+    margin: 0.5em 0;
+    line-height: 1.4;
+  }
+  .tutorial-footer {
+    margin-top: 1.5em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .tutorial-footer label {
+    font-size: 0.85em;
+    color: #333;
+    cursor: pointer;
+  }
+  .tutorial-box button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    background: #007bff;
+    color: white;
+    font-size: 0.95em;
+    cursor: pointer;
+  }
+  .tutorial-box button:hover {
+    background: #0056b3;
+  }
+  @keyframes fadeIn {
+    from {opacity: 0; transform: scale(0.9);}
+    to {opacity: 1; transform: scale(1);}
+  }
+
+  /* Responsive khusus layar kecil */
+  @media (max-width: 480px) {
     .tutorial-box {
-      background: #fff;
-      padding: 2em;
-      max-width: 100%;
-      border-radius: 10px;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      animation: fadeIn 0.3s ease-in-out;
+      padding: 1em;
+      font-size: 0.85em;
     }
     .tutorial-box h3 {
-      margin-top: 0;
+      font-size: 1em;
     }
     .tutorial-box p {
-      text-align: left;
-      font-size: 14px;
-      margin: 0.5em 0;
-    }
-    .tutorial-footer {
-      margin-top: 1.5em;
-      display: flex;
-      flex-direction: column;
-    /*  align-items: center; */
-      gap: 10px;
-    }
-    .tutorial-footer label {
-      font-size: 13px;
-      color: #333;
-      cursor: pointer;
+      font-size: 0.85em;
     }
     .tutorial-box button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 6px;
-      background: #007bff;
-      color: white;
-      font-size: 15px;
-      cursor: pointer;
+      width: 100%;
     }
-    .tutorial-box button:hover {
-      background: #0056b3;
-    }
-    @keyframes fadeIn {
-      from {opacity: 0; transform: scale(0.9);}
-      to {opacity: 1; transform: scale(1);}
-      }
+  }
   </style>
 </head>
 <body>
