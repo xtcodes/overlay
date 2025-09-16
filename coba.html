@@ -438,7 +438,7 @@ return;
 }
 const finalCanvas = renderFinalImage();
 finalCanvas.toBlob(async blob => {
-if (!blob) return alert("Gagal membuat gambar untuk dibagikan.");
+if (!blob) return showNotification("Gagal membuat gambar untuk dibagikan.");
 const file = new File([blob], "twibbon.png", { type: "image/png" });
 try {
 if (navigator.canShare && navigator.canShare({ files: [file] })) {
