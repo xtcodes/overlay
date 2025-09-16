@@ -117,105 +117,9 @@
         width: auto;
       }
     }
-
-  /* === CSS modal tutorial responsif === */
-  .tutorial-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 1em;
-    overflow-y: auto; /* biar bisa discroll di layar kecil */
-  }
-  .tutorial-box {
-    background: #fff;
-    padding: 1.5em;
-    width: 100%;
-    max-width: 500px;
-    border-radius: 10px;
-    text-align: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    animation: fadeIn 0.3s ease-in-out;
-  }
-  .tutorial-box h3 {
-    margin-top: 0;
-    font-size: 1.2em;
-  }
-  .tutorial-box p {
-    text-align: left;
-    font-size: 0.9em;
-    margin: 0.5em 0;
-    line-height: 1.4;
-  }
-  .tutorial-footer {
-    margin-top: 1.5em;
-    display: flex;
-    flex-direction: column;
-   /* align-items: center; */
-    gap: 10px;
-  }
-  .tutorial-footer label {
-    font-size: 0.85em;
-    color: #333;
-    cursor: pointer;
-  }
-  .tutorial-box button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
-    background: #007bff;
-    color: white;
-    font-size: 0.95em;
-    cursor: pointer;
-  }
-  .tutorial-box button:hover {
-    background: #0056b3;
-  }
-  @keyframes fadeIn {
-    from {opacity: 0; transform: scale(0.9);}
-    to {opacity: 1; transform: scale(1);}
-  }
-
-  /* Responsive khusus layar kecil */
-  @media (max-width: 480px) {
-    .tutorial-box {
-      padding: 1em;
-      font-size: 0.85em;
-    }
-    .tutorial-box h3 {
-      font-size: 1em;
-    }
-    .tutorial-box p {
-      font-size: 0.85em;
-    }
-    .tutorial-box button {
-      width: 100%;
-    }
-  }
   </style>
 </head>
 <body>
-  <!-- Tutorial Popup -->
-  <div id="tutorial" class="tutorial-overlay" style="display:none;">
-    <div class="tutorial-box">
-      <h3>📌 Cara Menggunakan Twibbon Generator</h3>
-      <p>1️⃣ Klik <b>Upload Foto</b> untuk menambahkan foto profil Anda.</p>
-      <p>2️⃣ Klik <b>Upload Twibbon</b> untuk memilih bingkai twibbon (PNG transparan).</p>
-      <p>3️⃣ Atur posisi & perbesar/kecilkan foto dengan mouse atau jari.</p>
-      <p>4️⃣ Klik <b>Unduh</b> untuk menyimpan hasil twibbon.</p>
-      <p>5️⃣ Klik <b>Bagikan</b> untuk langsung membagikan hasil.</p>
-      
-      <div class="tutorial-footer">
-        <label>
-          <input type="checkbox" id="dontShowAgain"> Jangan tampilkan lagi
-        </label>
-        <button onclick="closeTutorial()">Mengerti 👍</button>
-      </div>
-    </div>
-  </div>
   
   <main>
   <h2>Twibbon Generator</h2>
@@ -535,22 +439,6 @@
     });
 
     updateButtons();
-
-    // Tampilkan tutorial jika belum pernah dicentang "jangan tampilkan lagi"
-    window.addEventListener("DOMContentLoaded", () => {
-      const hideTutorial = localStorage.getItem("hideTutorial");
-      if (!hideTutorial) {
-        document.getElementById("tutorial").style.display = "flex";
-      }
-    });
-
-    function closeTutorial() {
-      const dontShow = document.getElementById("dontShowAgain").checked;
-      if (dontShow) {
-        localStorage.setItem("hideTutorial", "true");
-      }
-      document.getElementById("tutorial").style.display = "none";
-        }
   </script>
 </body>
 </html>
