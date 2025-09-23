@@ -44,8 +44,8 @@
 
     .btn img { width: 16px; height: 16px; }
 
-    /* Tombol upload di luar canvas */
-    #uploadUserBtn, #uploadTwibbonBtn {
+    /* Tombol upload pertama di luar canvas */
+    #uploadUserBtn {
       position: fixed;
       right: 20px;
       bottom: 20px;
@@ -53,9 +53,15 @@
       color: white;
       font-size: 14px;
     }
-    #uploadTwibbonBtn { background: #28a745; }
 
     /* Tombol di dalam canvas */
+    #uploadTwibbonBtn {
+      left: 10px;
+      bottom: 10px;
+      background: #28a745;
+      color: white;
+    }
+
     #downloadBtn {
       left: 10px;
       bottom: 10px;
@@ -106,12 +112,9 @@
   <input type="file" id="userFile" accept="image/*" class="hidden">
   <input type="file" id="twibbonFile" accept="image/*" class="hidden">
 
-  <!-- Tombol upload -->
+  <!-- Tombol upload pertama -->
   <button id="uploadUserBtn" class="btn">
     <img src="https://img.icons8.com/ios-filled/50/image.png" alt="gambar"> Unggah Gambar
-  </button>
-  <button id="uploadTwibbonBtn" class="btn hidden">
-    <img src="https://img.icons8.com/ios-filled/50/layers.png" alt="layer"> Unggah Twibbon
   </button>
 
   <div id="loading">
@@ -123,6 +126,10 @@
   <div class="canvas-container">
     <canvas id="canvas"></canvas>
 
+    <button id="uploadTwibbonBtn" class="btn hidden">
+      <img src="https://img.icons8.com/ios-filled/50/layers.png" alt="layer"> Unggah Twibbon
+    </button>
+
     <button id="downloadBtn" class="btn hidden">
       <img src="https://img.icons8.com/ios-filled/50/download.png" alt="unduh"> Unduh
     </button>
@@ -130,7 +137,7 @@
       <img src="https://img.icons8.com/ios-filled/50/share.png" alt="bagikan"> Bagikan
     </button>
     <button id="reloadBtn" class="btn hidden">
-      <img src="https://img.icons8.com/ios-filled/50/restart.png" alt="ulang"> Ulangi
+      <img src="https://img.icons8.com/ios-filled/50/restart.png" alt="ulang"> Muat Ulang
     </button>
   </div>
 
@@ -173,7 +180,6 @@
         uploadTwibbonBtn.classList.add("hidden");
         loading.style.display = "flex";
 
-        // proses setelah gambar siap
         setTimeout(() => {
           // set ukuran canvas mengikuti twibbon
           canvas.width = twibbonImg.width;
