@@ -13,49 +13,65 @@
 
     .hidden { display: none; }
 
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      margin: 20px auto;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
     .btn {
-      position: fixed;
-      bottom: 20px;
-      padding: 10px 14px;
+      position: absolute;
+      padding: 8px 12px;
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 13px;
       display: flex;
       align-items: center;
-      gap: 6px;
-      z-index: 100;
+      gap: 5px;
     }
 
-    .btn img { width: 18px; height: 18px; }
+    .btn img { width: 16px; height: 16px; }
 
-    #uploadUserBtn {
+    /* Tombol upload di luar canvas */
+    #uploadUserBtn, #uploadTwibbonBtn {
+      position: fixed;
       right: 20px;
+      bottom: 20px;
       background: #007bff;
       color: white;
+      font-size: 14px;
     }
+    #uploadTwibbonBtn { background: #28a745; }
 
-    #uploadTwibbonBtn {
-      right: 20px;
-      background: #28a745;
-      color: white;
-    }
-
+    /* Tombol di dalam canvas */
     #downloadBtn {
-      left: 20px;
+      left: 10px;
+      bottom: 10px;
       background: #17a2b8;
       color: white;
     }
 
     #shareBtn {
-      right: 70px;
+      right: 60px;
+      bottom: 10px;
       background: #ffc107;
       color: black;
     }
 
     #reloadBtn {
-      right: 20px;
-      bottom: 70px;
+      right: 10px;
+      bottom: 10px;
       background: #6c757d;
       color: white;
     }
@@ -81,20 +97,6 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-
-    .canvas-wrapper {
-      width: 100%;
-      max-width: 600px;
-      margin: 20px auto;
-    }
-
-    canvas {
-      width: 100%;
-      height: auto;
-      display: block;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-    }
   </style>
 </head>
 <body>
@@ -103,10 +105,10 @@
   <input type="file" id="userFile" accept="image/*" class="hidden">
   <input type="file" id="twibbonFile" accept="image/*" class="hidden">
 
+  <!-- Tombol upload -->
   <button id="uploadUserBtn" class="btn">
     <img src="https://img.icons8.com/ios-filled/50/image.png" alt="gambar"> Unggah Gambar
   </button>
-
   <button id="uploadTwibbonBtn" class="btn hidden">
     <img src="https://img.icons8.com/ios-filled/50/layers.png" alt="layer"> Unggah Twibbon
   </button>
@@ -116,19 +118,20 @@
     <span>Sedang proses...</span>
   </div>
 
-  <div class="canvas-wrapper">
+  <!-- Canvas + tombol dalam container -->
+  <div class="canvas-container">
     <canvas id="canvas"></canvas>
-  </div>
 
-  <button id="downloadBtn" class="btn hidden">
-    <img src="https://img.icons8.com/ios-filled/50/download.png" alt="unduh"> Unduh
-  </button>
-  <button id="shareBtn" class="btn hidden">
-    <img src="https://img.icons8.com/ios-filled/50/share.png" alt="bagikan"> Bagikan
-  </button>
-  <button id="reloadBtn" class="btn hidden">
-    <img src="https://img.icons8.com/ios-filled/50/restart.png" alt="ulang"> Ulangi
-  </button>
+    <button id="downloadBtn" class="btn hidden">
+      <img src="https://img.icons8.com/ios-filled/50/download.png" alt="unduh"> Unduh
+    </button>
+    <button id="shareBtn" class="btn hidden">
+      <img src="https://img.icons8.com/ios-filled/50/share.png" alt="bagikan"> Bagikan
+    </button>
+    <button id="reloadBtn" class="btn hidden">
+      <img src="https://img.icons8.com/ios-filled/50/restart.png" alt="ulang"> Ulangi
+    </button>
+  </div>
 
   <script>
     const userFile = document.getElementById("userFile");
@@ -164,26 +167,26 @@
       twibbonImg = new Image();
       twibbonImg.src = URL.createObjectURL(file);
       twibbonImg.onload = () => {
-        // mulai proses setelah unggah twibbon
         uploadTwibbonBtn.classList.add("hidden");
         loading.classList.remove("hidden");
 
         setTimeout(() => {
-          // canvas mengikuti ukuran twibbon (agar pas overlay)
+          // ukuran canvas mengikuti twibbon
           canvas.width = twibbonImg.width;
           canvas.height = twibbonImg.height;
 
-          // gambar user dengan scaling
+          // gambar user di bawah
           ctx.drawImage(userImg, 0, 0, canvas.width, canvas.height);
-
           // gambar twibbon di atas
           ctx.drawImage(twibbonImg, 0, 0, canvas.width, canvas.height);
 
           loading.classList.add("hidden");
+
+          // tampilkan tombol di dalam canvas
           downloadBtn.classList.remove("hidden");
           shareBtn.classList.remove("hidden");
           reloadBtn.classList.remove("hidden");
-        }, 15000); // delay 15 detik
+        }, 15000);
       };
     };
 
