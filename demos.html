@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alat Twibbon</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .btn {
+      position: fixed;
+      bottom: 20px;
+      padding: 12px 18px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn img {
+      width: 18px;
+      height: 18px;
+    }
+
+    #uploadUserBtn {
+      right: 20px;
+      background: #007bff;
+      color: white;
+    }
+
+    #uploadTwibbonBtn {
+      right: 20px;
+      background: #28a745;
+      color: white;
+    }
+
+    #downloadBtn {
+      left: 20px;
+      background: #17a2b8;
+      color: white;
+    }
+
+    #shareBtn {
+      right: 70px;
+      background: #ffc107;
+      color: black;
+    }
+
+    #reloadBtn {
+      right: 20px;
+      bottom: 70px;
+      background: #6c757d;
+      color: white;
+    }
+
+    #loading {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007bff;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    canvas {
+      max-width: 90%;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Alat Twibbon</h2>
+  <input type="file" id="userFile" accept="image/*" class="hidden">
+  <input type="file" id="twibbonFile" accept="image/*" class="hidden">
+
+  <button id="uploadUserBtn" class="btn">
+    <img src="https://img.icons8.com/ios-filled/50/image.png" alt="gambar"> Unggah Gambar
+  </button>
+
+  <button id="uploadTwibbonBtn" class="btn hidden">
+    <img src="https://img.icons8.com/ios-filled/50/layers.png" alt="layer"> Unggah Twibbon
+  </button>
+
+  <div id="loading" class="hidden">
+    <div class="spinner"></div>
+    <span>Sedang proses...</span>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <button id="downloadBtn" class="btn hidden">
+    <img src="https://img.icons8.com/ios-filled/50/download.png" alt="unduh"> Unduh
+  </button>
+  <button id="shareBtn" class="btn hidden">
+    <img src="https://img.icons8.com/ios-filled/50/share.png" alt="bagikan"> Bagikan
+  </button>
+  <button id="reloadBtn" class="btn hidden">
+    <img src="https://img.icons8.com/ios-filled/50/restart.png" alt="ulang"> Ulangi
+  </button>
+
+  <script>
+    const userFile = document.getElementById("userFile");
+    const twibbonFile = document.getElementById("twibbonFile");
+    const uploadUserBtn = document.getElementById("uploadUserBtn");
+    const uploadTwibbonBtn = document.getElementById("uploadTwibbonBtn");
+    const loading = document.getElementById("loading");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const shareBtn = document.getElementById("shareBtn");
+    const reloadBtn = document.getElementById("reloadBtn");
+
+    let userImg, twibbonImg;
+
+    uploadUserBtn.onclick = () => userFile.click();
+    uploadTwibbonBtn.onclick = () => twibbonFile.click();
+
+    userFile.onchange = e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      userImg = new Image();
+      userImg.src = URL.createObjectURL(file);
+      userImg.onload = () => {
+        uploadUserBtn.classList.add("hidden");
+        uploadTwibbonBtn.classList.remove("hidden");
+      };
+    };
+
+    twibbonFile.onchange = e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      twibbonImg = new Image();
+      twibbonImg.src = URL.createObjectURL(file);
+      twibbonImg.onload = () => {
+        uploadTwibbonBtn.classList.add("hidden");
+        loading.classList.remove("hidden");
+
+        setTimeout(() => {
+          // set canvas size
+          canvas.width = userImg.width;
+          canvas.height = userImg.height;
+
+          // gambar user
+          ctx.drawImage(userImg, 0, 0, canvas.width, canvas.height);
+
+          // gambar twibbon
+          ctx.drawImage(twibbonImg, 0, 0, canvas.width, canvas.height);
+
+          loading.classList.add("hidden");
+          downloadBtn.classList.remove("hidden");
+          shareBtn.classList.remove("hidden");
+          reloadBtn.classList.remove("hidden");
+        }, 15000); // delay 15 detik
+      };
+    };
+
+    downloadBtn.onclick = () => {
+      const link = document.createElement("a");
+      link.download = "twibbon.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    };
+
+    shareBtn.onclick = async () => {
+      if (navigator.share) {
+        canvas.toBlob(blob => {
+          const file = new File([blob], "twibbon.png", { type: "image/png" });
+          navigator.share({
+            files: [file],
+            title: "Twibbon Saya",
+            text: "Lihat twibbon saya!"
+          });
+        });
+      } else {
+        alert("Fitur bagikan tidak didukung di browser ini.");
+      }
+    };
+
+    reloadBtn.onclick = () => location.reload();
+  </script>
+</body>
+</html>
