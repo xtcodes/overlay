@@ -27,6 +27,7 @@
       width: 100%;
       height: auto;
       display: block;
+      background: #f8f9fa;
     }
 
     .btn {
@@ -63,7 +64,7 @@
     }
 
     #shareBtn {
-      right: 60px;
+      right: 70px;
       bottom: 10px;
       background: #ffc107;
       color: black;
@@ -78,7 +79,7 @@
 
     #loading {
       margin-top: 20px;
-      display: flex;
+      display: none;
       justify-content: center;
       align-items: center;
       gap: 10px;
@@ -113,7 +114,7 @@
     <img src="https://img.icons8.com/ios-filled/50/layers.png" alt="layer"> Unggah Twibbon
   </button>
 
-  <div id="loading" class="hidden">
+  <div id="loading">
     <div class="spinner"></div>
     <span>Sedang proses...</span>
   </div>
@@ -147,7 +148,9 @@
 
     let userImg, twibbonImg;
 
+    // tombol upload gambar
     uploadUserBtn.onclick = () => userFile.click();
+    // tombol upload twibbon
     uploadTwibbonBtn.onclick = () => twibbonFile.click();
 
     userFile.onchange = e => {
@@ -167,11 +170,12 @@
       twibbonImg = new Image();
       twibbonImg.src = URL.createObjectURL(file);
       twibbonImg.onload = () => {
+        // tampilkan spinner setelah user pilih twibbon
         uploadTwibbonBtn.classList.add("hidden");
-        loading.classList.remove("hidden");
+        loading.style.display = "flex";
 
         setTimeout(() => {
-          // ukuran canvas mengikuti twibbon
+          // set ukuran canvas mengikuti twibbon
           canvas.width = twibbonImg.width;
           canvas.height = twibbonImg.height;
 
@@ -180,9 +184,10 @@
           // gambar twibbon di atas
           ctx.drawImage(twibbonImg, 0, 0, canvas.width, canvas.height);
 
-          loading.classList.add("hidden");
+          // selesai → sembunyikan spinner
+          loading.style.display = "none";
 
-          // tampilkan tombol di dalam canvas
+          // munculkan tombol di dalam canvas
           downloadBtn.classList.remove("hidden");
           shareBtn.classList.remove("hidden");
           reloadBtn.classList.remove("hidden");
