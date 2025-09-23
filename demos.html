@@ -118,17 +118,17 @@
   <div class="canvas-container">
     <canvas id="canvas"></canvas>
 
-    <!-- Awalnya hanya tombol ini -->
+    <!-- Step 1: awal -->
     <button id="uploadUserBtn" class="btn">
       <img src="https://img.icons8.com/ios-filled/50/image.png" alt="gambar"> Unggah Gambar
     </button>
 
-    <!-- Muncul setelah user upload gambar -->
+    <!-- Step 2: muncul setelah gambar -->
     <button id="uploadTwibbonBtn" class="btn hidden">
       <img src="https://img.icons8.com/ios-filled/50/layers.png" alt="layer"> Unggah Twibbon
     </button>
 
-    <!-- Muncul setelah user upload twibbon -->
+    <!-- Step 3: muncul setelah twibbon -->
     <button id="downloadBtn" class="btn hidden">
       <img src="https://img.icons8.com/ios-filled/50/download.png" alt="unduh"> Unduh
     </button>
@@ -165,8 +165,8 @@
       userImg = new Image();
       userImg.src = URL.createObjectURL(file);
       userImg.onload = () => {
-        uploadUserBtn.classList.add("hidden");
-        uploadTwibbonBtn.classList.remove("hidden");
+        uploadUserBtn.classList.add("hidden");   // sembunyikan tombol gambar
+        uploadTwibbonBtn.classList.remove("hidden"); // tampilkan tombol twibbon
       };
     };
 
@@ -176,7 +176,7 @@
       twibbonImg = new Image();
       twibbonImg.src = URL.createObjectURL(file);
       twibbonImg.onload = () => {
-        uploadTwibbonBtn.classList.add("hidden");
+        uploadTwibbonBtn.classList.add("hidden"); // sembunyikan tombol twibbon
         loading.style.display = "flex";
 
         setTimeout(() => {
@@ -198,7 +198,7 @@
           // gambar twibbon di atas
           ctx.drawImage(twibbonImg, 0, 0, canvas.width, canvas.height);
 
-          // selesai → sembunyikan spinner, tampilkan tombol
+          // selesai → sembunyikan spinner, tampilkan tombol hasil
           loading.style.display = "none";
           downloadBtn.classList.remove("hidden");
           shareBtn.classList.remove("hidden");
