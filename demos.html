@@ -11,14 +11,12 @@
       padding: 20px;
     }
 
-    .hidden {
-      display: none;
-    }
+    .hidden { display: none; }
 
     .btn {
       position: fixed;
       bottom: 20px;
-      padding: 12px 18px;
+      padding: 10px 14px;
       border: none;
       border-radius: 6px;
       cursor: pointer;
@@ -26,12 +24,10 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      z-index: 100;
     }
 
-    .btn img {
-      width: 18px;
-      height: 18px;
-    }
+    .btn img { width: 18px; height: 18px; }
 
     #uploadUserBtn {
       right: 20px;
@@ -86,9 +82,18 @@
       100% { transform: rotate(360deg); }
     }
 
+    .canvas-wrapper {
+      width: 100%;
+      max-width: 600px;
+      margin: 20px auto;
+    }
+
     canvas {
-      max-width: 90%;
-      margin-top: 20px;
+      width: 100%;
+      height: auto;
+      display: block;
+      border: 1px solid #ddd;
+      border-radius: 6px;
     }
   </style>
 </head>
@@ -111,7 +116,9 @@
     <span>Sedang proses...</span>
   </div>
 
-  <canvas id="canvas"></canvas>
+  <div class="canvas-wrapper">
+    <canvas id="canvas"></canvas>
+  </div>
 
   <button id="downloadBtn" class="btn hidden">
     <img src="https://img.icons8.com/ios-filled/50/download.png" alt="unduh"> Unduh
@@ -153,22 +160,23 @@
 
     twibbonFile.onchange = e => {
       const file = e.target.files[0];
-      if (!file) return;
+      if (!file || !userImg) return;
       twibbonImg = new Image();
       twibbonImg.src = URL.createObjectURL(file);
       twibbonImg.onload = () => {
+        // mulai proses setelah unggah twibbon
         uploadTwibbonBtn.classList.add("hidden");
         loading.classList.remove("hidden");
 
         setTimeout(() => {
-          // set canvas size
-          canvas.width = userImg.width;
-          canvas.height = userImg.height;
+          // canvas mengikuti ukuran twibbon (agar pas overlay)
+          canvas.width = twibbonImg.width;
+          canvas.height = twibbonImg.height;
 
-          // gambar user
+          // gambar user dengan scaling
           ctx.drawImage(userImg, 0, 0, canvas.width, canvas.height);
 
-          // gambar twibbon
+          // gambar twibbon di atas
           ctx.drawImage(twibbonImg, 0, 0, canvas.width, canvas.height);
 
           loading.classList.add("hidden");
