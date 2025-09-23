@@ -170,28 +170,35 @@
       twibbonImg = new Image();
       twibbonImg.src = URL.createObjectURL(file);
       twibbonImg.onload = () => {
-        // tampilkan spinner setelah user pilih twibbon
         uploadTwibbonBtn.classList.add("hidden");
         loading.style.display = "flex";
 
+        // proses setelah gambar siap
         setTimeout(() => {
           // set ukuran canvas mengikuti twibbon
           canvas.width = twibbonImg.width;
           canvas.height = twibbonImg.height;
 
-          // gambar user di bawah
-          ctx.drawImage(userImg, 0, 0, canvas.width, canvas.height);
+          // hitung rasio agar userImg tetap proporsional
+          const scale = Math.max(
+            canvas.width / userImg.width,
+            canvas.height / userImg.height
+          );
+          const x = (canvas.width / 2) - (userImg.width / 2) * scale;
+          const y = (canvas.height / 2) - (userImg.height / 2) * scale;
+
+          // gambar user di bawah (fit + center)
+          ctx.drawImage(userImg, x, y, userImg.width * scale, userImg.height * scale);
+
           // gambar twibbon di atas
           ctx.drawImage(twibbonImg, 0, 0, canvas.width, canvas.height);
 
-          // selesai → sembunyikan spinner
+          // selesai → sembunyikan spinner, tampilkan tombol
           loading.style.display = "none";
-
-          // munculkan tombol di dalam canvas
           downloadBtn.classList.remove("hidden");
           shareBtn.classList.remove("hidden");
           reloadBtn.classList.remove("hidden");
-        }, 15000);
+        }, 500);
       };
     };
 
