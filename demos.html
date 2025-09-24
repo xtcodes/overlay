@@ -36,8 +36,6 @@
     overflow:hidden;
     touch-action:none;
   }
-
-  /* main canvas & fx canvas */
   canvas{
     position:absolute;
     inset:0;
@@ -45,7 +43,7 @@
     height:100%;
     display:block;
   }
-  #fxCanvas{ pointer-events:none; } /* jangan menangkap pointer */
+  #fxCanvas{ pointer-events:none; }
   .overlay{
     position:absolute;
     inset:0;
@@ -70,7 +68,7 @@
     padding:8px;
     border-radius:8px;
     backdrop-filter:blur(4px);
-    z-index:50; /* selalu di atas efek */
+    z-index:50;
   }
   .btn{
     width:40px;
@@ -124,7 +122,6 @@
       <canvas id="mainCanvas"></canvas>
       <canvas id="fxCanvas"></canvas>
 
-      <!-- Overlay spinner -->
       <div class="overlay" id="overlay">
         <div class="spinner"></div>
         <div>Sedang proses...</div>
@@ -161,7 +158,6 @@ let offsetX=0, offsetY=0, scale=1;
 let isEditing=false, isDragging=false, lastX=0,lastY=0,lastTouchDist=0;
 let isLocked=false;
 
-// ---------- helper: cek transparansi twibbon ----------
 function hasTransparency(img){
   try{
     const t=document.createElement("canvas"), c=t.getContext("2d");
@@ -170,34 +166,22 @@ function hasTransparency(img){
     const d=c.getImageData(0,0,img.width,img.height).data;
     for(let i=3;i<d.length;i+=4){ if(d[i]<255) return true; }
     return false;
-  }catch(err){
-    // jika terjadi error (mis. ukuran sangat besar), anggap tidak transparan untuk safety
-    return false;
-  }
+  }catch(err){ return false; }
 }
 
-// ---------- resizing (sinkron untuk main + fx) ----------
 function resizeCanvas(){
   const rect=container.getBoundingClientRect();
   const cssSize=rect.width;
   DPR=window.devicePixelRatio||1;
-
-  // main canvas
-  canvas.style.width=cssSize+'px';
-  canvas.style.height=cssSize+'px';
-  canvas.width=cssSize*DPR;
-  canvas.height=cssSize*DPR;
-
-  // fx canvas (efek) - cocokkan ukuran
-  fxCanvas.style.width=cssSize+'px';
-  fxCanvas.style.height=cssSize+'px';
-  fxCanvas.width=cssSize*DPR;
-  fxCanvas.height=cssSize*DPR;
-
+  [canvas, fxCanvas].forEach(c=>{
+    c.style.width=cssSize+'px';
+    c.style.height=cssSize+'px';
+    c.width=cssSize*DPR;
+    c.height=cssSize*DPR;
+  });
   draw();
 }
 
-// ---------- placeholder responsif ----------
 function drawPlaceholder(){
   ctx.save();
   ctx.fillStyle = "#9ca3af";
@@ -207,18 +191,13 @@ function drawPlaceholder(){
   ctx.font = `${fontSize}px sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-
-  const text = "Unggah Foto dan Twibbon untuk Memulai";
-  // sederhana: tidak membungkus; ukuran sudah dibuat responsif
-  ctx.fillText(text, canvas.width/2, canvas.height/2);
+  ctx.fillText("Unggah Foto dan Twibbon untuk Memulai", canvas.width/2, canvas.height/2);
   ctx.restore();
 }
 
-// ---------- draw utama (hanya image + frame) ----------
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   const cW=canvas.width, cH=canvas.height;
-
   if(photoImg){
     const baseScale=Math.max(cW/photoImg.width,cH/photoImg.height);
     const drawScale=baseScale*scale;
@@ -231,17 +210,10 @@ function draw(){
     ctx.drawImage(frameImg,0,0,cW,cH);
     ctx.globalAlpha=1.0;
   }
-
   if(!photoImg && !frameImg) drawPlaceholder();
-  updateDownloadVisibility();
-}
-
-// ---------- update visibility control download area ----------
-function updateDownloadVisibility(){
   $('downloadBox').style.display=(photoImg && frameImg)?"flex":"none";
 }
 
-// ---------- Upload handlers (dengan validasi transparansi pada frame) ----------
 $('photoBtn').onclick=()=>$('photoInput').click();
 $('frameBtn').onclick=()=>$('frameInput').click();
 
@@ -251,33 +223,22 @@ $('photoInput').addEventListener('change',e=>{
   img.onload=()=>{ photoImg=img; offsetX=offsetY=0; scale=1; draw(); URL.revokeObjectURL(url); };
   img.src=url;
 });
-
 $('frameInput').addEventListener('change',e=>{
   const f=e.target.files[0]; if(!f) return;
   const url=URL.createObjectURL(f), img=new Image();
   img.onload=()=>{
-    // validasi transparansi
-    if(hasTransparency(img)){
-      frameImg=img;
-      draw();
-    } else {
-      alert("⚠️ Twibbon harus PNG transparan (alpha). Silakan gunakan file twibbon dengan latar belakang transparan.");
-      frameImg=null;
-      draw();
-    }
+    if(hasTransparency(img)){ frameImg=img; draw(); }
+    else{ alert("⚠️ Twibbon harus PNG transparan!"); frameImg=null; draw(); }
     URL.revokeObjectURL(url);
   };
   img.src=url;
 });
 
-// ---------- Export aman: gambar ulang ke offscreen canvas (tanpa efek) ----------
 function exportTwibbonBlob(callback){
   const exportCanvas = document.createElement('canvas');
   exportCanvas.width = canvas.width;
   exportCanvas.height = canvas.height;
   const ectx = exportCanvas.getContext('2d');
-
-  // gambar foto (jika ada), dengan perhitungan skala & offset yang sama
   if(photoImg){
     const cW = exportCanvas.width, cH = exportCanvas.height;
     const baseScale=Math.max(cW/photoImg.width,cH/photoImg.height);
@@ -286,188 +247,145 @@ function exportTwibbonBlob(callback){
     const x=(cW-w)/2+offsetX, y=(cH-h)/2+offsetY;
     ectx.drawImage(photoImg,x,y,w,h);
   }
-
-  // gambar frame (full canvas)
-  if(frameImg){
-    ectx.drawImage(frameImg,0,0,exportCanvas.width,exportCanvas.height);
-  }
-
-  // hasil ke blob PNG
-  exportCanvas.toBlob(blob=>{
-    callback(blob);
-  },'image/png');
+  if(frameImg){ ectx.drawImage(frameImg,0,0,exportCanvas.width,exportCanvas.height); }
+  exportCanvas.toBlob(blob=>{ callback(blob); },'image/png');
 }
 
-// ---------- Animasi partikel pada fxCanvas (tidak merusak main canvas) ----------
-let particles = [], animId = null;
-function createParticles(){
-  particles = [];
-  const cx = fxCanvas.width/2, cy = fxCanvas.height/2;
-  for(let i=0;i<200;i++){
-    const angle = Math.random()*2*Math.PI;
-    const speed = Math.random()*6 + 2;
+// ---------- Fireworks ----------
+let particles=[],animId=null;
+function createParticles(x,y){
+  for(let i=0;i<150;i++){
+    const angle=Math.random()*2*Math.PI, speed=Math.random()*6+2;
     particles.push({
-      x: cx,
-      y: cy,
-      vx: Math.cos(angle)*speed,
-      vy: Math.sin(angle)*speed - (Math.random()*2), // sedikit variasi vertikal
-      radius: Math.random()*3 + 2,
-      color: `hsl(${Math.random()*360},100%,50%)`,
-      life: Math.random()*60 + 40,
-      gravity: 0.15 + Math.random()*0.2,
-      friction: 0.99
+      x,y,
+      vx:Math.cos(angle)*speed,
+      vy:Math.sin(angle)*speed - Math.random()*2,
+      radius:Math.random()*3+2,
+      color:`hsl(${Math.random()*360},100%,50%)`,
+      life:Math.random()*60+40,
+      gravity:0.15+Math.random()*0.2,
+      friction:0.99
     });
   }
 }
-
 function updateParticles(){
   for(const p of particles){
-    p.vx *= p.friction;
-    p.vy += p.gravity;
-    p.x += p.vx;
-    p.y += p.vy;
-    p.life--;
+    p.vx*=p.friction; p.vy+=p.gravity;
+    p.x+=p.vx; p.y+=p.vy; p.life--;
   }
-  // hapus yang mati
-  particles = particles.filter(p => p.life > 0);
+  particles=particles.filter(p=>p.life>0);
 }
-
 function drawParticles(){
-  // clear fx canvas semi-clear (bersih)
   ctxFX.clearRect(0,0,fxCanvas.width,fxCanvas.height);
   for(const p of particles){
     ctxFX.beginPath();
-    ctxFX.arc(p.x, p.y, p.radius, 0, Math.PI*2);
-    ctxFX.fillStyle = p.color;
+    ctxFX.arc(p.x,p.y,p.radius,0,Math.PI*2);
+    ctxFX.fillStyle=p.color;
     ctxFX.fill();
   }
 }
-
 function animateParticles(){
   if(animId) cancelAnimationFrame(animId);
   function loop(){
-    if(particles.length > 0){
-      updateParticles();
-      drawParticles();
-      animId = requestAnimationFrame(loop);
-    } else {
-      // bersihkan sisa
-      ctxFX.clearRect(0,0,fxCanvas.width,fxCanvas.height);
-      if(animId) cancelAnimationFrame(animId);
-      animId = null;
-    }
+    if(particles.length>0){
+      updateParticles(); drawParticles();
+      animId=requestAnimationFrame(loop);
+    }else{ ctxFX.clearRect(0,0,fxCanvas.width,fxCanvas.height); animId=null; }
   }
   loop();
 }
+function triggerSequenceFireworks(){
+  const w=fxCanvas.width,h=fxCanvas.height;
+  const points=[[w/2,h/2],[w*0.2,h*0.2],[w*0.8,h*0.2],[w*0.2,h*0.8],[w*0.8,h*0.8]];
+  points.forEach((pt,idx)=>{
+    setTimeout(()=>{
+      createParticles(pt[0],pt[1]); animateParticles();
+    },idx*1000);
+  });
+}
 
-// ---------- Unduh (dengan delay) ---------- 
+// ---------- Unduh ----------
 $('downloadBtn').onclick=()=>{
   const btn=$('downloadBtn'), overlay=$('overlay');
   btn.disabled=true; overlay.style.display="flex"; isLocked=true;
-  $('uploadPanel').style.display="none"; // sembunyikan upload panel
-
+  $('uploadPanel').style.display="none";
   setTimeout(()=>{
-    // ekspor aman dari offscreen canvas
     exportTwibbonBlob(blob=>{
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'twibbon.png';
-      a.click();
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download='twibbon.png'; a.click();
       setTimeout(()=>URL.revokeObjectURL(url),1000);
-
-      overlay.style.display="none";
-      btn.style.display="none";
-      $('shareBtn').style.display="inline-block";
-      $('resetBtn').style.display="inline-block";
+      overlay.style.display="none"; btn.style.display="none";
+      $('shareBtn').style.display="inline-block"; $('resetBtn').style.display="inline-block";
       btn.disabled=false;
-
-      // jalankan efek (di fxCanvas) setelah unduh selesai
-      createParticles();
-      animateParticles();
+      triggerSequenceFireworks();
     });
   },15000);
 };
 
-// ---------- Bagikan (menggunakan export yang sama agar bersih) ----------
+// ---------- Bagikan ----------
 $('shareBtn').onclick=()=>{
   exportTwibbonBlob(async blob=>{
     const file=new File([blob],"twibbon.png",{type:"image/png"});
     if(navigator.share && navigator.canShare?.({files:[file]})){
       try{ await navigator.share({title:"Twibbon",text:"Lihat twibbon saya!",files:[file]}); }
       catch(err){ console.log("Share dibatalkan:",err); }
-    } else {
-      alert("Fitur share tidak didukung di browser ini.");
-    }
+    } else alert("Fitur share tidak didukung di browser ini.");
   });
 };
 
 // ---------- Reset ----------
 $('resetBtn').onclick=()=>{
-  photoImg=null; frameImg=null;
-  offsetX=offsetY=0; scale=1; isLocked=false;
-  $('uploadPanel').style.display="flex";
-  $('downloadBtn').style.display="inline-block";
-  $('shareBtn').style.display="none";
-  $('resetBtn').style.display="none";
-  $('photoInput').value="";
-  $('frameInput').value="";
-  // hentikan animasi & bersihkan fx canvas
-  particles = [];
-  if(animId){ cancelAnimationFrame(animId); animId = null; }
-  ctxFX.clearRect(0,0,fxCanvas.width,fxCanvas.height);
-  draw();
+  photoImg=null; frameImg=null; offsetX=offsetY=0; scale=1; isLocked=false;
+  $('uploadPanel').style.display="flex"; $('downloadBtn').style.display="inline-block";
+  $('shareBtn').style.display="none"; $('resetBtn').style.display="none";
+  $('photoInput').value=""; $('frameInput').value="";
+  particles=[]; if(animId){cancelAnimationFrame(animId); animId=null;}
+  ctxFX.clearRect(0,0,fxCanvas.width,fxCanvas.height); draw();
 };
 
-// ---------- Gestures (masih dikunci saat isLocked=true) ----------
-function getDist(t1,t2){ const dx=t2.clientX-t1.clientX, dy=t2.clientY-t1.clientY; return Math.hypot(dx,dy); }
-
-canvas.addEventListener('pointerdown', e=>{
-  if(isLocked) return;
-  isDragging=true; lastX=e.clientX; lastY=e.clientY; isEditing=true;
+// ---------- Gestures ----------
+function getDist(t1,t2){return Math.hypot(t2.clientX-t1.clientX,t2.clientY-t1.clientY);}
+canvas.addEventListener('pointerdown',e=>{
+  if(isLocked)return; isDragging=true; lastX=e.clientX; lastY=e.clientY; isEditing=true;
   canvas.setPointerCapture(e.pointerId);
 });
-canvas.addEventListener('pointermove', e=>{
-  if(isLocked) return;
+canvas.addEventListener('pointermove',e=>{
+  if(isLocked)return;
   if(isDragging && e.pointerType==="mouse"){
     offsetX+=(e.clientX-lastX)*DPR; offsetY+=(e.clientY-lastY)*DPR;
     lastX=e.clientX; lastY=e.clientY; draw();
   }
 });
-canvas.addEventListener('pointerup', e=>{
-  if(isLocked) return;
+canvas.addEventListener('pointerup',e=>{
+  if(isLocked)return;
   isDragging=false; isEditing=false; canvas.releasePointerCapture(e.pointerId); draw();
 });
-
-canvas.addEventListener('touchstart', e=>{
-  if(isLocked) return;
-  if(e.touches.length===2){ lastTouchDist=getDist(e.touches[0],e.touches[1]); isEditing=true; }
-  else if(e.touches.length===1){ lastX=e.touches[0].clientX; lastY=e.touches[0].clientY; isEditing=true; }
+canvas.addEventListener('touchstart',e=>{
+  if(isLocked)return;
+  if(e.touches.length===2){lastTouchDist=getDist(e.touches[0],e.touches[1]); isEditing=true;}
+  else if(e.touches.length===1){lastX=e.touches[0].clientX; lastY=e.touches[0].clientY; isEditing=true;}
 },{passive:false});
-canvas.addEventListener('touchmove', e=>{
-  if(isLocked) return;
+canvas.addEventListener('touchmove',e=>{
+  if(isLocked)return;
   if(e.touches.length===2){
     const dist=getDist(e.touches[0],e.touches[1]);
-    if(lastTouchDist>0){ scale*=dist/lastTouchDist; scale=Math.max(0.2,Math.min(5,scale)); }
+    if(lastTouchDist>0){scale*=dist/lastTouchDist; scale=Math.max(0.2,Math.min(5,scale));}
     lastTouchDist=dist; draw();
   } else if(e.touches.length===1){
     offsetX+=(e.touches[0].clientX-lastX)*DPR; offsetY+=(e.touches[0].clientY-lastY)*DPR;
     lastX=e.touches[0].clientX; lastY=e.touches[0].clientY; draw();
   }
 },{passive:false});
-canvas.addEventListener('touchend', e=>{
-  if(isLocked) return;
-  if(e.touches.length===0){ isEditing=false; draw(); }
+canvas.addEventListener('touchend',e=>{
+  if(isLocked)return; if(e.touches.length===0){isEditing=false; draw();}
 });
-
-canvas.addEventListener('wheel', e=>{
-  if(isLocked) return;
-  isEditing=true; scale*=(e.deltaY<0?1.1:0.9); scale=Math.max(0.2,Math.min(5,scale));
+canvas.addEventListener('wheel',e=>{
+  if(isLocked)return; isEditing=true;
+  scale*=(e.deltaY<0?1.1:0.9); scale=Math.max(0.2,Math.min(5,scale));
   draw(); clearTimeout(canvas._wheelTimeout);
   canvas._wheelTimeout=setTimeout(()=>{isEditing=false; draw();},400);
 });
 
-// ---------- init ----------
 window.addEventListener('resize',resizeCanvas);
 resizeCanvas();
 </script>
