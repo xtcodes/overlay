@@ -3,508 +3,178 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Alat Twibbon - Ikon Font Awesome pada Tombol Upload</title>
+<title>Alat Twibbon Sederhana</title>
 
-<!-- Font Awesome CDN (free) -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-pQ3o0Zr0kq8gkPjzqv3Dk1yZlF+X0V1m3p6x8r9b1j5t9R9k0s6v1YBx2Pd8gq7e6g7bZ3v9W3y7z6v3y7z6w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
 
 <style>
-  :root{
-    --panel-bg: rgba(0,0,0,0.6);
-    --panel-fg: #fff;
-    --accent: #4CAF50;
-    --container-max: 900px;
-  }
   body{
-    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
     margin:0;
-    padding:18px;
+    padding:20px;
     background:#f3f4f6;
-    color:#111827;
+    font-family:sans-serif;
     display:flex;
-    align-items:flex-start;
     justify-content:center;
+    align-items:flex-start;
     min-height:100vh;
   }
-
   .wrap{
     width:100%;
-    max-width: var(--container-max);
-    box-shadow: 0 6px 18px rgba(15,23,42,0.08);
-    border-radius:12px;
-    background: #ffffff;
-    padding:16px;
-    box-sizing:border-box;
+    max-width:800px;
+    background:#fff;
+    border-radius:10px;
+    padding:12px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.1);
   }
-
   .canvas-area{
     position:relative;
     width:100%;
-    padding-top:75%;
-    background: linear-gradient(180deg,#eef2ff, #fff);
+    padding-top:75%; /* 4:3 */
+    background:#e5e7eb;
     border-radius:8px;
     overflow:hidden;
   }
-
   canvas{
     position:absolute;
     inset:0;
     width:100%;
     height:100%;
-    display:block;
-    background:transparent;
   }
-
-  /* control panel anchored bottom-left of canvas */
   .control-panel{
     position:absolute;
-    left:12px;
     bottom:12px;
+    left:12px;
     display:flex;
     gap:8px;
-    flex-direction:column;
-    background: var(--panel-bg);
-    color:var(--panel-fg);
-    padding:10px;
-    border-radius:10px;
-    box-shadow: 0 6px 18px rgba(2,6,23,0.2);
-    backdrop-filter: blur(6px);
-    z-index:30;
-    min-width:170px;
-  }
-
-  .control-panel .row{
-    display:flex;
-    gap:8px;
-    align-items:center;
-  }
-
-  .control-panel label{
-    font-size:13px;
-    color: #f8fafc;
-  }
-
-  .control-panel input[type="file"]{
-    display:none;
-  }
-
-  .btn{
-    appearance:none;
-    border:none;
-    padding:8px 10px;
-    background:rgba(255,255,255,0.08);
-    color:inherit;
+    background:rgba(0,0,0,0.6);
+    padding:8px;
     border-radius:8px;
+    backdrop-filter:blur(4px);
+  }
+  .btn{
+    width:40px;
+    height:40px;
+    border:none;
+    border-radius:6px;
+    background:rgba(255,255,255,0.15);
+    color:#fff;
     cursor:pointer;
-    font-size:13px;
-    display:inline-flex;
+    display:flex;
     align-items:center;
     justify-content:center;
-    gap:6px;
+    font-size:18px;
   }
-  .btn.primary{
-    background:var(--accent);
-    color:white;
-  }
-  .small{
-    font-size:14px;
-    padding:8px;
-  }
-
-  .icon-only{
-    width:36px;
-    height:36px;
-    padding:0;
-    font-size:16px;
-    display:inline-grid;
-    place-items:center;
-  }
-
-  .controls-bottom{
+  input[type=file]{display:none}
+  .download{
     margin-top:12px;
     display:flex;
-    gap:8px;
-    justify-content:space-between;
-    align-items:center;
-  }
-
-  .sliders{
-    display:flex;
-    gap:6px;
-    align-items:center;
-    margin-top:8px;
-  }
-  .sliders input[type="range"]{
-    width:120px;
-  }
-
-  .meta{
-    margin-top:12px;
-    display:flex;
-    gap:8px;
-    align-items:center;
     justify-content:flex-end;
   }
-
-  .info{
-    margin-top:12px;
-    font-size:13px;
-    color:#374151;
-  }
-
-  @media (max-width:520px){
-    .control-panel{
-      left:8px;
-      bottom:8px;
-      min-width:150px;
-      padding:8px;
-    }
-    .sliders input[type="range"]{ width:92px; }
+  .download button{
+    padding:8px 14px;
+    border:none;
+    border-radius:6px;
+    background:#4CAF50;
+    color:#fff;
+    font-size:14px;
+    cursor:pointer;
   }
 </style>
 </head>
 <body>
-  <div class="wrap" role="main">
-    <h2 style="margin:6px 0 12px 0">Alat Twibbon — Tombol Upload dengan Font Awesome</h2>
-
+  <div class="wrap">
+    <h3 style="margin:6px 0 12px">Alat Twibbon Sederhana</h3>
     <div class="canvas-area" id="canvasArea">
-      <canvas id="mainCanvas" aria-label="Canvas Twibbon"></canvas>
+      <canvas id="mainCanvas"></canvas>
 
-      <!-- Control panel bottom-left -->
-      <div class="control-panel" id="controlPanel" aria-hidden="false">
-        <div class="row" title="Unggah foto (gambar)">
-          <label for="photoInput" style="min-width:52px">Foto</label>
-          <!-- tombol icon-only menggunakan Font Awesome -->
-          <button class="btn icon-only" id="photoBtn" aria-label="Unggah Foto" title="Unggah Foto (klik)">
-            <i class="fa-solid fa-image" aria-hidden="true"></i>
-          </button>
-          <input id="photoInput" type="file" accept="image/*" aria-label="Input file foto">
-        </div>
+      <div class="control-panel">
+        <!-- Tombol unggah foto -->
+        <button class="btn" id="photoBtn" title="Unggah Foto">
+          <i class="fa-solid fa-image"></i>
+        </button>
+        <input id="photoInput" type="file" accept="image/*">
 
-        <div class="row" title="Unggah twibbon/frame (PNG) - akan diletakkan di atas">
-          <label for="frameInput" style="min-width:52px">Twibbon</label>
-          <button class="btn icon-only" id="frameBtn" aria-label="Unggah Twibbon" title="Unggah Twibbon/Frame (PNG)">
-            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
-          </button>
-          <input id="frameInput" type="file" accept="image/png,image/*" aria-label="Input file frame">
-        </div>
-
-        <div class="row" title="Unggah font (opsional)">
-          <label for="fontInput" style="min-width:52px">Font</label>
-          <button class="btn icon-only" id="fontBtn" aria-label="Unggah Font" title="Unggah Font (TTF/OTF/WOFF)">
-            <i class="fa-solid fa-font" aria-hidden="true"></i>
-          </button>
-          <input id="fontInput" type="file" accept=".ttf,.otf,.woff,.woff2" aria-label="Input file font">
-        </div>
-
-        <div class="sliders" title="Atur posisi & ukuran foto">
-          <div style="font-size:12px;color:#fff;">Scale</div>
-          <input id="scaleRange" type="range" min="0.2" max="2.5" step="0.01" value="1" aria-label="Skala foto">
-        </div>
-
-        <div class="sliders" title="Putar foto">
-          <div style="font-size:12px;color:#fff;">Rotate</div>
-          <input id="rotateRange" type="range" min="-180" max="180" step="1" value="0" aria-label="Putar foto">
-        </div>
-
-        <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
-          <input id="textInput" type="text" placeholder="Tulis teks..." style="flex:1;padding:6px;border-radius:6px;border:none;font-size:13px;" aria-label="Input teks">
-        </div>
-
-        <div class="controls-bottom">
-          <div style="display:flex;gap:6px;">
-            <button class="btn" id="resetBtn" title="Reset posisi dan konten">Reset</button>
-            <button class="btn" id="undoBtn" title="Undo terakhir">Undo</button>
-          </div>
-          <div style="display:flex;gap:6px;">
-            <button class="btn primary" id="downloadBtn" title="Unduh PNG">Unduh</button>
-          </div>
-        </div>
+        <!-- Tombol unggah twibbon -->
+        <button class="btn" id="frameBtn" title="Unggah Twibbon">
+          <i class="fa-solid fa-layer-group"></i>
+        </button>
+        <input id="frameInput" type="file" accept="image/png,image/*">
       </div>
     </div>
-
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <div class="info">Tips: seret foto langsung di kanvas untuk memindahkan. Gunakan slider untuk scale & rotate.</div>
-      <div style="font-size:13px;color:#6b7280">Output: PNG</div>
+    <div class="download">
+      <button id="downloadBtn">Unduh PNG</button>
     </div>
   </div>
 
 <script>
 const $ = id => document.getElementById(id);
-
 const canvas = $('mainCanvas');
-const ctx = canvas.getContext('2d', { alpha: true });
+const ctx = canvas.getContext('2d');
 const container = document.getElementById('canvasArea');
-
 let DPR = window.devicePixelRatio || 1;
 
-const state = {
-  photo: { img: null, x: 0, y: 0, scale: 1, rotation: 0, w:0, h:0 },
-  frame: { img: null },
-  text: { value: '', fontFamily: 'sans-serif', size: 40, x: 0.5, y: 0.9, color: '#ffffff' },
-  history: []
-};
+let photoImg = null;
+let frameImg = null;
 
 function resizeCanvas(){
   const rect = container.getBoundingClientRect();
-  const cssW = Math.max(200, rect.width);
-  const cssH = Math.max(150, rect.height);
+  const cssW = rect.width;
+  const cssH = rect.height;
   DPR = window.devicePixelRatio || 1;
   canvas.style.width = cssW + 'px';
   canvas.style.height = cssH + 'px';
-  canvas.width = Math.round(cssW * DPR);
-  canvas.height = Math.round(cssH * DPR);
-  draw();
-}
-
-function pushHistory(){
-  const snap = {
-    photo: {...state.photo},
-    text: {...state.text},
-    frame: state.frame.img ? state.frame.img.src : null
-  };
-  state.history.push(snap);
-  if(state.history.length > 30) state.history.shift();
-}
-
-function undo(){
-  if(state.history.length === 0) return;
-  const last = state.history.pop();
-  state.photo = {...state.photo, ...last.photo};
-  state.text = {...state.text, ...last.text};
-  if(last.frame){
-    const img = new Image();
-    img.onload = () => { state.frame.img = img; draw(); };
-    img.src = last.frame;
-  } else {
-    state.frame.img = null;
-  }
+  canvas.width = cssW * DPR;
+  canvas.height = cssH * DPR;
   draw();
 }
 
 function draw(){
-  if(!ctx) return;
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  const cW = canvas.width, cH = canvas.height;
+  const cW = canvas.width;
+  const cH = canvas.height;
 
-  if(state.photo.img){
-    ctx.save();
-    const cx = cW * 0.5;
-    const cy = cH * 0.5;
-    ctx.translate(cx + state.photo.x * DPR, cy + state.photo.y * DPR);
-    ctx.rotate(state.photo.rotation * Math.PI / 180);
-    ctx.scale(state.photo.scale * DPR, state.photo.scale * DPR);
-    const w = state.photo.w;
-    const h = state.photo.h;
-    ctx.drawImage(state.photo.img, -w/2, -h/2, w, h);
-    ctx.restore();
-  } else {
-    ctx.save();
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(0,0,cW,cH);
-    ctx.restore();
+  if(photoImg){
+    const scale = Math.max(cW/photoImg.width, cH/photoImg.height);
+    const w = photoImg.width*scale;
+    const h = photoImg.height*scale;
+    ctx.drawImage(photoImg, (cW-w)/2, (cH-h)/2, w, h);
   }
-
-  if(state.text.value){
-    ctx.save();
-    const px = Math.round(cW * state.text.x);
-    const py = Math.round(cH * state.text.y);
-    const fontSizePx = Math.round(state.text.size * DPR);
-    ctx.font = `${fontSizePx}px "${state.text.fontFamily}", sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.lineWidth = Math.max(2, Math.round(fontSizePx * 0.08));
-    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillStyle = state.text.color;
-    ctx.strokeText(state.text.value, px, py);
-    ctx.fillText(state.text.value, px, py);
-    ctx.restore();
-  }
-
-  if(state.frame.img){
-    ctx.save();
-    ctx.drawImage(state.frame.img, 0, 0, cW, cH);
-    ctx.restore();
+  if(frameImg){
+    ctx.drawImage(frameImg,0,0,cW,cH);
   }
 }
 
-// --- Handlers for buttons with icons ---
-$('photoBtn').addEventListener('click', ()=> $('photoInput').click());
-$('frameBtn').addEventListener('click', ()=> $('frameInput').click());
-$('fontBtn').addEventListener('click', ()=> $('fontInput').click());
+$('photoBtn').onclick = ()=> $('photoInput').click();
+$('frameBtn').onclick = ()=> $('frameInput').click();
 
-// photo upload
-$('photoInput').addEventListener('change', (ev)=>{
-  const f = ev.target.files && ev.target.files[0];
-  if(!f) return;
+$('photoInput').addEventListener('change',(e)=>{
+  const f = e.target.files[0]; if(!f) return;
   const url = URL.createObjectURL(f);
   const img = new Image();
-  img.onload = ()=>{
-    const cW = canvas.width / DPR;
-    const cH = canvas.height / DPR;
-    const scale = Math.max(cW / img.width, cH / img.height);
-    state.photo.img = img;
-    state.photo.w = img.width * scale;
-    state.photo.h = img.height * scale;
-    state.photo.x = 0;
-    state.photo.y = 0;
-    state.photo.scale = 1;
-    state.photo.rotation = 0;
-    pushHistory();
-    draw();
-    URL.revokeObjectURL(url);
-  };
+  img.onload = ()=>{ photoImg=img; draw(); URL.revokeObjectURL(url); };
+  img.src = url;
+});
+$('frameInput').addEventListener('change',(e)=>{
+  const f = e.target.files[0]; if(!f) return;
+  const url = URL.createObjectURL(f);
+  const img = new Image();
+  img.onload = ()=>{ frameImg=img; draw(); URL.revokeObjectURL(url); };
   img.src = url;
 });
 
-// frame upload
-$('frameInput').addEventListener('change', (ev)=>{
-  const f = ev.target.files && ev.target.files[0];
-  if(!f) return;
-  const url = URL.createObjectURL(f);
-  const img = new Image();
-  img.onload = ()=>{
-    state.frame.img = img;
-    pushHistory();
-    draw();
-    URL.revokeObjectURL(url);
-  };
-  img.src = url;
-});
-
-// font upload (optional)
-$('fontInput').addEventListener('change', async (ev)=>{
-  const f = ev.target.files && ev.target.files[0];
-  if(!f) return;
-  const name = f.name.replace(/\s+/g,'_').replace(/\.[^.]+$/, '');
-  const reader = new FileReader();
-  reader.onload = async (e)=>{
-    try{
-      const fontData = e.target.result;
-      const fontFace = new FontFace(name, fontData);
-      await fontFace.load();
-      document.fonts.add(fontFace);
-      state.text.fontFamily = name;
-      pushHistory();
-      draw();
-      alert('Font berhasil diunggah dan diterapkan.');
-    }catch(err){
-      console.error(err);
-      alert('Gagal memuat font. Pastikan file font valid (ttf/otf/woff).');
-    }
-  };
-  reader.readAsArrayBuffer(f);
-});
-
-$('scaleRange').addEventListener('input', (e)=>{
-  state.photo.scale = parseFloat(e.target.value);
-  draw();
-});
-$('rotateRange').addEventListener('input', (e)=>{
-  state.photo.rotation = parseFloat(e.target.value);
-  draw();
-});
-$('textInput').addEventListener('input', (e)=>{
-  state.text.value = e.target.value;
-  pushHistory();
-  draw();
-});
-$('downloadBtn').addEventListener('click', ()=>{
-  canvas.toBlob((blob)=>{
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'twibbon.png';
-    document.body.appendChild(a);
+$('downloadBtn').onclick=()=>{
+  canvas.toBlob(blob=>{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='twibbon.png';
     a.click();
     a.remove();
-  }, 'image/png');
-});
-$('resetBtn').addEventListener('click', ()=>{
-  if(confirm('Reset seluruh konten (foto, frame, teks)?')) {
-    state.photo = { img:null, x:0, y:0, scale:1, rotation:0, w:0, h:0 };
-    state.frame = { img:null };
-    state.text = { value:'', fontFamily:'sans-serif', size:40, x:0.5, y:0.9, color:'#ffffff' };
-    state.history = [];
-    $('textInput').value = '';
-    $('scaleRange').value = 1;
-    $('rotateRange').value = 0;
-    draw();
-  }
-});
-$('undoBtn').addEventListener('click', undo);
+  });
+};
 
-// drag photo
-let dragging = false;
-let lastPointer = null;
-function onPointerDown(ev){
-  if(!state.photo.img) return;
-  ev.preventDefault();
-  dragging = true;
-  lastPointer = ev;
-  pushHistory();
-}
-function onPointerMove(ev){
-  if(!dragging || !lastPointer) return;
-  ev.preventDefault();
-  const dx = (ev.clientX - lastPointer.clientX) / DPR;
-  const dy = (ev.clientY - lastPointer.clientY) / DPR;
-  state.photo.x += dx;
-  state.photo.y += dy;
-  lastPointer = ev;
-  draw();
-}
-function onPointerUp(ev){
-  if(!dragging) return;
-  dragging = false;
-  lastPointer = null;
-}
-canvas.addEventListener('mousedown', onPointerDown);
-window.addEventListener('mousemove', onPointerMove);
-window.addEventListener('mouseup', onPointerUp);
-
-// touch support (pan + pinch)
-canvas.addEventListener('touchstart', (e)=>{
-  if(e.touches.length === 1){
-    const t = e.touches[0];
-    onPointerDown({clientX: t.clientX, clientY: t.clientY, preventDefault: ()=>e.preventDefault()});
-  } else if(e.touches.length === 2){
-    const a = e.touches[0], b = e.touches[1];
-    const startDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-    const startScale = state.photo.scale;
-    const onMove = (ev)=>{
-      if(ev.touches.length !== 2) return;
-      const a2 = ev.touches[0], b2 = ev.touches[1];
-      const dist2 = Math.hypot(a2.clientX - b2.clientX, a2.clientY - b2.clientY);
-      const ratio = dist2 / startDist;
-      state.photo.scale = Math.max(0.2, Math.min(3, startScale * ratio));
-      $('scaleRange').value = state.photo.scale;
-      draw();
-    };
-    const onEnd = ()=>{ window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onEnd); };
-    window.addEventListener('touchmove', onMove, {passive:false});
-    window.addEventListener('touchend', onEnd);
-  }
-}, {passive:false});
-
-window.addEventListener('resize', resizeCanvas);
-
-function init(){
-  resizeCanvas();
-  state.text.size = Math.max(24, Math.round((canvas.width / DPR) * 0.06));
-  draw();
-}
-init();
-
-window.addEventListener('keydown', (e)=>{
-  if(e.key === 'z' && (e.ctrlKey || e.metaKey)){
-    e.preventDefault();
-    undo();
-  }
-  if(e.key === 's' && (e.ctrlKey || e.metaKey)){
-    e.preventDefault();
-    $('downloadBtn').click();
-  }
-});
+window.addEventListener('resize',resizeCanvas);
+resizeCanvas();
 </script>
 </body>
 </html>
