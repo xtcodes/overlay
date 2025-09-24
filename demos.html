@@ -164,9 +164,21 @@ function resizeCanvas(){
   canvas.height=cssSize*DPR;
   draw();
 }
+
+function drawPlaceholder(){
+  ctx.save();
+  ctx.fillStyle="#9ca3af";
+  ctx.font=`${20*DPR}px sans-serif`;
+  ctx.textAlign="center";
+  ctx.textBaseline="middle";
+  ctx.fillText("Unggah Foto dan Twibbon untuk Memulai", canvas.width/2, canvas.height/2);
+  ctx.restore();
+}
+
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   const cW=canvas.width, cH=canvas.height;
+
   if(photoImg){
     const baseScale=Math.max(cW/photoImg.width,cH/photoImg.height);
     const drawScale=baseScale*scale;
@@ -179,8 +191,14 @@ function draw(){
     ctx.drawImage(frameImg,0,0,cW,cH);
     ctx.globalAlpha=1.0;
   }
+
+  if(!photoImg && !frameImg){
+    drawPlaceholder();
+  }
+
   updateDownloadVisibility();
 }
+
 function hasTransparency(img){
   const t=document.createElement("canvas"), c=t.getContext("2d");
   t.width=img.width; t.height=img.height;
@@ -252,6 +270,8 @@ $('resetBtn').onclick=()=>{
   $('downloadBtn').style.display="inline-block";
   $('shareBtn').style.display="none";
   $('resetBtn').style.display="none";
+  $('photoInput').value="";
+  $('frameInput').value="";
   draw();
 };
 
