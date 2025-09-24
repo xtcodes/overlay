@@ -69,7 +69,7 @@
   input[type=file]{display:none}
   .download{
     margin-top:12px;
-    display:flex;
+    display:none; /* awalnya hidden */
     justify-content:flex-end;
   }
   .download button{
@@ -103,7 +103,7 @@
         <input id="frameInput" type="file" accept="image/png,image/*">
       </div>
     </div>
-    <div class="download">
+    <div class="download" id="downloadBox">
       <button id="downloadBtn">Unduh PNG</button>
     </div>
   </div>
@@ -156,6 +156,7 @@ function draw(){
     ctx.drawImage(frameImg,0,0,cW,cH);
     ctx.globalAlpha = 1.0;
   }
+  updateDownloadVisibility();
 }
 
 // cek apakah gambar punya transparansi
@@ -181,6 +182,15 @@ function startEdit(){
 function endEdit(){
   isEditing = false;
   draw();
+}
+
+function updateDownloadVisibility(){
+  const box = $('downloadBox');
+  if(photoImg && frameImg){
+    box.style.display = "flex";
+  } else {
+    box.style.display = "none";
+  }
 }
 
 // pointer drag
@@ -287,6 +297,7 @@ $('frameInput').addEventListener('change',(e)=>{
     } else {
       alert("⚠️ Twibbon harus memiliki bidang transparan (PNG dengan alpha)!\nFile tidak ditampilkan.");
       frameImg=null; // jangan tampilkan
+      draw();
     }
     URL.revokeObjectURL(url);
   };
