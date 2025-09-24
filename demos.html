@@ -1,205 +1,90 @@
 <!doctype html>
 <html lang="id">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Alat Twibbon Final</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Alat Twibbon</title>
 
-<!-- Font Awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
 
 <style>
   body{
-    margin:0;
-    padding:20px;
-    background:#f3f4f6;
-    font-family:sans-serif;
-    display:flex;
-    justify-content:center;
-    align-items:flex-start;
-    min-height:100vh;
+    margin:0;padding:20px;background:#f3f4f6;
+    font-family:sans-serif;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;
   }
-  .wrap{
-    width:100%;
-    max-width:600px;
-    background:#fff;
-    border-radius:10px;
-    padding:12px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.1);
-  }
-  .canvas-area{
-    position:relative;
-    width:100%;
-    padding-top:100%;
-    background:#e5e7eb;
-    border-radius:8px;
-    overflow:hidden;
-    touch-action:none;
-  }
-  canvas{
-    position:absolute;
-    inset:0;
-    width:100%;
-    height:100%;
-  }
+  .wrap{width:100%;max-width:600px;background:#fff;border-radius:10px;padding:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1);}
+  .canvas-area{position:relative;width:100%;padding-top:100%;background:#e5e7eb;border-radius:8px;overflow:hidden;touch-action:none;}
+  canvas{position:absolute;inset:0;width:100%;height:100%;}
   .placeholder{
-    position:absolute;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
-    font-size:clamp(14px,4vw,20px);
-    color:#6b7280;
-    text-align:center;
-    pointer-events:none;
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    font-size:clamp(14px,4vw,20px);color:#6b7280;pointer-events:none;white-space:nowrap;
   }
-  .overlay{
-    position:absolute;
-    inset:0;
-    background:rgba(0,0,0,0.5);
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    color:#fff;
-    font-size:16px;
-    font-weight:500;
-    gap:10px;
-    z-index:10;
-    display:none;
-  }
-  .control-panel{
-    position:absolute;
-    bottom:12px;
-    left:12px;
-    display:flex;
-    gap:8px;
-    background:rgba(0,0,0,0.6);
-    padding:8px;
-    border-radius:8px;
-    backdrop-filter:blur(4px);
-  }
-  .btn{
-    width:40px;
-    height:40px;
-    border:none;
-    border-radius:6px;
-    background:rgba(255,255,255,0.15);
-    color:#fff;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:18px;
-  }
+  .overlay{position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;color:#fff;font-size:16px;font-weight:500;gap:10px;z-index:10;display:none;}
+  .control-panel{position:absolute;bottom:12px;left:12px;display:flex;gap:8px;background:rgba(0,0,0,0.6);padding:8px;border-radius:8px;backdrop-filter:blur(4px);}
+  .btn{width:40px;height:40px;border:none;border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;}
   input[type=file]{display:none}
-  .process-box{
-    margin-top:12px;
-    display:none;
-    justify-content:flex-end;
-  }
-  .process-box button{
-    padding:8px 14px;
-    border:none;
-    border-radius:6px;
-    background:#4CAF50;
-    color:#fff;
-    font-size:14px;
-    cursor:pointer;
-  }
-  .alt-download{
-    margin-top:12px;
-    display:none;
-    font-size:14px;
-  }
-  .download{
-    margin-top:12px;
-    display:none;
-    justify-content:flex-end;
-    gap:10px;
-  }
-  .download button{
-    padding:8px 14px;
-    border:none;
-    border-radius:6px;
-    background:#2196F3;
-    color:#fff;
-    font-size:14px;
-    cursor:pointer;
-  }
-  .reset-btn{ background:#f44336 !important; }
-  .spinner{
-    border:4px solid rgba(255,255,255,0.3);
-    border-top:4px solid #fff;
-    border-radius:50%;
-    width:22px;
-    height:22px;
-    animation:spin 1s linear infinite;
-  }
-  @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+  .download{margin-top:12px;display:none;justify-content:flex-end;gap:10px;}
+  .download button{padding:8px 14px;border:none;border-radius:6px;font-size:14px;cursor:pointer;color:#fff;}
+  .share-btn{background:#2196F3;}
+  .reset-btn{background:#f44336;}
+  .process-box{margin-top:12px;text-align:right;}
+  .process-box button{padding:8px 14px;border:none;border-radius:6px;background:#4CAF50;color:#fff;font-size:14px;cursor:pointer;}
+  .alt-download{display:none;margin-top:12px;font-size:15px;color:#333;}
+  .alt-download a{color:#2196F3;text-decoration:underline;}
+  .spinner{border:4px solid rgba(255,255,255,0.3);border-top:4px solid #fff;border-radius:50%;width:22px;height:22px;animation:spin 1s linear infinite;}
+  @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <h3 style="margin:6px 0 12px">Alat Twibbon (Final)</h3>
-    <div class="canvas-area" id="canvasArea">
-      <canvas id="mainCanvas"></canvas>
-      <div class="placeholder" id="placeholder">Unggah Foto &amp; Twibbon<br>untuk mulai</div>
+<div class="wrap">
+  <h3 style="margin:6px 0 12px">Alat Twibbon</h3>
+  <div class="canvas-area" id="canvasArea">
+    <canvas id="mainCanvas"></canvas>
+    <div class="placeholder" id="placeholder">Unggah Foto & Twibbon</div>
 
-      <!-- Overlay spinner -->
-      <div class="overlay" id="overlay">
-        <div class="spinner"></div>
-        <div>Memproses...</div>
-      </div>
-
-      <div class="control-panel" id="uploadPanel">
-        <button class="btn" id="photoBtn" title="Unggah Foto">
-          <i class="fa-solid fa-image"></i>
-        </button>
-        <input id="photoInput" type="file" accept="image/*">
-
-        <button class="btn" id="frameBtn" title="Unggah Twibbon">
-          <i class="fa-solid fa-layer-group"></i>
-        </button>
-        <input id="frameInput" type="file" accept="image/png,image/*">
-      </div>
+    <div class="overlay" id="overlay">
+      <div class="spinner"></div>
+      <div>Memproses...</div>
     </div>
 
-    <!-- Link alternatif unduh -->
-    <div class="alt-download" id="altLinkContainer">
-      Jika unduhan tidak dimulai otomatis <a id="altDownloadLink" href="#" download="twibbon.png">klik disini</a>
-    </div>
-
-    <!-- Tombol proses -->
-    <div class="process-box" id="processBox">
-      <button id="processBtn">Proses</button>
-    </div>
-
-    <!-- Tombol share + reset -->
-    <div class="download" id="downloadBox">
-      <button id="shareBtn" style="display:none">Bagikan</button>
-      <button id="resetBtn" class="reset-btn" style="display:none">Reset</button>
+    <div class="control-panel" id="uploadPanel">
+      <button class="btn" id="photoBtn" title="Unggah Foto"><i class="fa-solid fa-image"></i></button>
+      <input id="photoInput" type="file" accept="image/*">
+      <button class="btn" id="frameBtn" title="Unggah Twibbon"><i class="fa-solid fa-layer-group"></i></button>
+      <input id="frameInput" type="file" accept="image/png,image/*">
     </div>
   </div>
 
+  <div class="alt-download" id="altLinkContainer">
+    Jika unduh tidak dimulai otomatis, <a id="altDownloadLink" download="twibbon.png">klik disini</a>
+  </div>
+
+  <div class="process-box" id="processBox">
+    <button id="processBtn">Proses</button>
+  </div>
+
+  <div class="download" id="downloadBox">
+    <button id="shareBtn" class="share-btn" style="display:none">Bagikan</button>
+    <button id="resetBtn" class="reset-btn" style="display:none">Reset</button>
+  </div>
+</div>
+
 <script>
-const $ = id=>document.getElementById(id);
-const canvas=$('mainCanvas'), ctx=canvas.getContext('2d');
+const $=id=>document.getElementById(id);
+const canvas=$('mainCanvas'),ctx=canvas.getContext('2d');
 const container=$('canvasArea');
 let DPR=window.devicePixelRatio||1;
-
-let photoImg=null, frameImg=null;
-let offsetX=0, offsetY=0, scale=1;
+let photoImg=null,frameImg=null;
+let offsetX=0,offsetY=0,scale=1;
 let isEditing=false,isDragging=false,lastX=0,lastY=0,lastTouchDist=0;
 let isLocked=false;
 let exportBlob=null,exportURL=null;
 
 function resizeCanvas(){
   const rect=container.getBoundingClientRect();
-  const cssSize=rect.width;
-  DPR=window.devicePixelRatio||1;
-  canvas.style.width=cssSize+'px';
-  canvas.style.height=cssSize+'px';
-  canvas.width=cssSize*DPR;
-  canvas.height=cssSize*DPR;
+  const cssSize=rect.width;DPR=window.devicePixelRatio||1;
+  canvas.style.width=cssSize+'px';canvas.style.height=cssSize+'px';
+  canvas.width=cssSize*DPR;canvas.height=cssSize*DPR;
   draw();
 }
 function draw(){
@@ -213,67 +98,53 @@ function draw(){
     ctx.drawImage(photoImg,x,y,w,h);
   }
   if(frameImg){
-    ctx.globalAlpha=isEditing?0.5:1.0;
     ctx.drawImage(frameImg,0,0,cW,cH);
-    ctx.globalAlpha=1.0;
   }
+  $('placeholder').style.display=(photoImg||frameImg)?"none":"block";
 }
 function hasTransparency(img){
   const t=document.createElement("canvas"),c=t.getContext("2d");
-  t.width=img.width;t.height=img.height;
-  c.drawImage(img,0,0);
+  t.width=img.width;t.height=img.height;c.drawImage(img,0,0);
   const d=c.getImageData(0,0,img.width,img.height).data;
-  for(let i=3;i<d.length;i+=4){ if(d[i]<255) return true; }
+  for(let i=3;i<d.length;i+=4){if(d[i]<255)return true;}
   return false;
 }
-function updateUI(){
-  $('placeholder').style.display=(photoImg&&frameImg)?'none':'block';
-  $('processBox').style.display=(photoImg&&frameImg)?'flex':'none';
-}
 
-// unggah
+// upload
 $('photoBtn').onclick=()=>$('photoInput').click();
 $('frameBtn').onclick=()=>$('frameInput').click();
 $('photoInput').addEventListener('change',e=>{
-  const f=e.target.files[0]; if(!f) return;
+  const f=e.target.files[0];if(!f)return;
   const url=URL.createObjectURL(f),img=new Image();
-  img.onload=()=>{ photoImg=img; offsetX=offsetY=0; scale=1; draw(); URL.revokeObjectURL(url); updateUI(); };
+  img.onload=()=>{photoImg=img;offsetX=offsetY=0;scale=1;draw();URL.revokeObjectURL(url);$('processBox').style.display='block';};
   img.src=url;
 });
 $('frameInput').addEventListener('change',e=>{
-  const f=e.target.files[0]; if(!f) return;
+  const f=e.target.files[0];if(!f)return;
   const url=URL.createObjectURL(f),img=new Image();
   img.onload=()=>{
-    if(hasTransparency(img)){ frameImg=img; draw(); }
-    else{ alert("⚠️ Twibbon harus transparan!"); frameImg=null; draw(); }
-    URL.revokeObjectURL(url); updateUI();
+    if(hasTransparency(img)){frameImg=img;draw();$('processBox').style.display='block';}
+    else{alert("⚠️ Twibbon harus transparan!");frameImg=null;draw();}
+    URL.revokeObjectURL(url);
   };
   img.src=url;
 });
 
 // proses export
 function exportTwibbonBlob(cb){
-  const temp=document.createElement('canvas');
-  temp.width=canvas.width; temp.height=canvas.height;
-  const tctx=temp.getContext('2d');
-  const baseScale=Math.max(temp.width/photoImg.width,temp.height/photoImg.height);
-  const drawScale=baseScale*scale;
-  const w=photoImg.width*drawScale,h=photoImg.height*drawScale;
-  const x=(temp.width-w)/2+offsetX,y=(temp.height-h)/2+offsetY;
-  tctx.drawImage(photoImg,x,y,w,h);
-  tctx.drawImage(frameImg,0,0,temp.width,temp.height);
-  temp.toBlob(cb,'image/png');
+  const out=document.createElement("canvas");
+  out.width=canvas.width;out.height=canvas.height;
+  const octx=out.getContext("2d");
+  octx.drawImage(canvas,0,0);
+  out.toBlob(cb,"image/png");
 }
 function processExport(){
   const overlay=$('overlay');
-  overlay.style.display='flex';
-  isLocked=true;
-  $('uploadPanel').style.display='none';
+  overlay.style.display='flex';isLocked=true;$('uploadPanel').style.display='none';
 
   setTimeout(()=>{
     exportTwibbonBlob(blob=>{
-      exportBlob=blob;
-      if(exportURL) URL.revokeObjectURL(exportURL);
+      exportBlob=blob;if(exportURL)URL.revokeObjectURL(exportURL);
       exportURL=URL.createObjectURL(blob);
 
       $('altLinkContainer').style.display='block';
@@ -286,39 +157,45 @@ function processExport(){
       overlay.style.display='none';
       $('processBox').style.display='none';
 
-      isLocked=true; // 🔒 permanen
+      isLocked=true; // 🔒 kunci permanen
       triggerSequenceFireworks();
     });
   },2000);
 }
 $('processBtn').onclick=processExport;
 
-// bagikan
+// share
 $('shareBtn').onclick=()=>{
-  if(!exportBlob) return;
+  if(!exportBlob)return;
   const file=new File([exportBlob],"twibbon.png",{type:"image/png"});
-  if(navigator.share && navigator.canShare?.({files:[file]})){
-    navigator.share({title:"Twibbon",files:[file]}).catch(()=>{});
-  }else alert("Fitur share tidak didukung browser ini.");
+  if(navigator.share&&navigator.canShare?.({files:[file]})){
+    navigator.share({title:"Twibbon",text:"Lihat twibbon saya!",files:[file]}).catch(()=>{});
+  }else{alert("Fitur share tidak didukung di browser ini.");}
 };
+
 // reset
-$('resetBtn').onclick=()=>window.location.reload();
+$('resetBtn').onclick=()=>{
+  photoImg=frameImg=null;offsetX=offsetY=0;scale=1;isLocked=false;
+  exportBlob=null;if(exportURL){URL.revokeObjectURL(exportURL);exportURL=null;}
+  $('uploadPanel').style.display='flex';
+  $('downloadBox').style.display='none';
+  $('altLinkContainer').style.display='none';
+  $('processBox').style.display='none';
+  draw();
+};
 
 // gesture
-function getDist(t1,t2){return Math.hypot(t2.clientX-t1.clientX,t2.clientY-t1.clientY);}
+function getDist(t1,t2){const dx=t2.clientX-t1.clientX,dy=t2.clientY-t1.clientY;return Math.hypot(dx,dy);}
 canvas.addEventListener('pointerdown',e=>{
-  if(isLocked)return;
-  isDragging=true;lastX=e.clientX;lastY=e.clientY;isEditing=true;
-  canvas.setPointerCapture(e.pointerId);
+  if(isLocked)return;isDragging=true;lastX=e.clientX;lastY=e.clientY;isEditing=true;canvas.setPointerCapture(e.pointerId);
 });
 canvas.addEventListener('pointermove',e=>{
   if(isLocked)return;
-  if(isDragging && e.pointerType==="mouse"){
-    e.preventDefault();
-    offsetX+=(e.clientX-lastX)*DPR; offsetY+=(e.clientY-lastY)*DPR;
-    lastX=e.clientX; lastY=e.clientY; draw();
+  if(isDragging&&e.pointerType==="mouse"){
+    offsetX+=(e.clientX-lastX)*DPR;offsetY+=(e.clientY-lastY)*DPR;
+    lastX=e.clientX;lastY=e.clientY;draw();
   }
-},{passive:false});
+});
 canvas.addEventListener('pointerup',e=>{
   if(isLocked)return;
   isDragging=false;isEditing=false;canvas.releasePointerCapture(e.pointerId);draw();
@@ -337,8 +214,7 @@ canvas.addEventListener('touchmove',e=>{
     if(lastTouchDist>0){scale*=dist/lastTouchDist;scale=Math.max(0.2,Math.min(5,scale));}
     lastTouchDist=dist;draw();
   }else if(e.touches.length===1){
-    offsetX+=(e.touches[0].clientX-lastX)*DPR;
-    offsetY+=(e.touches[0].clientY-lastY)*DPR;
+    offsetX+=(e.touches[0].clientX-lastX)*DPR;offsetY+=(e.touches[0].clientY-lastY)*DPR;
     lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;draw();
   }
 },{passive:false});
@@ -354,17 +230,11 @@ canvas.addEventListener('wheel',e=>{
   canvas._wheelTimeout=setTimeout(()=>{isEditing=false;draw();},400);
 },{passive:false});
 
-// fireworks (versi lama, hanya efek sementara)
+// fireworks efek semula
 function triggerFireworksAt(x,y,duration=1500){
   const particles=[];
-  for(let i=0;i<40;i++){
-    particles.push({
-      x:x,y:y,
-      angle:Math.random()*2*Math.PI,
-      speed:2+Math.random()*3,
-      life:duration,age:0,
-      color:`hsl(${Math.random()*360},100%,50%)`
-    });
+  for(let i=0;i<60;i++){
+    particles.push({x,y,angle:Math.random()*2*Math.PI,speed:2+Math.random()*3,life:duration,age:0,color:`hsl(${Math.random()*360},100%,60%)`});
   }
   const start=performance.now();
   function animate(now){
@@ -374,32 +244,29 @@ function triggerFireworksAt(x,y,duration=1500){
     particles.forEach(p=>{
       const progress=p.age/p.life;
       if(progress<1){
-        const px=p.x+Math.cos(p.angle)*p.speed*progress*30;
-        const py=p.y+Math.sin(p.angle)*p.speed*progress*30;
+        const px=p.x+Math.cos(p.angle)*p.speed*progress*40;
+        const py=p.y+Math.sin(p.angle)*p.speed*progress*40;
         ctx.fillStyle=p.color;
         ctx.globalAlpha=1-progress;
-        ctx.beginPath();
-        ctx.arc(px,py,2,0,2*Math.PI);
-        ctx.fill();
+        ctx.beginPath();ctx.arc(px,py,2,0,2*Math.PI);ctx.fill();
         p.age=elapsed;
       }
     });
     ctx.restore();
-    if(elapsed<duration) requestAnimationFrame(animate);
-    else draw();
+    if(elapsed<duration){requestAnimationFrame(animate);}else{draw();}
   }
   requestAnimationFrame(animate);
 }
 function triggerSequenceFireworks(){
   const positions=[
     [canvas.width/2,canvas.height/2],
-    [50,50],
-    [canvas.width-50,50],
-    [50,canvas.height-50],
-    [canvas.width-50,canvas.height-50]
+    [60,60],
+    [canvas.width-60,60],
+    [60,canvas.height-60],
+    [canvas.width-60,canvas.height-60]
   ];
   positions.forEach((pos,i)=>{
-    setTimeout(()=>{triggerFireworksAt(pos[0],pos[1]);},i*600);
+    setTimeout(()=>{triggerFireworksAt(pos[0],pos[1]);},i*700);
   });
 }
 
