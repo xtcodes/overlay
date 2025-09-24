@@ -159,23 +159,19 @@ function draw(){
 }
 
 // cek apakah gambar punya transparansi
-function validateTransparency(img){
+function hasTransparency(img){
   const testCanvas = document.createElement("canvas");
   const tctx = testCanvas.getContext("2d");
   testCanvas.width = img.width;
   testCanvas.height = img.height;
   tctx.drawImage(img,0,0);
   const data = tctx.getImageData(0,0,img.width,img.height).data;
-  let hasTransparent = false;
   for(let i=3;i<data.length;i+=4){
     if(data[i] < 255){ // alpha kurang dari 255
-      hasTransparent = true;
-      break;
+      return true;
     }
   }
-  if(!hasTransparent){
-    alert("⚠️ Twibbon harus memiliki bidang transparan (PNG dengan alpha)!");
-  }
+  return false;
 }
 
 function startEdit(){
@@ -285,9 +281,13 @@ $('frameInput').addEventListener('change',(e)=>{
   const url = URL.createObjectURL(f);
   const img = new Image();
   img.onload = ()=>{
-    frameImg=img; 
-    validateTransparency(img);
-    draw(); 
+    if(hasTransparency(img)){
+      frameImg=img; 
+      draw(); 
+    } else {
+      alert("⚠️ Twibbon harus memiliki bidang transparan (PNG dengan alpha)!\nFile tidak ditampilkan.");
+      frameImg=null; // jangan tampilkan
+    }
     URL.revokeObjectURL(url);
   };
   img.src = url;
