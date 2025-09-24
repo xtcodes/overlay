@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Alat Twibbon 1x1 + Gesture + Validasi</title>
+<title>Alat Twibbon 1x1 + Gesture + Validasi + Delay Unduh</title>
 
 <!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
@@ -41,6 +41,20 @@
     inset:0;
     width:100%;
     height:100%;
+  }
+  .overlay{
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,0.5);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    color:#fff;
+    font-size:16px;
+    font-weight:500;
+    gap:10px;
+    z-index:10;
+    display:none; /* default hidden */
   }
   .control-panel{
     position:absolute;
@@ -81,13 +95,31 @@
     font-size:14px;
     cursor:pointer;
   }
+  .spinner{
+    border:4px solid rgba(255,255,255,0.3);
+    border-top:4px solid #fff;
+    border-radius:50%;
+    width:22px;
+    height:22px;
+    animation:spin 1s linear infinite;
+  }
+  @keyframes spin{
+    0%{transform:rotate(0deg)}
+    100%{transform:rotate(360deg)}
+  }
 </style>
 </head>
 <body>
   <div class="wrap">
-    <h3 style="margin:6px 0 12px">Alat Twibbon 1:1 + Gesture + Validasi</h3>
+    <h3 style="margin:6px 0 12px">Alat Twibbon 1:1 + Delay Unduh</h3>
     <div class="canvas-area" id="canvasArea">
       <canvas id="mainCanvas"></canvas>
+
+      <!-- Overlay spinner + teks -->
+      <div class="overlay" id="overlay">
+        <div class="spinner"></div>
+        <div>Sedang proses...</div>
+      </div>
 
       <div class="control-panel">
         <!-- Tombol unggah foto -->
@@ -123,12 +155,12 @@ let offsetX = 0, offsetY = 0;
 let scale = 1;
 let lastTouchDist = 0;
 let isDragging = false;
-let isEditing = false; // flag untuk transparansi twibbon
+let isEditing = false;
 let lastX = 0, lastY = 0;
 
 function resizeCanvas(){
   const rect = container.getBoundingClientRect();
-  const cssSize = rect.width; // square
+  const cssSize = rect.width;
   DPR = window.devicePixelRatio || 1;
   canvas.style.width = cssSize + 'px';
   canvas.style.height = cssSize + 'px';
@@ -152,14 +184,13 @@ function draw(){
     ctx.drawImage(photoImg, x, y, w, h);
   }
   if(frameImg){
-    ctx.globalAlpha = isEditing ? 0.5 : 1.0; // transparan saat edit
+    ctx.globalAlpha = isEditing ? 0.5 : 1.0;
     ctx.drawImage(frameImg,0,0,cW,cH);
     ctx.globalAlpha = 1.0;
   }
   updateDownloadVisibility();
 }
 
-// cek apakah gambar punya transparansi
 function hasTransparency(img){
   const testCanvas = document.createElement("canvas");
   const tctx = testCanvas.getContext("2d");
@@ -168,7 +199,7 @@ function hasTransparency(img){
   tctx.drawImage(img,0,0);
   const data = tctx.getImageData(0,0,img.width,img.height).data;
   for(let i=3;i<data.length;i+=4){
-    if(data[i] < 255){ // alpha kurang dari 255
+    if(data[i] < 255){
       return true;
     }
   }
@@ -191,84 +222,6 @@ function updateDownloadVisibility(){
   } else {
     box.style.display = "none";
   }
-}
-
-// pointer drag
-canvas.addEventListener('pointerdown', e=>{
-  isDragging = true;
-  lastX = e.clientX;
-  lastY = e.clientY;
-  startEdit();
-  canvas.setPointerCapture(e.pointerId);
-});
-canvas.addEventListener('pointermove', e=>{
-  if(isDragging && e.pointerType==="mouse"){
-    offsetX += (e.clientX - lastX)*DPR;
-    offsetY += (e.clientY - lastY)*DPR;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    draw();
-  }
-});
-canvas.addEventListener('pointerup', e=>{
-  isDragging = false;
-  endEdit();
-  canvas.releasePointerCapture(e.pointerId);
-});
-
-// pinch zoom (touch)
-canvas.addEventListener('touchstart', e=>{
-  if(e.touches.length===2){
-    lastTouchDist = getDist(e.touches[0], e.touches[1]);
-    startEdit();
-  } else if(e.touches.length===1){
-    lastX = e.touches[0].clientX;
-    lastY = e.touches[0].clientY;
-    startEdit();
-  }
-},{passive:false});
-
-canvas.addEventListener('touchmove', e=>{
-  if(e.touches.length===2){
-    const dist = getDist(e.touches[0], e.touches[1]);
-    if(lastTouchDist>0){
-      const factor = dist/lastTouchDist;
-      scale *= factor;
-      scale = Math.max(0.2, Math.min(5, scale));
-    }
-    lastTouchDist = dist;
-    draw();
-  } else if(e.touches.length===1){
-    offsetX += (e.touches[0].clientX - lastX)*DPR;
-    offsetY += (e.touches[0].clientY - lastY)*DPR;
-    lastX = e.touches[0].clientX;
-    lastY = e.touches[0].clientY;
-    draw();
-  }
-},{passive:false});
-
-canvas.addEventListener('touchend', e=>{
-  if(e.touches.length===0){
-    endEdit();
-  }
-});
-
-// mouse wheel zoom
-canvas.addEventListener('wheel', e=>{
-  startEdit();
-  const delta = e.deltaY<0 ? 1.1 : 0.9;
-  scale *= delta;
-  scale = Math.max(0.2, Math.min(5, scale));
-  draw();
-  clearTimeout(canvas._wheelTimeout);
-  canvas._wheelTimeout = setTimeout(endEdit, 400);
-});
-
-// helper jarak
-function getDist(t1,t2){
-  const dx = t2.clientX - t1.clientX;
-  const dy = t2.clientY - t1.clientY;
-  return Math.hypot(dx,dy);
 }
 
 $('photoBtn').onclick = ()=> $('photoInput').click();
@@ -296,7 +249,7 @@ $('frameInput').addEventListener('change',(e)=>{
       draw(); 
     } else {
       alert("⚠️ Twibbon harus memiliki bidang transparan (PNG dengan alpha)!\nFile tidak ditampilkan.");
-      frameImg=null; // jangan tampilkan
+      frameImg=null; 
       draw();
     }
     URL.revokeObjectURL(url);
@@ -304,15 +257,100 @@ $('frameInput').addEventListener('change',(e)=>{
   img.src = url;
 });
 
+// fitur unduh dengan delay + spinner
 $('downloadBtn').onclick=()=>{
-  canvas.toBlob(blob=>{
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download='twibbon.png';
-    a.click();
-    a.remove();
-  });
+  const btn = $('downloadBtn');
+  const overlay = $('overlay');
+
+  btn.disabled = true;
+  overlay.style.display = "flex";
+
+  setTimeout(()=>{
+    canvas.toBlob(blob=>{
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='twibbon.png';
+      a.click();
+      a.remove();
+
+      overlay.style.display = "none";
+      btn.disabled = false;
+    });
+  },15000); // delay 15 detik
 };
+
+// gesture & zoom
+canvas.addEventListener('pointerdown', e=>{
+  isDragging = true;
+  lastX = e.clientX;
+  lastY = e.clientY;
+  startEdit();
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', e=>{
+  if(isDragging && e.pointerType==="mouse"){
+    offsetX += (e.clientX - lastX)*DPR;
+    offsetY += (e.clientY - lastY)*DPR;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    draw();
+  }
+});
+canvas.addEventListener('pointerup', e=>{
+  isDragging = false;
+  endEdit();
+  canvas.releasePointerCapture(e.pointerId);
+});
+
+canvas.addEventListener('touchstart', e=>{
+  if(e.touches.length===2){
+    lastTouchDist = getDist(e.touches[0], e.touches[1]);
+    startEdit();
+  } else if(e.touches.length===1){
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
+    startEdit();
+  }
+},{passive:false});
+canvas.addEventListener('touchmove', e=>{
+  if(e.touches.length===2){
+    const dist = getDist(e.touches[0], e.touches[1]);
+    if(lastTouchDist>0){
+      const factor = dist/lastTouchDist;
+      scale *= factor;
+      scale = Math.max(0.2, Math.min(5, scale));
+    }
+    lastTouchDist = dist;
+    draw();
+  } else if(e.touches.length===1){
+    offsetX += (e.touches[0].clientX - lastX)*DPR;
+    offsetY += (e.touches[0].clientY - lastY)*DPR;
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
+    draw();
+  }
+},{passive:false});
+canvas.addEventListener('touchend', e=>{
+  if(e.touches.length===0){
+    endEdit();
+  }
+});
+
+canvas.addEventListener('wheel', e=>{
+  startEdit();
+  const delta = e.deltaY<0 ? 1.1 : 0.9;
+  scale *= delta;
+  scale = Math.max(0.2, Math.min(5, scale));
+  draw();
+  clearTimeout(canvas._wheelTimeout);
+  canvas._wheelTimeout = setTimeout(endEdit, 400);
+});
+
+function getDist(t1,t2){
+  const dx = t2.clientX - t1.clientX;
+  const dy = t2.clientY - t1.clientY;
+  return Math.hypot(dx,dy);
+}
 
 window.addEventListener('resize',resizeCanvas);
 resizeCanvas();
