@@ -3,7 +3,11 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Alat Twibbon Responsif</title>
+<title>Alat Twibbon - Ikon Font Awesome pada Tombol Upload</title>
+
+<!-- Font Awesome CDN (free) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-pQ3o0Zr0kq8gkPjzqv3Dk1yZlF+X0V1m3p6x8r9b1j5t9R9k0s6v1YBx2Pd8gq7e6g7bZ3v9W3y7z6v3y7z6w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
 <style>
   :root{
     --panel-bg: rgba(0,0,0,0.6);
@@ -36,7 +40,6 @@
   .canvas-area{
     position:relative;
     width:100%;
-    /* maintain 4:3 aspect ratio by default, but responsive */
     padding-top:75%;
     background: linear-gradient(180deg,#eef2ff, #fff);
     border-radius:8px;
@@ -94,14 +97,27 @@
     border-radius:8px;
     cursor:pointer;
     font-size:13px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
   }
   .btn.primary{
     background:var(--accent);
     color:white;
   }
   .small{
-    font-size:12px;
-    padding:6px 8px;
+    font-size:14px;
+    padding:8px;
+  }
+
+  .icon-only{
+    width:36px;
+    height:36px;
+    padding:0;
+    font-size:16px;
+    display:inline-grid;
+    place-items:center;
   }
 
   .controls-bottom{
@@ -131,11 +147,11 @@
   }
 
   .info{
+    margin-top:12px;
     font-size:13px;
     color:#374151;
   }
 
-  /* small screens adjust */
   @media (max-width:520px){
     .control-panel{
       left:8px;
@@ -149,43 +165,50 @@
 </head>
 <body>
   <div class="wrap" role="main">
-    <h2 style="margin:6px 0 12px 0">Alat Twibbon — Responsive Canvas</h2>
+    <h2 style="margin:6px 0 12px 0">Alat Twibbon — Tombol Upload dengan Font Awesome</h2>
 
     <div class="canvas-area" id="canvasArea">
       <canvas id="mainCanvas" aria-label="Canvas Twibbon"></canvas>
 
       <!-- Control panel bottom-left -->
       <div class="control-panel" id="controlPanel" aria-hidden="false">
-        <div class="row">
-          <label for="photoInput">Foto:</label>
-          <button class="btn small" id="photoBtn">Pilih</button>
-          <input id="photoInput" type="file" accept="image/*">
+        <div class="row" title="Unggah foto (gambar)">
+          <label for="photoInput" style="min-width:52px">Foto</label>
+          <!-- tombol icon-only menggunakan Font Awesome -->
+          <button class="btn icon-only" id="photoBtn" aria-label="Unggah Foto" title="Unggah Foto (klik)">
+            <i class="fa-solid fa-image" aria-hidden="true"></i>
+          </button>
+          <input id="photoInput" type="file" accept="image/*" aria-label="Input file foto">
         </div>
 
-        <div class="row">
-          <label for="frameInput">Twibbon (PNG):</label>
-          <button class="btn small" id="frameBtn">Pilih</button>
-          <input id="frameInput" type="file" accept="image/png,image/*">
+        <div class="row" title="Unggah twibbon/frame (PNG) - akan diletakkan di atas">
+          <label for="frameInput" style="min-width:52px">Twibbon</label>
+          <button class="btn icon-only" id="frameBtn" aria-label="Unggah Twibbon" title="Unggah Twibbon/Frame (PNG)">
+            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+          </button>
+          <input id="frameInput" type="file" accept="image/png,image/*" aria-label="Input file frame">
         </div>
 
-        <div class="row">
-          <label for="fontInput">Font:</label>
-          <button class="btn small" id="fontBtn">Unggah</button>
-          <input id="fontInput" type="file" accept=".ttf,.otf,.woff,.woff2">
+        <div class="row" title="Unggah font (opsional)">
+          <label for="fontInput" style="min-width:52px">Font</label>
+          <button class="btn icon-only" id="fontBtn" aria-label="Unggah Font" title="Unggah Font (TTF/OTF/WOFF)">
+            <i class="fa-solid fa-font" aria-hidden="true"></i>
+          </button>
+          <input id="fontInput" type="file" accept=".ttf,.otf,.woff,.woff2" aria-label="Input file font">
         </div>
 
         <div class="sliders" title="Atur posisi & ukuran foto">
           <div style="font-size:12px;color:#fff;">Scale</div>
-          <input id="scaleRange" type="range" min="0.2" max="2.5" step="0.01" value="1">
+          <input id="scaleRange" type="range" min="0.2" max="2.5" step="0.01" value="1" aria-label="Skala foto">
         </div>
 
-        <div class="sliders">
+        <div class="sliders" title="Putar foto">
           <div style="font-size:12px;color:#fff;">Rotate</div>
-          <input id="rotateRange" type="range" min="-180" max="180" step="1" value="0">
+          <input id="rotateRange" type="range" min="-180" max="180" step="1" value="0" aria-label="Putar foto">
         </div>
 
         <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
-          <input id="textInput" type="text" placeholder="Tulis teks..." style="flex:1;padding:6px;border-radius:6px;border:none;font-size:13px;">
+          <input id="textInput" type="text" placeholder="Tulis teks..." style="flex:1;padding:6px;border-radius:6px;border:none;font-size:13px;" aria-label="Input teks">
         </div>
 
         <div class="controls-bottom">
@@ -200,33 +223,21 @@
       </div>
     </div>
 
-    <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
       <div class="info">Tips: seret foto langsung di kanvas untuk memindahkan. Gunakan slider untuk scale & rotate.</div>
-      <div style="font-size:13px;color:#6b7280">Output: PNG (transparent jika frame/overlay ada area transparan)</div>
+      <div style="font-size:13px;color:#6b7280">Output: PNG</div>
     </div>
   </div>
 
 <script>
-/*
-  Twibbon Tool JS
-  - responsive canvas with devicePixelRatio support
-  - load user photo, load frame (twibbon) PNG, load font via FontFace
-  - allow dragging photo, scale & rotate via range inputs
-  - editable text using uploaded font; text rendered at center-bottom by default
-  - download final PNG
-*/
-
-// --- Helpers ---
 const $ = id => document.getElementById(id);
 
-// Canvas setup
 const canvas = $('mainCanvas');
 const ctx = canvas.getContext('2d', { alpha: true });
 const container = document.getElementById('canvasArea');
 
 let DPR = window.devicePixelRatio || 1;
 
-// scene state
 const state = {
   photo: { img: null, x: 0, y: 0, scale: 1, rotation: 0, w:0, h:0 },
   frame: { img: null },
@@ -234,7 +245,6 @@ const state = {
   history: []
 };
 
-// responsive: set canvas size to container size * DPR
 function resizeCanvas(){
   const rect = container.getBoundingClientRect();
   const cssW = Math.max(200, rect.width);
@@ -247,7 +257,6 @@ function resizeCanvas(){
   draw();
 }
 
-// save state to history (shallow clone)
 function pushHistory(){
   const snap = {
     photo: {...state.photo},
@@ -258,7 +267,6 @@ function pushHistory(){
   if(state.history.length > 30) state.history.shift();
 }
 
-// undo
 function undo(){
   if(state.history.length === 0) return;
   const last = state.history.pop();
@@ -274,42 +282,29 @@ function undo(){
   draw();
 }
 
-// draw scene
 function draw(){
   if(!ctx) return;
-  // clear
   ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  // background: optional light checker to show transparency?
-  // (commented out)
-  // draw photo
   const cW = canvas.width, cH = canvas.height;
 
-  // photo: draw centered with transforms
   if(state.photo.img){
     ctx.save();
-    // center of canvas in pixels
     const cx = cW * 0.5;
     const cy = cH * 0.5;
     ctx.translate(cx + state.photo.x * DPR, cy + state.photo.y * DPR);
     ctx.rotate(state.photo.rotation * Math.PI / 180);
     ctx.scale(state.photo.scale * DPR, state.photo.scale * DPR);
-
-    // draw image centered at 0,0 with its intrinsic size
     const w = state.photo.w;
     const h = state.photo.h;
     ctx.drawImage(state.photo.img, -w/2, -h/2, w, h);
-
     ctx.restore();
   } else {
-    // optional placeholder
     ctx.save();
     ctx.fillStyle = '#f8fafc';
     ctx.fillRect(0,0,cW,cH);
     ctx.restore();
   }
 
-  // draw text (centered by relative positions)
   if(state.text.value){
     ctx.save();
     const px = Math.round(cW * state.text.x);
@@ -318,7 +313,6 @@ function draw(){
     ctx.font = `${fontSizePx}px "${state.text.fontFamily}", sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    // stroke for readability
     ctx.lineWidth = Math.max(2, Math.round(fontSizePx * 0.08));
     ctx.strokeStyle = 'rgba(0,0,0,0.4)';
     ctx.fillStyle = state.text.color;
@@ -327,30 +321,27 @@ function draw(){
     ctx.restore();
   }
 
-  // draw frame (twibbon) on top
   if(state.frame.img){
     ctx.save();
-    // draw frame stretched to cover canvas (respect device pixel)
     ctx.drawImage(state.frame.img, 0, 0, cW, cH);
     ctx.restore();
   }
 }
 
-// --- Input handling ---
+// --- Handlers for buttons with icons ---
+$('photoBtn').addEventListener('click', ()=> $('photoInput').click());
+$('frameBtn').addEventListener('click', ()=> $('frameInput').click());
+$('fontBtn').addEventListener('click', ()=> $('fontInput').click());
 
 // photo upload
-$('photoBtn').addEventListener('click', ()=> $('photoInput').click());
-$('photoInput').addEventListener('change', async (ev)=>{
+$('photoInput').addEventListener('change', (ev)=>{
   const f = ev.target.files && ev.target.files[0];
   if(!f) return;
   const url = URL.createObjectURL(f);
   const img = new Image();
   img.onload = ()=>{
-    // fit image to canvas dimension but keep aspect
-    // we'll store original drawn w/h such that the image fills the canvas shortest side
     const cW = canvas.width / DPR;
     const cH = canvas.height / DPR;
-    // scale image to cover canvas (cover strategy)
     const scale = Math.max(cW / img.width, cH / img.height);
     state.photo.img = img;
     state.photo.w = img.width * scale;
@@ -366,15 +357,13 @@ $('photoInput').addEventListener('change', async (ev)=>{
   img.src = url;
 });
 
-// frame upload (twibbon overlay)
-$('frameBtn').addEventListener('click', ()=> $('frameInput').click());
+// frame upload
 $('frameInput').addEventListener('change', (ev)=>{
   const f = ev.target.files && ev.target.files[0];
   if(!f) return;
   const url = URL.createObjectURL(f);
   const img = new Image();
   img.onload = ()=>{
-    // ensure PNG with transparency ideally; we just draw it stretched
     state.frame.img = img;
     pushHistory();
     draw();
@@ -383,8 +372,7 @@ $('frameInput').addEventListener('change', (ev)=>{
   img.src = url;
 });
 
-// font upload
-$('fontBtn').addEventListener('click', ()=> $('fontInput').click());
+// font upload (optional)
 $('fontInput').addEventListener('change', async (ev)=>{
   const f = ev.target.files && ev.target.files[0];
   if(!f) return;
@@ -394,25 +382,20 @@ $('fontInput').addEventListener('change', async (ev)=>{
     try{
       const fontData = e.target.result;
       const fontFace = new FontFace(name, fontData);
-      // load & add
       await fontFace.load();
       document.fonts.add(fontFace);
       state.text.fontFamily = name;
       pushHistory();
       draw();
-      alert('Font berhasil diunggah dan diterapkan ke teks.');
+      alert('Font berhasil diunggah dan diterapkan.');
     }catch(err){
       console.error(err);
       alert('Gagal memuat font. Pastikan file font valid (ttf/otf/woff).');
     }
   };
-  // read as ArrayBuffer then wrap as binary data URL
   reader.readAsArrayBuffer(f);
-
-  // Note: For wider browser support, you could also create a blob URL and @font-face rule.
 });
 
-// scale & rotate inputs
 $('scaleRange').addEventListener('input', (e)=>{
   state.photo.scale = parseFloat(e.target.value);
   draw();
@@ -421,17 +404,12 @@ $('rotateRange').addEventListener('input', (e)=>{
   state.photo.rotation = parseFloat(e.target.value);
   draw();
 });
-
-// text input
 $('textInput').addEventListener('input', (e)=>{
   state.text.value = e.target.value;
   pushHistory();
   draw();
 });
-
-// download
 $('downloadBtn').addEventListener('click', ()=>{
-  // Export canvas as PNG with devicePixel handled already
   canvas.toBlob((blob)=>{
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -441,8 +419,6 @@ $('downloadBtn').addEventListener('click', ()=>{
     a.remove();
   }, 'image/png');
 });
-
-// reset
 $('resetBtn').addEventListener('click', ()=>{
   if(confirm('Reset seluruh konten (foto, frame, teks)?')) {
     state.photo = { img:null, x:0, y:0, scale:1, rotation:0, w:0, h:0 };
@@ -455,63 +431,43 @@ $('resetBtn').addEventListener('click', ()=>{
     draw();
   }
 });
-
-// undo
 $('undoBtn').addEventListener('click', undo);
 
-// drag photo with mouse/touch
+// drag photo
 let dragging = false;
 let lastPointer = null;
-
-function screenToCanvasCoords(clientX, clientY){
-  const rect = canvas.getBoundingClientRect();
-  const x = clientX - rect.left - rect.width/2; // relative to center
-  const y = clientY - rect.top - rect.height/2;
-  // convert to logical px (not CSS px)
-  return { x: x / DPR, y: y / DPR };
-}
-
 function onPointerDown(ev){
   if(!state.photo.img) return;
   ev.preventDefault();
   dragging = true;
   lastPointer = ev;
-  // push state for undo only once per drag start
   pushHistory();
 }
-
 function onPointerMove(ev){
   if(!dragging || !lastPointer) return;
   ev.preventDefault();
-  // compute delta in CSS px, convert to canvas logical px
   const dx = (ev.clientX - lastPointer.clientX) / DPR;
   const dy = (ev.clientY - lastPointer.clientY) / DPR;
-  // update photo state position
-  // note: photo.x,y are in logical px offsets relative to center
   state.photo.x += dx;
   state.photo.y += dy;
   lastPointer = ev;
   draw();
 }
-
 function onPointerUp(ev){
   if(!dragging) return;
   dragging = false;
   lastPointer = null;
 }
-
 canvas.addEventListener('mousedown', onPointerDown);
 window.addEventListener('mousemove', onPointerMove);
 window.addEventListener('mouseup', onPointerUp);
 
-// touch support
+// touch support (pan + pinch)
 canvas.addEventListener('touchstart', (e)=>{
   if(e.touches.length === 1){
     const t = e.touches[0];
     onPointerDown({clientX: t.clientX, clientY: t.clientY, preventDefault: ()=>e.preventDefault()});
   } else if(e.touches.length === 2){
-    // simple pinch to scale
-    // store initial distance and scale
     const a = e.touches[0], b = e.touches[1];
     const startDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
     const startScale = state.photo.scale;
@@ -530,24 +486,15 @@ canvas.addEventListener('touchstart', (e)=>{
   }
 }, {passive:false});
 
-
-// resize handling
 window.addEventListener('resize', resizeCanvas);
 
-// initial setup
 function init(){
   resizeCanvas();
-
-  // show a simple default frame-ish placeholder? skip.
-
-  // default text font size relative to canvas
   state.text.size = Math.max(24, Math.round((canvas.width / DPR) * 0.06));
   draw();
 }
-
 init();
 
-// keyboard shortcuts (optional)
 window.addEventListener('keydown', (e)=>{
   if(e.key === 'z' && (e.ctrlKey || e.metaKey)){
     e.preventDefault();
