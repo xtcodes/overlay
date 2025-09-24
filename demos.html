@@ -134,7 +134,7 @@
     height:22px;
     animation:spin 1s linear infinite;
   }
-  @keyframes spin{ 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
+  @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -354,7 +354,7 @@ canvas.addEventListener('wheel',e=>{
   canvas._wheelTimeout=setTimeout(()=>{isEditing=false;draw();},400);
 },{passive:false});
 
-// fireworks
+// fireworks (versi lama, hanya efek sementara)
 function triggerFireworksAt(x,y,duration=1500){
   const particles=[];
   for(let i=0;i<40;i++){
@@ -374,12 +374,12 @@ function triggerFireworksAt(x,y,duration=1500){
     particles.forEach(p=>{
       const progress=p.age/p.life;
       if(progress<1){
-        p.x+=Math.cos(p.angle)*p.speed;
-        p.y+=Math.sin(p.angle)*p.speed;
+        const px=p.x+Math.cos(p.angle)*p.speed*progress*30;
+        const py=p.y+Math.sin(p.angle)*p.speed*progress*30;
         ctx.fillStyle=p.color;
         ctx.globalAlpha=1-progress;
         ctx.beginPath();
-        ctx.arc(p.x,p.y,2,0,2*Math.PI);
+        ctx.arc(px,py,2,0,2*Math.PI);
         ctx.fill();
         p.age=elapsed;
       }
