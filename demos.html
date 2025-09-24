@@ -152,8 +152,55 @@ let DPR = window.devicePixelRatio || 1;
 let photoImg=null, frameImg=null;
 let offsetX=0, offsetY=0, scale=1;
 let isEditing=false, isDragging=false, lastX=0,lastY=0,lastTouchDist=0;
-let isLocked=false; // 🔒 kunci gesture
+let isLocked=false;
 
+// --- Animasi partikel (konfeti/kembang api) ---
+let particles = [];
+function createParticles(){
+  particles=[];
+  for(let i=0;i<150;i++){
+    particles.push({
+      x: canvas.width/2,
+      y: canvas.height/2,
+      angle: Math.random()*2*Math.PI,
+      speed: Math.random()*6+2,
+      radius: Math.random()*3+2,
+      color:`hsl(${Math.random()*360},100%,50%)`,
+      life: Math.random()*60+60
+    });
+  }
+}
+function updateParticles(){
+  particles.forEach(p=>{
+    p.x+=Math.cos(p.angle)*p.speed;
+    p.y+=Math.sin(p.angle)*p.speed;
+    p.speed*=0.96; // friction
+    p.life--;
+  });
+  particles=particles.filter(p=>p.life>0);
+}
+function drawParticles(){
+  particles.forEach(p=>{
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);
+    ctx.fillStyle=p.color;
+    ctx.fill();
+  });
+}
+function animateParticles(){
+  let anim;
+  function loop(){
+    if(particles.length>0){
+      draw();
+      drawParticles();
+      updateParticles();
+      anim=requestAnimationFrame(loop);
+    } else cancelAnimationFrame(anim);
+  }
+  loop();
+}
+
+// --- Resize & Draw ---
 function resizeCanvas(){
   const rect=container.getBoundingClientRect();
   const cssSize=rect.width;
@@ -164,29 +211,21 @@ function resizeCanvas(){
   canvas.height=cssSize*DPR;
   draw();
 }
-
 function drawPlaceholder(){
   ctx.save();
   ctx.fillStyle = "#9ca3af";
-
-  // font size responsif: 5% dari lebar canvas
   let fontSize = Math.floor(canvas.width * 0.05);
-  if (fontSize < 14) fontSize = 14;   // minimal
-  if (fontSize > 28) fontSize = 28;   // maksimal
-
+  if (fontSize < 14) fontSize = 14;
+  if (fontSize > 28) fontSize = 28;
   ctx.font = `${fontSize}px sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-
-  const text = "Unggah Foto dan Twibbon untuk Memulai";
-  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+  ctx.fillText("Unggah Foto dan Twibbon untuk Memulai", canvas.width/2, canvas.height/2);
   ctx.restore();
 }
-
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   const cW=canvas.width, cH=canvas.height;
-
   if(photoImg){
     const baseScale=Math.max(cW/photoImg.width,cH/photoImg.height);
     const drawScale=baseScale*scale;
@@ -199,21 +238,8 @@ function draw(){
     ctx.drawImage(frameImg,0,0,cW,cH);
     ctx.globalAlpha=1.0;
   }
-
-  if(!photoImg && !frameImg){
-    drawPlaceholder();
-  }
-
+  if(!photoImg && !frameImg) drawPlaceholder();
   updateDownloadVisibility();
-}
-
-function hasTransparency(img){
-  const t=document.createElement("canvas"), c=t.getContext("2d");
-  t.width=img.width; t.height=img.height;
-  c.drawImage(img,0,0);
-  const d=c.getImageData(0,0,img.width,img.height).data;
-  for(let i=3;i<d.length;i+=4){ if(d[i]<255) return true; }
-  return false;
 }
 function updateDownloadVisibility(){
   $('downloadBox').style.display=(photoImg && frameImg)?"flex":"none";
@@ -232,29 +258,28 @@ $('frameInput').addEventListener('change',e=>{
   const f=e.target.files[0]; if(!f) return;
   const url=URL.createObjectURL(f), img=new Image();
   img.onload=()=>{
-    if(hasTransparency(img)){ frameImg=img; draw(); }
-    else{ alert("⚠️ Twibbon harus transparan!"); frameImg=null; draw(); }
-    URL.revokeObjectURL(url);
+    frameImg=img; draw(); URL.revokeObjectURL(url);
   };
   img.src=url;
 });
 
-// unduh dengan delay + lock permanen + sembunyikan upload panel
+// unduh
 $('downloadBtn').onclick=()=>{
   const btn=$('downloadBtn'), overlay=$('overlay');
   btn.disabled=true; overlay.style.display="flex"; isLocked=true; 
-  $('uploadPanel').style.display="none"; // 🔒 sembunyikan upload panel
-
+  $('uploadPanel').style.display="none";
   setTimeout(()=>{
     canvas.toBlob(blob=>{
       const a=document.createElement('a');
       a.href=URL.createObjectURL(blob);
       a.download='twibbon.png'; a.click(); a.remove();
-
       overlay.style.display="none"; btn.style.display="none";
       $('shareBtn').style.display="inline-block";
       $('resetBtn').style.display="inline-block";
       btn.disabled=false;
+      // 🚀 jalankan animasi kejutan
+      createParticles();
+      animateParticles();
     });
   },15000);
 };
@@ -270,7 +295,7 @@ $('shareBtn').onclick=()=>{
   });
 };
 
-// reset / muat ulang
+// reset
 $('resetBtn').onclick=()=>{
   photoImg=null; frameImg=null;
   offsetX=offsetY=0; scale=1; isLocked=false;
@@ -283,9 +308,8 @@ $('resetBtn').onclick=()=>{
   draw();
 };
 
-// gesture (dicegah jika isLocked=true)
+// gesture
 function getDist(t1,t2){ const dx=t2.clientX-t1.clientX, dy=t2.clientY-t1.clientY; return Math.hypot(dx,dy); }
-
 canvas.addEventListener('pointerdown', e=>{
   if(isLocked) return;
   isDragging=true; lastX=e.clientX; lastY=e.clientY; isEditing=true;
