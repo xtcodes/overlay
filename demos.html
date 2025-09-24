@@ -85,9 +85,9 @@
   .download{
     margin-top:12px;
     display:none;
-    justify-content:flex-end;
-    gap:10px;
-    flex-wrap:wrap;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:8px;
   }
   .download button{
     padding:8px 14px;
@@ -140,7 +140,7 @@
       </div>
     </div>
     <div class="download" id="downloadBox">
-      <button id="downloadBtn">Unduh PNG</button>
+      <button id="downloadBtn">Proses & Tampilkan Link Unduh</button>
       <button id="shareBtn" class="share-btn" style="display:none">Bagikan</button>
       <button id="resetBtn" class="reset-btn" style="display:none">Reset</button>
     </div>
@@ -247,19 +247,7 @@ $('downloadBtn').onclick=()=>{
     exportTwibbonBlob(blob=>{
       const url=URL.createObjectURL(blob);
 
-      // coba otomatis unduh
-      try {
-        const a=document.createElement('a');
-        a.href=url; a.download='twibbon.png';
-        a.style.display='none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      } catch(err){
-        console.log("Otomatis unduh gagal:", err);
-      }
-
-      // teks + link fallback
+      // tampilkan link unduh saja (tidak otomatis)
       const altWrapper = document.createElement("div");
       altWrapper.style.marginTop = "10px";
       altWrapper.style.fontSize = "14px";
@@ -311,7 +299,7 @@ function exportTwibbonBlob(cb){
   temp.toBlob(cb);
 }
 
-// gesture
+// gesture (geser & zoom)
 function getDist(t1,t2){ const dx=t2.clientX-t1.clientX, dy=t2.clientY-t1.clientY; return Math.hypot(dx,dy); }
 canvas.addEventListener('pointerdown', e=>{
   if(isLocked) return;
@@ -358,7 +346,6 @@ canvas.addEventListener('wheel', e=>{
 
 // ---------- Animasi kembang api ----------
 let particles = [], animId = null;
-
 function createParticles(x, y){
   const count = 150;
   for(let i=0;i<count;i++){
