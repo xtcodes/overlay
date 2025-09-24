@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Alat Twibbon Sederhana</title>
+<title>Alat Twibbon 1x1</title>
 
 <!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
@@ -21,7 +21,7 @@
   }
   .wrap{
     width:100%;
-    max-width:800px;
+    max-width:600px;
     background:#fff;
     border-radius:10px;
     padding:12px;
@@ -30,7 +30,7 @@
   .canvas-area{
     position:relative;
     width:100%;
-    padding-top:75%; /* 4:3 */
+    padding-top:100%; /* 1:1 square */
     background:#e5e7eb;
     border-radius:8px;
     overflow:hidden;
@@ -84,7 +84,7 @@
 </head>
 <body>
   <div class="wrap">
-    <h3 style="margin:6px 0 12px">Alat Twibbon Sederhana</h3>
+    <h3 style="margin:6px 0 12px">Alat Twibbon 1:1 (Square)</h3>
     <div class="canvas-area" id="canvasArea">
       <canvas id="mainCanvas"></canvas>
 
@@ -119,13 +119,12 @@ let frameImg = null;
 
 function resizeCanvas(){
   const rect = container.getBoundingClientRect();
-  const cssW = rect.width;
-  const cssH = rect.height;
+  const cssSize = rect.width; // square
   DPR = window.devicePixelRatio || 1;
-  canvas.style.width = cssW + 'px';
-  canvas.style.height = cssH + 'px';
-  canvas.width = cssW * DPR;
-  canvas.height = cssH * DPR;
+  canvas.style.width = cssSize + 'px';
+  canvas.style.height = cssSize + 'px';
+  canvas.width = cssSize * DPR;
+  canvas.height = cssSize * DPR;
   draw();
 }
 
