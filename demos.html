@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Alat Twibbon + Delay Unduh + Bagikan</title>
+<title>Alat Twibbon Permanen Lock Setelah Unduh</title>
 
 <!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
@@ -113,7 +113,7 @@
 </head>
 <body>
   <div class="wrap">
-    <h3 style="margin:6px 0 12px">Alat Twibbon + Delay Unduh + Bagikan</h3>
+    <h3 style="margin:6px 0 12px">Alat Twibbon Lock Gesture Setelah Unduh</h3>
     <div class="canvas-area" id="canvasArea">
       <canvas id="mainCanvas"></canvas>
 
@@ -150,7 +150,7 @@ let DPR = window.devicePixelRatio || 1;
 let photoImg=null, frameImg=null;
 let offsetX=0, offsetY=0, scale=1;
 let isEditing=false, isDragging=false, lastX=0,lastY=0,lastTouchDist=0;
-let isLocked=false; // 🔒 kunci gesture saat unduh
+let isLocked=false; // 🔒 kunci gesture
 
 function resizeCanvas(){
   const rect=container.getBoundingClientRect();
@@ -211,10 +211,10 @@ $('frameInput').addEventListener('change',e=>{
   img.src=url;
 });
 
-// unduh dengan delay
+// unduh dengan delay + lock permanen
 $('downloadBtn').onclick=()=>{
   const btn=$('downloadBtn'), overlay=$('overlay');
-  btn.disabled=true; overlay.style.display="flex"; isLocked=true;
+  btn.disabled=true; overlay.style.display="flex"; isLocked=true; // 🔒 permanen
   setTimeout(()=>{
     canvas.toBlob(blob=>{
       const a=document.createElement('a');
@@ -223,7 +223,8 @@ $('downloadBtn').onclick=()=>{
 
       overlay.style.display="none"; btn.style.display="none";
       $('shareBtn').style.display="inline-block";
-      btn.disabled=false; isLocked=false;
+      btn.disabled=false;
+      // ❌ tidak reset isLocked agar gesture tetap nonaktif
     });
   },15000);
 };
@@ -239,7 +240,9 @@ $('shareBtn').onclick=()=>{
   });
 };
 
-// gesture (dicegah jika isLocked)
+// gesture (dicegah jika isLocked=true)
+function getDist(t1,t2){ const dx=t2.clientX-t1.clientX, dy=t2.clientY-t1.clientY; return Math.hypot(dx,dy); }
+
 canvas.addEventListener('pointerdown', e=>{
   if(isLocked) return;
   isDragging=true; lastX=e.clientX; lastY=e.clientY; isEditing=true;
@@ -282,7 +285,6 @@ canvas.addEventListener('wheel', e=>{
   draw(); clearTimeout(canvas._wheelTimeout);
   canvas._wheelTimeout=setTimeout(()=>{isEditing=false; draw();},400);
 });
-function getDist(t1,t2){ const dx=t2.clientX-t1.clientX, dy=t2.clientY-t1.clientY; return Math.hypot(dx,dy); }
 
 window.addEventListener('resize',resizeCanvas);
 resizeCanvas();
