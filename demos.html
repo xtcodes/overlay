@@ -167,11 +167,19 @@ function resizeCanvas(){
 
 function drawPlaceholder(){
   ctx.save();
-  ctx.fillStyle="#9ca3af";
-  ctx.font=`${20*DPR}px sans-serif`;
-  ctx.textAlign="center";
-  ctx.textBaseline="middle";
-  ctx.fillText("Unggah Foto dan Twibbon untuk Memulai", canvas.width/2, canvas.height/2);
+  ctx.fillStyle = "#9ca3af";
+
+  // font size responsif: 5% dari lebar canvas
+  let fontSize = Math.floor(canvas.width * 0.05);
+  if (fontSize < 14) fontSize = 14;   // minimal
+  if (fontSize > 28) fontSize = 28;   // maksimal
+
+  ctx.font = `${fontSize}px sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  const text = "Unggah Foto dan Twibbon untuk Memulai";
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
   ctx.restore();
 }
 
