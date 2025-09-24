@@ -23,7 +23,9 @@
   /* tombol kanan */
   .download{margin-top:12px;display:flex;width:100%;justify-content:flex-end;gap:10px;align-items:center;}
   .primary{padding:8px 14px;border-radius:6px;border:0;cursor:pointer;font-size:14px;color:#fff;}
-  .share-btn{background:#2196F3;} .reset-btn{background:#f44336;}
+  .process-btn{background:#4CAF50;}
+  .share-btn{background:#2196F3;}
+  .reset-btn{background:#f44336;}
   .spinner{border:4px solid rgba(255,255,255,0.25);border-top:4px solid #fff;border-radius:50%;width:22px;height:22px;animation:spin 1s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
 </style>
@@ -44,12 +46,17 @@
     </div>
   </div>
 
-  <!-- link alternatif statis (JS hanya set href) -->
+  <!-- tombol Proses muncul setelah unggah foto+twibbon -->
+  <div id="processBox" class="download" style="display:none">
+    <button id="processBtn" class="primary process-btn">Proses</button>
+  </div>
+
+  <!-- link alternatif statis -->
   <p id="altLinkContainer" class="alt-link" style="display:none">
     Jika unduh tidak dimulai otomatis, <a id="altDownloadLink" href="#" download="twibbon.png">klik disini</a>
   </p>
 
-  <!-- tombol bagikan & reset di kanan -->
+  <!-- tombol bagikan & reset -->
   <div id="downloadBox" class="download" style="display:none">
     <button id="shareBtn" class="primary share-btn" style="display:none">Bagikan</button>
     <button id="resetBtn" class="primary reset-btn" style="display:none">Reset</button>
@@ -64,12 +71,12 @@ const canvasArea=$('canvasArea');let DPR=window.devicePixelRatio||1;
 let photoImg=null,frameImg=null,offsetX=0,offsetY=0,scale=1,isEditing=false,isDragging=false,lastX=0,lastY=0,lastTouchDist=0,isLocked=false;
 let exportBlob=null,exportURL=null;
 
-/* resize */
+/* resize & draw */
 function resizeCanvas(){const rect=canvasArea.getBoundingClientRect();const cssSize=rect.width;DPR=window.devicePixelRatio||1;[mainCanvas,fxCanvas].forEach(c=>{c.style.width=cssSize+'px';c.style.height=cssSize+'px';c.width=Math.round(cssSize*DPR);c.height=Math.round(cssSize*DPR);});draw();}
 function drawPlaceholder(){ctx.save();ctx.fillStyle="#9ca3af";let fontSize=Math.floor(mainCanvas.width*0.05);fontSize=Math.max(14,Math.min(32,fontSize));ctx.font=`${fontSize}px system-ui,sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("Unggah Foto dan Twibbon untuk Memulai",mainCanvas.width/2,mainCanvas.height/2);ctx.restore();}
-function draw(){ctx.clearRect(0,0,mainCanvas.width,mainCanvas.height);const cW=mainCanvas.width,cH=mainCanvas.height;if(photoImg){const baseScale=Math.max(cW/photoImg.width,cH/photoImg.height);const ds=baseScale*scale;const w=photoImg.width*ds,h=photoImg.height*ds;const x=(cW-w)/2+offsetX,y=(cH-h)/2+offsetY;ctx.drawImage(photoImg,x,y,w,h);}if(frameImg){ctx.globalAlpha=isEditing?0.5:1.0;ctx.drawImage(frameImg,0,0,cW,cH);ctx.globalAlpha=1.0;}if(!photoImg&&!frameImg)drawPlaceholder();updateDownloadVisibility();}
+function draw(){ctx.clearRect(0,0,mainCanvas.width,mainCanvas.height);const cW=mainCanvas.width,cH=mainCanvas.height;if(photoImg){const baseScale=Math.max(cW/photoImg.width,cH/photoImg.height);const ds=baseScale*scale;const w=photoImg.width*ds,h=photoImg.height*ds;const x=(cW-w)/2+offsetX,y=(cH-h)/2+offsetY;ctx.drawImage(photoImg,x,y,w,h);}if(frameImg){ctx.globalAlpha=isEditing?0.5:1.0;ctx.drawImage(frameImg,0,0,cW,cH);ctx.globalAlpha=1.0;}if(!photoImg&&!frameImg)drawPlaceholder();updateProcessVisibility();}
 function hasTransparency(img){const t=document.createElement('canvas'),c=t.getContext('2d');t.width=img.width;t.height=img.height;c.drawImage(img,0,0);const d=c.getImageData(0,0,img.width,img.height).data;for(let i=3;i<d.length;i+=4){if(d[i]<255)return true;}return false;}
-function updateDownloadVisibility(){$('downloadBox').style.display=(photoImg&&frameImg)?'flex':'none';if(!(photoImg&&frameImg)){$('altLinkContainer').style.display='none';if(exportURL){URL.revokeObjectURL(exportURL);exportURL=null;}exportBlob=null;}}
+function updateProcessVisibility(){$('processBox').style.display=(photoImg&&frameImg)?'flex':'none';}
 
 /* upload */
 $('photoBtn').onclick=()=>$('photoInput').click();
@@ -79,18 +86,17 @@ $('frameInput').addEventListener('change',e=>{const f=e.target.files[0];if(!f)re
 
 /* export */
 function exportTwibbonBlob(cb){const tmp=document.createElement('canvas');tmp.width=mainCanvas.width;tmp.height=mainCanvas.height;const tctx=tmp.getContext('2d');const cW=tmp.width,cH=tmp.height;if(photoImg){const baseScale=Math.max(cW/photoImg.width,cH/photoImg.height);const ds=baseScale*scale;const w=photoImg.width*ds,h=photoImg.height*ds;const x=(cW-w)/2+offsetX,y=(cH-h)/2+offsetY;tctx.drawImage(photoImg,x,y,w,h);}if(frameImg){tctx.drawImage(frameImg,0,0,cW,cH);}tmp.toBlob(cb,'image/png');}
-
-/* proses otomatis -> langsung export & tampilkan link */
 function processExport(){const overlay=$('overlay');overlay.style.display='flex';isLocked=true;$('uploadPanel').style.display='none';
-setTimeout(()=>{exportTwibbonBlob(blob=>{exportBlob=blob;if(exportURL)URL.revokeObjectURL(exportURL);exportURL=URL.createObjectURL(blob);$('altLinkContainer').style.display='block';$('altDownloadLink').href=exportURL;$('shareBtn').style.display='inline-block';$('resetBtn').style.display='inline-block';overlay.style.display='none';isLocked=false;triggerSequenceFireworks();});},15000);}
- 
+setTimeout(()=>{exportTwibbonBlob(blob=>{exportBlob=blob;if(exportURL)URL.revokeObjectURL(exportURL);exportURL=URL.createObjectURL(blob);$('altLinkContainer').style.display='block';$('altDownloadLink').href=exportURL;$('shareBtn').style.display='inline-block';$('resetBtn').style.display='inline-block';$('downloadBox').style.display='flex';overlay.style.display='none';isLocked=false;triggerSequenceFireworks();});},2000);}
+$('processBtn').onclick=processExport;
+
 /* share */
 $('shareBtn').addEventListener('click',async()=>{if(!exportBlob){alert("Proses dulu sebelum bagikan.");return;}const file=new File([exportBlob],"twibbon.png",{type:"image/png"});if(navigator.share&&navigator.canShare?.({files:[file]})){try{await navigator.share({title:"Twibbon",text:"Lihat twibbon saya!",files:[file]});}catch(e){console.log("Share batal:",e);} } else alert("Fitur share tidak didukung.");});
 
 /* reset */
-$('resetBtn').addEventListener('click',()=>{photoImg=frameImg=null;offsetX=offsetY=0;scale=1;isEditing=isDragging=false;lastX=lastY=lastTouchDist=0;isLocked=false;exportBlob=null;if(exportURL){URL.revokeObjectURL(exportURL);exportURL=null;}$('photoInput').value='';$('frameInput').value='';$('uploadPanel').style.display='flex';$('shareBtn').style.display='none';$('resetBtn').style.display='none';$('altLinkContainer').style.display='none';draw();particles=[];if(animId){cancelAnimationFrame(animId);animId=null;}ctxFX.clearRect(0,0,fxCanvas.width,fxCanvas.height);});
+$('resetBtn').addEventListener('click',()=>{photoImg=frameImg=null;offsetX=offsetY=0;scale=1;isEditing=isDragging=false;lastX=lastY=lastTouchDist=0;isLocked=false;exportBlob=null;if(exportURL){URL.revokeObjectURL(exportURL);exportURL=null;}$('photoInput').value='';$('frameInput').value='';$('uploadPanel').style.display='flex';$('shareBtn').style.display='none';$('resetBtn').style.display='none';$('downloadBox').style.display='none';$('altLinkContainer').style.display='none';$('processBox').style.display='none';draw();particles=[];if(animId){cancelAnimationFrame(animId);animId=null;}ctxFX.clearRect(0,0,fxCanvas.width,fxCanvas.height);});
 
-/* gesture geser/zoom */
+/* geser/zoom sama dengan sebelumnya (dipertahankan) */
 function getDist(t1,t2){return Math.hypot(t2.clientX-t1.clientX,t2.clientY-t1.clientY);}
 mainCanvas.addEventListener('pointerdown',e=>{if(isLocked||e.pointerType==='touch')return;isDragging=true;lastX=e.clientX;lastY=e.clientY;isEditing=true;mainCanvas.setPointerCapture?.(e.pointerId);});
 mainCanvas.addEventListener('pointermove',e=>{if(isLocked||!isDragging||e.pointerType==='touch')return;const dx=(e.clientX-lastX)*DPR,dy=(e.clientY-lastY)*DPR;offsetX+=dx;offsetY+=dy;lastX=e.clientX;lastY=e.clientY;draw();});
@@ -110,10 +116,6 @@ function triggerSequenceFireworks(){const w=fxCanvas.width,h=fxCanvas.height;[[w
 
 /* init */
 window.addEventListener('resize',resizeCanvas);resizeCanvas();
-
-/* otomatis mulai proses saat foto & twibbon lengkap */
-const observer=new MutationObserver(()=>{if(photoImg&&frameImg&&!exportBlob)processExport();});
-observer.observe($('downloadBox'),{attributes:true,attributeFilter:['style']});
 </script>
 </body>
 </html>
