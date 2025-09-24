@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Alat Twibbon 1x1 + Gesture</title>
+<title>Alat Twibbon 1x1 + Gesture + Validasi</title>
 
 <!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
@@ -34,7 +34,7 @@
     background:#e5e7eb;
     border-radius:8px;
     overflow:hidden;
-    touch-action:none; /* penting untuk gesture */
+    touch-action:none;
   }
   canvas{
     position:absolute;
@@ -85,7 +85,7 @@
 </head>
 <body>
   <div class="wrap">
-    <h3 style="margin:6px 0 12px">Alat Twibbon 1:1 + Gesture</h3>
+    <h3 style="margin:6px 0 12px">Alat Twibbon 1:1 + Gesture + Validasi</h3>
     <div class="canvas-area" id="canvasArea">
       <canvas id="mainCanvas"></canvas>
 
@@ -123,6 +123,7 @@ let offsetX = 0, offsetY = 0;
 let scale = 1;
 let lastTouchDist = 0;
 let isDragging = false;
+let isEditing = false; // flag untuk transparansi twibbon
 let lastX = 0, lastY = 0;
 
 function resizeCanvas(){
@@ -151,22 +152,47 @@ function draw(){
     ctx.drawImage(photoImg, x, y, w, h);
   }
   if(frameImg){
+    ctx.globalAlpha = isEditing ? 0.5 : 1.0; // transparan saat edit
     ctx.drawImage(frameImg,0,0,cW,cH);
+    ctx.globalAlpha = 1.0;
   }
 }
 
-// helper jarak antara 2 titik
-function getDist(t1,t2){
-  const dx = t2.clientX - t1.clientX;
-  const dy = t2.clientY - t1.clientY;
-  return Math.hypot(dx,dy);
+// cek apakah gambar punya transparansi
+function validateTransparency(img){
+  const testCanvas = document.createElement("canvas");
+  const tctx = testCanvas.getContext("2d");
+  testCanvas.width = img.width;
+  testCanvas.height = img.height;
+  tctx.drawImage(img,0,0);
+  const data = tctx.getImageData(0,0,img.width,img.height).data;
+  let hasTransparent = false;
+  for(let i=3;i<data.length;i+=4){
+    if(data[i] < 255){ // alpha kurang dari 255
+      hasTransparent = true;
+      break;
+    }
+  }
+  if(!hasTransparent){
+    alert("⚠️ Twibbon harus memiliki bidang transparan (PNG dengan alpha)!");
+  }
 }
 
-// gesture
+function startEdit(){
+  isEditing = true;
+  draw();
+}
+function endEdit(){
+  isEditing = false;
+  draw();
+}
+
+// pointer drag
 canvas.addEventListener('pointerdown', e=>{
   isDragging = true;
   lastX = e.clientX;
   lastY = e.clientY;
+  startEdit();
   canvas.setPointerCapture(e.pointerId);
 });
 canvas.addEventListener('pointermove', e=>{
@@ -180,6 +206,7 @@ canvas.addEventListener('pointermove', e=>{
 });
 canvas.addEventListener('pointerup', e=>{
   isDragging = false;
+  endEdit();
   canvas.releasePointerCapture(e.pointerId);
 });
 
@@ -187,9 +214,11 @@ canvas.addEventListener('pointerup', e=>{
 canvas.addEventListener('touchstart', e=>{
   if(e.touches.length===2){
     lastTouchDist = getDist(e.touches[0], e.touches[1]);
+    startEdit();
   } else if(e.touches.length===1){
     lastX = e.touches[0].clientX;
     lastY = e.touches[0].clientY;
+    startEdit();
   }
 },{passive:false});
 
@@ -212,13 +241,29 @@ canvas.addEventListener('touchmove', e=>{
   }
 },{passive:false});
 
+canvas.addEventListener('touchend', e=>{
+  if(e.touches.length===0){
+    endEdit();
+  }
+});
+
 // mouse wheel zoom
 canvas.addEventListener('wheel', e=>{
+  startEdit();
   const delta = e.deltaY<0 ? 1.1 : 0.9;
   scale *= delta;
   scale = Math.max(0.2, Math.min(5, scale));
   draw();
+  clearTimeout(canvas._wheelTimeout);
+  canvas._wheelTimeout = setTimeout(endEdit, 400);
 });
+
+// helper jarak
+function getDist(t1,t2){
+  const dx = t2.clientX - t1.clientX;
+  const dy = t2.clientY - t1.clientY;
+  return Math.hypot(dx,dy);
+}
 
 $('photoBtn').onclick = ()=> $('photoInput').click();
 $('frameBtn').onclick = ()=> $('frameInput').click();
@@ -239,7 +284,12 @@ $('frameInput').addEventListener('change',(e)=>{
   const f = e.target.files[0]; if(!f) return;
   const url = URL.createObjectURL(f);
   const img = new Image();
-  img.onload = ()=>{ frameImg=img; draw(); URL.revokeObjectURL(url); };
+  img.onload = ()=>{
+    frameImg=img; 
+    validateTransparency(img);
+    draw(); 
+    URL.revokeObjectURL(url);
+  };
   img.src = url;
 });
 
