@@ -17,10 +17,8 @@
   .control-panel{position:absolute;bottom:12px;left:12px;z-index:70;display:flex;gap:8px;background:rgba(0,0,0,0.55);padding:8px;border-radius:8px;backdrop-filter: blur(4px);}
   .btn{width:40px;height:40px;border:none;border-radius:6px;background:rgba(255,255,255,0.12);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;}
   input[type=file]{display:none;}
-  /* link alternatif */
   .alt-link{margin-top:14px;font-size:15px;color:#333;}
   .alt-link a{color:#2196F3;text-decoration:underline;}
-  /* tombol kanan */
   .download{margin-top:12px;display:flex;width:100%;justify-content:flex-end;gap:10px;align-items:center;}
   .primary{padding:8px 14px;border-radius:6px;border:0;cursor:pointer;font-size:14px;color:#fff;}
   .process-btn{background:#4CAF50;}
@@ -46,12 +44,12 @@
     </div>
   </div>
 
-  <!-- tombol Proses muncul setelah unggah foto+twibbon -->
+  <!-- tombol Proses -->
   <div id="processBox" class="download" style="display:none">
     <button id="processBtn" class="primary process-btn">Proses</button>
   </div>
 
-  <!-- link alternatif statis -->
+  <!-- link alternatif -->
   <p id="altLinkContainer" class="alt-link" style="display:none">
     Jika unduh tidak dimulai otomatis, <a id="altDownloadLink" href="#" download="twibbon.png">klik disini</a>
   </p>
@@ -87,7 +85,7 @@ $('frameInput').addEventListener('change',e=>{const f=e.target.files[0];if(!f)re
 /* export */
 function exportTwibbonBlob(cb){const tmp=document.createElement('canvas');tmp.width=mainCanvas.width;tmp.height=mainCanvas.height;const tctx=tmp.getContext('2d');const cW=tmp.width,cH=tmp.height;if(photoImg){const baseScale=Math.max(cW/photoImg.width,cH/photoImg.height);const ds=baseScale*scale;const w=photoImg.width*ds,h=photoImg.height*ds;const x=(cW-w)/2+offsetX,y=(cH-h)/2+offsetY;tctx.drawImage(photoImg,x,y,w,h);}if(frameImg){tctx.drawImage(frameImg,0,0,cW,cH);}tmp.toBlob(cb,'image/png');}
 function processExport(){const overlay=$('overlay');overlay.style.display='flex';isLocked=true;$('uploadPanel').style.display='none';
-setTimeout(()=>{exportTwibbonBlob(blob=>{exportBlob=blob;if(exportURL)URL.revokeObjectURL(exportURL);exportURL=URL.createObjectURL(blob);$('altLinkContainer').style.display='block';$('altDownloadLink').href=exportURL;$('shareBtn').style.display='inline-block';$('resetBtn').style.display='inline-block';$('downloadBox').style.display='flex';overlay.style.display='none';isLocked=false;triggerSequenceFireworks();});},2000);}
+setTimeout(()=>{exportTwibbonBlob(blob=>{exportBlob=blob;if(exportURL)URL.revokeObjectURL(exportURL);exportURL=URL.createObjectURL(blob);$('altLinkContainer').style.display='block';$('altDownloadLink').href=exportURL;$('shareBtn').style.display='inline-block';$('resetBtn').style.display='inline-block';$('downloadBox').style.display='flex';overlay.style.display='none';$('processBox').style.display='none';isLocked=false;triggerSequenceFireworks();});},2000);}
 $('processBtn').onclick=processExport;
 
 /* share */
@@ -96,7 +94,7 @@ $('shareBtn').addEventListener('click',async()=>{if(!exportBlob){alert("Proses d
 /* reset */
 $('resetBtn').addEventListener('click',()=>{photoImg=frameImg=null;offsetX=offsetY=0;scale=1;isEditing=isDragging=false;lastX=lastY=lastTouchDist=0;isLocked=false;exportBlob=null;if(exportURL){URL.revokeObjectURL(exportURL);exportURL=null;}$('photoInput').value='';$('frameInput').value='';$('uploadPanel').style.display='flex';$('shareBtn').style.display='none';$('resetBtn').style.display='none';$('downloadBox').style.display='none';$('altLinkContainer').style.display='none';$('processBox').style.display='none';draw();particles=[];if(animId){cancelAnimationFrame(animId);animId=null;}ctxFX.clearRect(0,0,fxCanvas.width,fxCanvas.height);});
 
-/* geser/zoom sama dengan sebelumnya (dipertahankan) */
+/* geser & zoom */
 function getDist(t1,t2){return Math.hypot(t2.clientX-t1.clientX,t2.clientY-t1.clientY);}
 mainCanvas.addEventListener('pointerdown',e=>{if(isLocked||e.pointerType==='touch')return;isDragging=true;lastX=e.clientX;lastY=e.clientY;isEditing=true;mainCanvas.setPointerCapture?.(e.pointerId);});
 mainCanvas.addEventListener('pointermove',e=>{if(isLocked||!isDragging||e.pointerType==='touch')return;const dx=(e.clientX-lastX)*DPR,dy=(e.clientY-lastY)*DPR;offsetX+=dx;offsetY+=dy;lastX=e.clientX;lastY=e.clientY;draw();});
