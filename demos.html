@@ -97,6 +97,7 @@
     cursor:pointer;
   }
   .share-btn{ background:#2196F3 !important; }
+  .reset-btn{ background:#f44336 !important; }
   .spinner{
     border:4px solid rgba(255,255,255,0.3);
     border-top:4px solid #fff;
@@ -138,6 +139,7 @@
     <div class="download" id="downloadBox">
       <button id="downloadBtn">Unduh PNG</button>
       <button id="shareBtn" class="share-btn" style="display:none">Bagikan</button>
+      <button id="resetBtn" class="reset-btn" style="display:none">Muat Ulang</button>
     </div>
   </div>
 
@@ -225,8 +227,8 @@ $('downloadBtn').onclick=()=>{
 
       overlay.style.display="none"; btn.style.display="none";
       $('shareBtn').style.display="inline-block";
+      $('resetBtn').style.display="inline-block";
       btn.disabled=false;
-      // ❌ upload panel tetap hidden, gesture tetap terkunci
     });
   },15000);
 };
@@ -240,6 +242,17 @@ $('shareBtn').onclick=()=>{
       catch(err){ console.log("Share dibatalkan:",err); }
     } else alert("Fitur share tidak didukung di browser ini.");
   });
+};
+
+// reset / muat ulang
+$('resetBtn').onclick=()=>{
+  photoImg=null; frameImg=null;
+  offsetX=offsetY=0; scale=1; isLocked=false;
+  $('uploadPanel').style.display="flex";
+  $('downloadBtn').style.display="inline-block";
+  $('shareBtn').style.display="none";
+  $('resetBtn').style.display="none";
+  draw();
 };
 
 // gesture (dicegah jika isLocked=true)
