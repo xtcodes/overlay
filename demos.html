@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Alat Twibbon Permanen Lock Setelah Unduh</title>
+<title>Alat Twibbon Lock Upload Setelah Unduh</title>
 
 <!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
@@ -113,7 +113,7 @@
 </head>
 <body>
   <div class="wrap">
-    <h3 style="margin:6px 0 12px">Alat Twibbon Lock Gesture Setelah Unduh</h3>
+    <h3 style="margin:6px 0 12px">Alat Twibbon (Upload Hilang Setelah Unduh)</h3>
     <div class="canvas-area" id="canvasArea">
       <canvas id="mainCanvas"></canvas>
 
@@ -123,7 +123,7 @@
         <div>Sedang proses...</div>
       </div>
 
-      <div class="control-panel">
+      <div class="control-panel" id="uploadPanel">
         <button class="btn" id="photoBtn" title="Unggah Foto">
           <i class="fa-solid fa-image"></i>
         </button>
@@ -211,10 +211,12 @@ $('frameInput').addEventListener('change',e=>{
   img.src=url;
 });
 
-// unduh dengan delay + lock permanen
+// unduh dengan delay + lock permanen + sembunyikan upload panel
 $('downloadBtn').onclick=()=>{
   const btn=$('downloadBtn'), overlay=$('overlay');
-  btn.disabled=true; overlay.style.display="flex"; isLocked=true; // 🔒 permanen
+  btn.disabled=true; overlay.style.display="flex"; isLocked=true; 
+  $('uploadPanel').style.display="none"; // 🔒 sembunyikan upload panel
+
   setTimeout(()=>{
     canvas.toBlob(blob=>{
       const a=document.createElement('a');
@@ -224,7 +226,7 @@ $('downloadBtn').onclick=()=>{
       overlay.style.display="none"; btn.style.display="none";
       $('shareBtn').style.display="inline-block";
       btn.disabled=false;
-      // ❌ tidak reset isLocked agar gesture tetap nonaktif
+      // ❌ upload panel tetap hidden, gesture tetap terkunci
     });
   },15000);
 };
