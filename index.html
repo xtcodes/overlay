@@ -261,7 +261,7 @@ $('frameInput').addEventListener('change',e=>{
   const url=URL.createObjectURL(f), img=new Image();
   img.onload=()=>{
     if(hasTransparency(img)){ frameImg=img; draw(); }
-    else{ showNotification("⚠️ Twibbon harus transparan!"); frameImg=null; draw(); }
+    else{ showNotification("❌ Twibbon harus transparan!"); frameImg=null; draw(); }
     URL.revokeObjectURL(url);
   };
   img.src=url;
@@ -269,7 +269,7 @@ $('frameInput').addEventListener('change',e=>{
 
 // proses
 $('processBtn').onclick=()=>{
-  if(!photoImg || !frameImg){ showNotification("Unggah foto & twibbon dulu!"); return; }
+  if(!photoImg || !frameImg){ showNotification("❌ Unggah foto & twibbon dulu!"); return; }
   const btn=$('processBtn'), overlay=$('overlay');
   btn.disabled=true; overlay.style.display="flex"; isLocked=true;
   $('uploadPanel').style.display="none";
@@ -295,7 +295,7 @@ $('shareBtn').onclick=()=>{
     if(navigator.share && navigator.canShare?.({files:[file]})){
       try{ await navigator.share({title:"Twibbon",text:"Lihat twibbon saya!",files:[file]}); }
       catch(err){ console.log("Share dibatalkan:",err); }
-    } else showNotification("Fitur share tidak didukung di browser ini.");
+    } else showNotification("❌ Fitur share tidak didukung di browser ini.");
   });
 };
 
