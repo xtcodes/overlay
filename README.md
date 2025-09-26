@@ -1,6 +1,6 @@
 # Apa Itu Twibbon? Fungsi, Manfaat, dan Cara Membuatnya 
 
-Di era digital saat ini, twibbon sudah tidak asing lagi, terutama saat ada kampanye sosial, acara komunitas, hingga kegiatan sekolah atau kampus. Twibbon sering digunakan untuk menunjukkan dukungan terhadap suatu kegiatan dengan cara yang sederhana namun efektif.
+Di era digital saat ini, **twibbon** sudah tidak asing lagi, terutama saat ada kampanye sosial, acara komunitas, hingga kegiatan sekolah atau kampus. Twibbon sering digunakan untuk menunjukkan dukungan terhadap suatu kegiatan dengan cara yang sederhana namun efektif.
 
 # Apa Itu Twibbon? 
 
