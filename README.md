@@ -4,9 +4,9 @@ Di era digital saat ini, twibbon sudah tidak asing lagi, terutama saat ada kampa
 
 # Apa Itu Twibbon? 
 
-Twibbon adalah bingkai digital transparan yang biasanya dipasang pada foto profil atau gambar seseorang. Bingkai ini dapat berupa desain khusus dengan logo, tulisan, atau elemen visual lain yang mewakili sebuah acara, kampanye, atau gerakan tertentu.
+Twibbon adalah **bingkai digital transparan** yang biasanya dipasang pada foto profil atau gambar seseorang. Bingkai ini dapat berupa desain khusus dengan logo, tulisan, atau elemen visual lain yang mewakili sebuah acara, kampanye, atau gerakan tertentu.
 
-Misalnya, ketika ada acara Hari Kemerdekaan, twibbon dengan tema merah putih banyak digunakan oleh masyarakat untuk menunjukkan rasa nasionalisme melalui foto profil media sosial.
+Misalnya, ketika ada acara **Hari Kemerdekaan**, twibbon dengan tema merah putih banyak digunakan oleh masyarakat untuk menunjukkan rasa nasionalisme melalui foto profil media sosial.
 
 # Fungsi Twibbon 
 
