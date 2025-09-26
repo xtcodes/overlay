@@ -38,7 +38,7 @@ Desain twibbon dapat dikreasikan sedemikian rupa sehingga menarik perhatian audi
 Buat desain bingkai dengan format transparan (PNG). Bisa menggunakan aplikasi seperti Canva, Photoshop, atau CorelDraw.
 
 **2. Gunakan Platform Twibbon**
-Unggah desain tersebut ke situs atau aplikasi penyedia twibbon, misalnya [Twibbon](https://twibbons.netlify.app/demos) atau aplikasi custom.
+Unggah desain tersebut ke situs atau aplikasi penyedia twibbon, misalnya [Twibbon](https://twibbons.netlify.app/) atau aplikasi custom.
 
 **3. Sebarkan Link Twibbon**
 Bagikan link twibbon ke peserta acara, komunitas, atau publik agar mereka bisa langsung memasang foto masing-masing.
