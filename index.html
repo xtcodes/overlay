@@ -131,6 +131,26 @@
     text-align:center;
   }
   .alt-download a{ color:#2196F3; text-decoration:underline; }
+  .notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    max-width: 90%;
+    text-align: center;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s ease, top 0.3s ease;
+}
+.notification.show {
+  opacity: 1;
+  top: 40px;
+}
 </style>
 </head>
 <body>
@@ -169,7 +189,8 @@
       <button id="resetBtn" class="reset-btn" style="display:none">Reset</button>
     </div>
     <p><strong>Catatan:</strong> Aplikasi ini hanya berjalan di peramban Anda. Aplikasi ini tidak akan menyimpan gambar atau data apa pun.</p>
-
+    
+    <div id="notification" class="notification"></div>
   </div>
 
 <script>
@@ -183,6 +204,13 @@ let offsetX=0, offsetY=0, scale=1;
 let isEditing=false, isDragging=false, lastX=0,lastY=0,lastTouchDist=0;
 let isLocked=false;
 
+function showNotification(message) {
+  notification.textContent = message;
+  notification.classList.add("show");
+  setTimeout(() => {
+    notification.classList.remove("show");
+  }, 3000);
+}
 function resizeCanvas(){
   const rect=container.getBoundingClientRect();
   const cssSize=rect.width;
@@ -233,7 +261,7 @@ $('frameInput').addEventListener('change',e=>{
   const url=URL.createObjectURL(f), img=new Image();
   img.onload=()=>{
     if(hasTransparency(img)){ frameImg=img; draw(); }
-    else{ alert("⚠️ Twibbon harus transparan!"); frameImg=null; draw(); }
+    else{ showNotification("⚠️ Twibbon harus transparan!"); frameImg=null; draw(); }
     URL.revokeObjectURL(url);
   };
   img.src=url;
@@ -241,7 +269,7 @@ $('frameInput').addEventListener('change',e=>{
 
 // proses
 $('processBtn').onclick=()=>{
-  if(!photoImg || !frameImg){ alert("Unggah foto & twibbon dulu!"); return; }
+  if(!photoImg || !frameImg){ showNotification("Unggah foto & twibbon dulu!"); return; }
   const btn=$('processBtn'), overlay=$('overlay');
   btn.disabled=true; overlay.style.display="flex"; isLocked=true;
   $('uploadPanel').style.display="none";
@@ -267,7 +295,7 @@ $('shareBtn').onclick=()=>{
     if(navigator.share && navigator.canShare?.({files:[file]})){
       try{ await navigator.share({title:"Twibbon",text:"Lihat twibbon saya!",files:[file]}); }
       catch(err){ console.log("Share dibatalkan:",err); }
-    } else alert("Fitur share tidak didukung di browser ini.");
+    } else showNotification("Fitur share tidak didukung di browser ini.");
   });
 };
 
