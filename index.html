@@ -293,7 +293,7 @@ $('shareBtn').onclick=()=>{
   canvas.toBlob(async blob=>{
     const file=new File([blob],"twibbon.png",{type:"image/png"});
     if(navigator.share && navigator.canShare?.({files:[file]})){
-      try{ await navigator.share({title:"Twibbon",text:"Lihat twibbon saya!",files:[file]}); }
+      try{ await navigator.share({title:"Twibbon",text:"Lihat twibbon saya!",url:"https://twibbons.netlify.app/",files:[file]}); }
       catch(err){ console.log("Share dibatalkan:",err); }
     } else showNotification("Fitur share tidak didukung di browser ini.");
   });
